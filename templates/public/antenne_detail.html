@@ -1,0 +1,37 @@
+{% extends "public/base.html" %}
+{% block titre %}{{ antenne.nom }}{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:antennes' %}">Antennes</a> / {{ antenne.nom }}</div>
+<section class="section">
+  <div class="conteneur">
+    <h1>{{ antenne.nom }}</h1>
+    <p class="article__meta">{{ antenne.get_type_display }}{% if antenne.region %} &middot; {{ antenne.region.nom }}{% if antenne.region.chef_lieu %} ({{ antenne.region.chef_lieu }}){% endif %}{% endif %}</p>
+    <div class="grille grille--2">
+      <div>
+        {{ antenne.presentation|linebreaks }}
+        {% if antenne.responsable %}<p><strong>Chef d'antenne :</strong> {{ antenne.responsable.nom_complet }}{% if antenne.responsable.fonction %} - {{ antenne.responsable.fonction }}{% endif %}</p>{% endif %}
+      </div>
+      <div class="chiffre">
+        <h3>Contact</h3>
+        <p>{{ antenne.adresse|default:"Adresse a preciser" }}<br>
+          {% if antenne.telephone %}{{ antenne.telephone }}<br>{% endif %}
+          {% if antenne.email %}<a href="mailto:{{ antenne.email }}">{{ antenne.email }}</a>{% endif %}</p>
+      </div>
+    </div>
+    {% if actualites %}
+      <h2 style="margin-top:2.5rem">Actualites de l'antenne</h2>
+      <div class="grille grille--3">{% for article in actualites %}{% include "public/_carte_actualite.html" %}{% endfor %}</div>
+    {% endif %}
+    {% if evenements %}
+      <h2 style="margin-top:2.5rem">Prochaines activites</h2>
+      {% for evenement in evenements %}
+        <div class="evenement">
+          <div class="date-bloc"><strong>{{ evenement.date_debut|date:"d" }}</strong><span>{{ evenement.date_debut|date:"M Y" }}</span></div>
+          <div class="evenement__corps"><h3><a href="{{ evenement.get_absolute_url }}">{{ evenement.titre }}</a></h3><p>{{ evenement.get_type_display }}</p></div>
+          <div class="evenement__lieu">{{ evenement.lieu }}</div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="pagination" aria-label="Pagination">
+  {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Precedent</a>{% endif %}
+  {% for numero in page_obj.paginator.page_range %}
+    {% if numero == page_obj.number %}<span class="actuelle">{{ numero }}</span>
+    {% elif numero > page_obj.number|add:"-3" and numero < page_obj.number|add:"3" %}<a href="?page={{ numero }}">{{ numero }}</a>{% endif %}
+  {% endfor %}
+  {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Suivant</a>{% endif %}
+</nav>
+{% endif %}

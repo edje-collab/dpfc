@@ -1,0 +1,19 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Notifications{% endblock %}
+{% block titre_page %}Notifications{% endblock %}
+{% block contenu %}
+<div class="bloc">
+  <table class="table">
+    <tbody>
+    {% for notification in notifications %}
+      <tr>
+        <td style="width:1%"><span class="pastille pastille--{% if notification.niveau == 'ALERTE' %}ko{% elif notification.niveau == 'SUCCES' %}ok{% else %}neutre{% endif %}">{{ notification.get_niveau_display }}</span></td>
+        <td><strong>{{ notification.titre }}</strong><br><span class="aide">{{ notification.message }}</span></td>
+        <td class="aide">{{ notification.creee_le|date:"d/m/Y H:i" }}</td>
+        <td>{% if notification.lien %}<a class="btn btn--secondaire btn--petit" href="{% url 'accounts:notification_ouvrir' notification.pk %}">Ouvrir</a>{% endif %}</td>
+      </tr>
+    {% empty %}<tr><td class="aide">Aucune notification.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

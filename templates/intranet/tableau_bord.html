@@ -1,0 +1,98 @@
+{% extends "intranet/base_intranet.html" %}
+{% load dpfc %}
+{% block titre %}Tableau de bord{% endblock %}
+{% block titre_page %}Bonjour {{ user.first_name|title }}{% endblock %}
+{% block sous_titre %}{{ user.libelle_affectation }}{% if user.est_en_region %} - antenne regionale{% else %} - direction centrale{% endif %}{% endblock %}
+{% block contenu %}
+<div class="grille-tb">
+  <div class="indicateur">
+    <strong>{{ solde.jours_restants }}</strong><span>jours de conge restants sur {{ solde.total_droits }} ({{ solde.annee }})</span>
+    <div class="jauge"><i style="width: {{ solde.taux_consommation }}%"></i></div>
+  </div>
+  <div class="indicateur"><strong>{{ nb_en_cours }}</strong><span>demande{{ nb_en_cours|pluralize }} en cours de validation</span></div>
+  <div class="indicateur"><strong>{{ nb_approuvees }}</strong><span>acte{{ nb_approuvees|pluralize }} approuve{{ nb_approuvees|pluralize }}</span></div>
+  <div class="indicateur"><strong>{{ nb_a_valider_total }}</strong><span>dossier{{ nb_a_valider_total|pluralize }} attendant votre avis</span></div>
+</div>
+
+<div class="bloc">
+  <div class="bloc__tete"><h2>Deposer une demande</h2>
+    {% if user.est_secretariat or user.role == 'CHEF_ANTENNE' %}
+      <a class="btn btn--secondaire btn--petit" href="{% url 'rh:demande_creer' 'CONGE_ANNUEL' %}?pour=agent">Depot au secretariat pour un agent</a>
+    {% endif %}
+  </div>
+  <div class="grille-tb">
+    {% for valeur, libelle in types %}
+      <a class="bloc" href="{% url 'rh:demande_creer' valeur %}" style="text-decoration:none">
+        <strong style="display:block">{{ libelle }}</strong>
+        <span class="aide">{% for cle, texte in aides.items %}{% if cle == valeur %}{{ texte }}{% endif %}{% endfor %}</span>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grille-2">
+  <div class="bloc">
+    <div class="bloc__tete"><h2>Mes dernieres demandes</h2><a href="{% url 'rh:mes_demandes' %}">Tout voir</a></div>
+    <table class="table">
+      <thead><tr><th>Objet</th><th>Periode</th><th>Statut</th></tr></thead>
+      <tbody>
+      {% for demande in mes_demandes_recentes %}
+        <tr>
+          <td><a href="{{ demande.get_absolute_url }}">{{ demande.get_type_display }}</a><br><small class="aide">{{ demande.numero|default:"brouillon" }}</small></td>
+          <td>{{ demande.date_debut|date:"d/m/Y" }} &rarr; {{ demande.date_fin|date:"d/m/Y" }}<br><small class="aide">{{ demande.nb_jours }} j ouvrable{{ demande.nb_jours|pluralize }}</small></td>
+          <td>{{ demande|pastille_statut }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3" class="aide">Vous n'avez encore depose aucune demande.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bloc">
+    <div class="bloc__tete"><h2>En attente de votre avis</h2><a href="{% url 'rh:a_valider' %}">Tout voir</a></div>
+    <table class="table">
+      <tbody>
+      {% for demande in a_valider %}
+        <tr>
+          <td><a href="{{ demande.get_absolute_url }}">{{ demande.agent.nom_complet }}</a><br>
+            <small class="aide">{{ demande.get_type_display }} &middot; {{ demande.date_debut|date:"d/m" }} au {{ demande.date_fin|date:"d/m/Y" }}</small></td>
+          <td style="text-align:right"><a class="btn btn--principal btn--petit" href="{{ demande.get_absolute_url }}">Traiter</a></td>
+        </tr>
+      {% empty %}
+        <tr><td class="aide">Aucun dossier n'attend votre decision.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="grille-2">
+  <div class="bloc">
+    <div class="bloc__tete"><h2>Absences prevues autour de vous</h2></div>
+    <table class="table table--compacte">
+      <tbody>
+      {% for demande in equipe_absente %}
+        <tr><td>{{ demande.agent.nom_complet }}<br><small class="aide">{{ demande.agent.structure }}</small></td>
+          <td><span class="puce-type {{ demande.type|classe_type }}">{{ demande.get_type_display }}</span></td>
+          <td>{{ demande.date_debut|date:"d/m" }} &rarr; {{ demande.date_fin|date:"d/m/Y" }}</td></tr>
+      {% empty %}<tr><td class="aide">Aucune absence programmee sur les trente prochains jours.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if missions_sans_rapport %}
+  <div class="bloc">
+    <div class="bloc__tete"><h2>Rapports de mission attendus</h2></div>
+    <table class="table table--compacte">
+      <tbody>
+      {% for demande in missions_sans_rapport %}
+        <tr><td>{{ demande.numero }}<br><small class="aide">{{ demande.destination }} &middot; retour le {{ demande.date_fin|date:"d/m/Y" }}</small></td>
+          <td style="text-align:right"><a class="btn btn--secondaire btn--petit" href="{% url 'rh:rapport_mission' demande.pk %}">Deposer</a></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

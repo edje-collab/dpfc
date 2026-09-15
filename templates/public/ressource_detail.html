@@ -1,0 +1,18 @@
+{% extends "public/base.html" %}
+{% block titre %}{{ ressource.titre }}{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:ressources' %}">Ressources</a> / {{ ressource.titre|truncatechars:45 }}</div>
+<section class="section">
+  <div class="conteneur article">
+    <span class="etiquette">{{ ressource.get_type_display }}</span>
+    <h1>{{ ressource.titre }}</h1>
+    <p class="article__meta">{{ ressource.get_niveau_display }}{% if ressource.classe %} &middot; {{ ressource.classe }}{% endif %}{% if ressource.discipline %} &middot; {{ ressource.discipline }}{% endif %}{% if ressource.annee %} &middot; {{ ressource.annee }}{% endif %} &middot; {{ ressource.telechargements }} telechargement{{ ressource.telechargements|pluralize }}</p>
+    {{ ressource.description|linebreaks }}
+    {% if ressource.url_fichier %}
+      <a class="bouton bouton--vert" href="{% url 'contenus:ressource_telecharger' ressource.slug %}">Telecharger le document</a>
+    {% else %}
+      <p class="aide">Le fichier de cette ressource sera mis en ligne prochainement.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% for champ in form.visible_fields %}
+<div class="champ {% if champ.errors %}champ--erreur{% endif %}">
+  <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>
+  {{ champ }}
+  {% if champ.help_text %}<small>{{ champ.help_text }}</small>{% endif %}
+  {% for erreur in champ.errors %}<p class="erreur-champ">{{ erreur }}</p>{% endfor %}
+</div>
+{% endfor %}
+{% for champ in form.hidden_fields %}{{ champ }}{% endfor %}
+{% if form.non_field_errors %}<ul class="alertes">{% for erreur in form.non_field_errors %}<li class="alerte alerte--error">{{ erreur }}</li>{% endfor %}</ul>{% endif %}

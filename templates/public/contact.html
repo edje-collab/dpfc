@@ -1,0 +1,31 @@
+{% extends "public/base.html" %}
+{% block titre %}Contact{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / Contact</div>
+<section class="section">
+  <div class="conteneur grille grille--2">
+    <div>
+      <h1>Ecrire a la direction</h1>
+      <p>Une question sur un programme, un guide ou une formation ? Adressez votre message au service concerne ou a l'antenne de votre region.</p>
+      <form method="post" class="formulaire" style="display:grid;gap:1rem;max-width:560px">
+        {% csrf_token %}
+        {{ form.site_web }}
+        {% for champ in form.visible_fields %}
+          <div class="champ">
+            <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>
+            {{ champ }}
+            {% if champ.errors %}<p class="erreur">{{ champ.errors|striptags }}</p>{% endif %}
+          </div>
+        {% endfor %}
+        <button class="bouton bouton--vert" type="submit">Envoyer le message</button>
+      </form>
+    </div>
+    <aside class="chiffre">
+      <h2>Coordonnees</h2>
+      <p>{{ config_site.nom_site }}<br>{{ config_site.adresse }}</p>
+      <p>Telephone : {{ config_site.telephone }}<br>Courriel : <a href="mailto:{{ config_site.email }}">{{ config_site.email }}</a></p>
+      <p>Les agents de la direction et des antennes deposent leurs demandes administratives depuis l'<a href="{% url 'accounts:connexion' %}">espace agent</a>.</p>
+    </aside>
+  </div>
+</section>
+{% endblock %}

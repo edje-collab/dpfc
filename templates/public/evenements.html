@@ -1,0 +1,32 @@
+{% extends "public/base.html" %}
+{% block titre %}Agenda{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / Evenements</div>
+<section class="section">
+  <div class="conteneur">
+    <h1>Evenements et formations</h1>
+    <h2>A venir</h2>
+    {% for evenement in a_venir %}
+      <div class="evenement">
+        <div class="date-bloc"><strong>{{ evenement.date_debut|date:"d" }}</strong><span>{{ evenement.date_debut|date:"M Y" }}</span></div>
+        <div class="evenement__corps">
+          <h3><a href="{{ evenement.get_absolute_url }}">{{ evenement.titre }}</a></h3>
+          <p>{{ evenement.get_type_display }}{% if evenement.public_cible %} &middot; {{ evenement.public_cible }}{% endif %}</p>
+        </div>
+        <div class="evenement__lieu">{{ evenement.lieu }}</div>
+      </div>
+    {% empty %}<p class="aide">Aucune activite programmee pour l'instant.</p>{% endfor %}
+
+    {% if passes %}
+      <h2 style="margin-top:2.5rem">Activites passees</h2>
+      {% for evenement in passes %}
+        <div class="evenement">
+          <div class="date-bloc" style="background:#8aa5ad"><strong>{{ evenement.date_debut|date:"d" }}</strong><span>{{ evenement.date_debut|date:"M Y" }}</span></div>
+          <div class="evenement__corps"><h3><a href="{{ evenement.get_absolute_url }}">{{ evenement.titre }}</a></h3><p>{{ evenement.get_type_display }}</p></div>
+          <div class="evenement__lieu">{{ evenement.lieu }}</div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

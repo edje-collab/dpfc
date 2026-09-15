@@ -1,0 +1,30 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Organisation{% endblock %}
+{% block titre_page %}Organisation de la direction{% endblock %}
+{% block contenu %}
+<div class="bloc">
+  <h2>Direction centrale</h2>
+  <table class="table">
+    <thead><tr><th>Structure</th><th>Type</th><th>Rattachement</th><th>Responsable</th><th>Agents</th></tr></thead>
+    <tbody>
+      {% for s in structures_centrales %}
+        <tr><td>{{ s.nom }}{% if s.sigle %} <small class="aide">({{ s.sigle }})</small>{% endif %}</td>
+          <td>{{ s.get_type_display }}</td><td>{{ s.parent.sigle|default:"-" }}</td>
+          <td>{{ s.responsable.nom_complet|default:"-" }}</td><td>{{ s.agents.count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="bloc">
+  <h2>Antennes regionales</h2>
+  <table class="table">
+    <thead><tr><th>Antenne</th><th>Region</th><th>Chef d'antenne</th><th>Contact</th><th>Agents</th></tr></thead>
+    <tbody>
+      {% for s in antennes %}
+        <tr><td><a href="{{ s.get_absolute_url }}">{{ s.nom }}</a></td><td>{{ s.region.nom }}</td>
+          <td>{{ s.responsable.nom_complet|default:"-" }}</td><td>{{ s.telephone|default:"-" }}</td><td>{{ s.agents.count }}</td></tr>
+      {% empty %}<tr><td colspan="5" class="aide">Aucune antenne enregistree.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+<div class="champ {% if champ.field.widget.input_type == 'textarea' or large %}champ--large{% endif %}">
+  <label for="{{ champ.id_for_label }}">{{ champ.label }}{% if champ.field.required %} *{% endif %}</label>
+  {{ champ }}
+  {% if champ.help_text %}<span class="aide">{{ champ.help_text }}</span>{% endif %}
+  {% if champ.errors %}<span class="erreur">{{ champ.errors|striptags }}</span>{% endif %}
+</div>

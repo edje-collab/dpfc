@@ -1,0 +1,37 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}{{ agent_fiche.nom_complet }}{% endblock %}
+{% block titre_page %}{{ agent_fiche.nom_complet }}{% endblock %}
+{% block sous_titre %}{{ agent_fiche.fonction|default:agent_fiche.get_role_display }}{% endblock %}
+{% block contenu %}
+<div class="grille-2">
+  <div class="bloc">
+    <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem">
+      {% if agent_fiche.photo %}<img class="avatar avatar--grand" src="{{ agent_fiche.photo.url }}" alt="">{% else %}<span class="avatar avatar--grand">{{ agent_fiche.initiales }}</span>{% endif %}
+      <div><h2 style="margin:0">{{ agent_fiche.titre_civilite }} {{ agent_fiche.nom_complet }}</h2>
+        <p class="aide" style="margin:0">{{ agent_fiche.matricule }} &middot; {{ agent_fiche.get_situation_display }}</p></div>
+    </div>
+    <table class="table table--compacte">
+      <tbody>
+        <tr><th>Fonction</th><td>{{ agent_fiche.fonction|default:"-" }}</td></tr>
+        <tr><th>Grade</th><td>{{ agent_fiche.grade|default:"-" }}</td></tr>
+        <tr><th>Structure</th><td>{{ agent_fiche.libelle_affectation }}</td></tr>
+        <tr><th>Affectation</th><td>{% if agent_fiche.est_en_region %}Antenne regionale{% else %}Direction centrale{% endif %}</td></tr>
+        <tr><th>Superieur</th><td>{{ agent_fiche.superieur.nom_complet|default:"-" }}</td></tr>
+        <tr><th>Courriel</th><td>{{ agent_fiche.email|default:"-" }}</td></tr>
+        <tr><th>Telephone</th><td>{{ agent_fiche.telephone|default:"-" }}</td></tr>
+        <tr><th>Prise de service</th><td>{{ agent_fiche.date_prise_service|date:"d/m/Y"|default:"-" }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="bloc">
+    <h2>Agents encadres</h2>
+    <table class="table table--compacte">
+      <tbody>
+      {% for sub in subordonnes %}
+        <tr><td><a href="{% url 'accounts:agent_detail' sub.pk %}">{{ sub.nom_complet }}</a></td><td class="aide">{{ sub.fonction }}</td></tr>
+      {% empty %}<tr><td class="aide">Aucun agent rattache.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

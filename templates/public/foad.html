@@ -1,0 +1,42 @@
+{% extends "public/base.html" %}
+{% block titre %}Formation ouverte et a distance{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / FOAD</div>
+<section class="section">
+  <div class="conteneur">
+    <h1>{% if page %}{{ page.titre }}{% else %}Formation ouverte et a distance{% endif %}</h1>
+    <div class="article">
+      {% if page %}{{ page.contenu|safe }}
+      {% else %}
+        <p><strong>La formation continue des enseignants se poursuit en ligne, entre deux regroupements presentiels.</strong></p>
+        <p>Les modules sont accessibles depuis la plateforme nationale et utilisables sur ordinateur comme sur telephone, y compris dans les antennes regionales disposant d'une connexion limitee.</p>
+      {% endif %}
+      {% if config_site.lien_foad %}<a class="bouton bouton--vert" href="{{ config_site.lien_foad }}" rel="noopener">Acceder a la plateforme</a>{% endif %}
+    </div>
+
+    {% if modules %}
+      <h2 style="margin-top:2.5rem">Modules disponibles</h2>
+      <div class="grille grille--3">
+        {% for module in modules %}
+          <article class="carte-actu"><div class="carte-actu__corps">
+            <span class="etiquette">{{ module.get_niveau_display }}</span>
+            <h3><a href="{{ module.get_absolute_url }}">{{ module.titre }}</a></h3>
+            <p>{{ module.description|truncatechars:120 }}</p>
+          </div></article>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if formations %}
+      <h2 style="margin-top:2.5rem">Sessions programmees</h2>
+      {% for evenement in formations %}
+        <div class="evenement">
+          <div class="date-bloc"><strong>{{ evenement.date_debut|date:"d" }}</strong><span>{{ evenement.date_debut|date:"M Y" }}</span></div>
+          <div class="evenement__corps"><h3><a href="{{ evenement.get_absolute_url }}">{{ evenement.titre }}</a></h3><p>{{ evenement.public_cible }}</p></div>
+          <div class="evenement__lieu">{{ evenement.lieu }}</div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

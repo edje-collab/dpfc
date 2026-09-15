@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Armoiries stylisees">
+  <path d="M32 3 58 12v22c0 14-11 24-26 27C17 58 6 48 6 34V12L32 3Z" fill="#0b6b60"/>
+  <path d="M32 8 53 15v19c0 11.5-9 19.8-21 22.4C20 53.8 11 45.5 11 34V15L32 8Z" fill="#12a594"/>
+  <path d="M20 27h24v3H20zm0 7h24v3H20zm0 7h16v3H20z" fill="#ffffff"/>
+  <circle cx="32" cy="20" r="4.4" fill="#f0a02a"/>
+</svg>

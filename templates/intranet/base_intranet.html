@@ -1,0 +1,87 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titre %}Espace agent{% endblock %} | Portail {{ config_site.sigle }}</title>
+  <link rel="icon" href="{% static 'img/blason.svg' %}" type="image/svg+xml">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/intranet.css' %}">
+</head>
+<body class="intranet">
+<div class="appli">
+  <aside class="lateral">
+    <a class="lateral__marque" href="{% url 'contenus:accueil' %}">
+      <img src="{% static 'img/blason.svg' %}" alt="">
+      <strong>{{ config_site.sigle }}<span>Espace agent</span></strong>
+    </a>
+    {% with url_nom=request.resolver_match.url_name %}
+    <nav aria-label="Navigation de l'espace agent">
+      <h4>Mon activite</h4>
+      <a href="{% url 'rh:tableau_bord' %}" class="{% if url_nom == 'tableau_bord' %}actif{% endif %}">Tableau de bord</a>
+      <a href="{% url 'rh:mes_demandes' %}" class="{% if url_nom in 'mes_demandes demande_detail demande_creer' %}actif{% endif %}">Mes demandes</a>
+      <a href="{% url 'rh:mes_soldes' %}" class="{% if url_nom == 'mes_soldes' %}actif{% endif %}">Mes conges</a>
+      <a href="{% url 'accounts:notifications' %}" class="{% if url_nom == 'notifications' %}actif{% endif %}">
+        Notifications {% if nb_notifications %}<span class="badge-compteur">{{ nb_notifications }}</span>{% endif %}
+      </a>
+
+      <h4>Encadrement</h4>
+      <a href="{% url 'rh:a_valider' %}" class="{% if url_nom == 'a_valider' %}actif{% endif %}">
+        A valider {% if nb_a_valider %}<span class="badge-compteur">{{ nb_a_valider }}</span>{% endif %}
+      </a>
+      <a href="{% url 'rh:planning' %}" class="{% if url_nom == 'planning' %}actif{% endif %}">Planning des absences</a>
+      {% if user.est_valideur or user.est_rh or user.est_direction or user.peut_administrer %}
+        <a href="{% url 'rh:registre' %}" class="{% if url_nom == 'registre' %}actif{% endif %}">Registre des actes</a>
+      {% endif %}
+
+      <h4>Direction</h4>
+      <a href="{% url 'accounts:annuaire' %}" class="{% if url_nom == 'annuaire' %}actif{% endif %}">Annuaire des agents</a>
+      <a href="{% url 'accounts:organigramme' %}" class="{% if url_nom == 'organigramme' %}actif{% endif %}">Organisation</a>
+      {% if user.est_rh or user.peut_administrer %}
+        <a href="{% url 'accounts:comptes_liste' %}" class="{% if url_nom == 'comptes_liste' %}actif{% endif %}">Comptes des agents</a>
+        <a href="{% url 'accounts:import_agents' %}" class="{% if url_nom == 'import_agents' %}actif{% endif %}">Import Excel des agents</a>
+        <a href="{% url 'rh:soldes_gestion' %}" class="{% if url_nom == 'soldes_gestion' %}actif{% endif %}">Droits a conge</a>
+        <a href="{% url 'rh:jours_feries' %}" class="{% if url_nom == 'jours_feries' %}actif{% endif %}">Jours feries</a>
+      {% endif %}
+      {% if user.is_staff %}<a href="{% url 'admin:index' %}">Administration du site</a>{% endif %}
+
+      <h4>Mon compte</h4>
+      <a href="{% url 'accounts:profil' %}" class="{% if url_nom == 'profil' %}actif{% endif %}">Mon profil</a>
+      <a href="{% url 'signature:ma_cle' %}" class="{% if url_nom == 'ma_cle' %}actif{% endif %}">Ma signature electronique</a>
+      <a href="{% url 'contenus:accueil' %}">Voir le site public</a>
+      <form method="post" action="{% url 'accounts:deconnexion' %}">{% csrf_token %}
+        <button class="btn btn--secondaire btn--petit" type="submit" style="margin:.6rem 1.1rem">Se deconnecter</button>
+      </form>
+    </nav>
+    {% endwith %}
+  </aside>
+
+  <div class="principal">
+    <header class="barre-haute">
+      <div class="barre-haute__titre">{% block titre_page %}Espace agent{% endblock %}
+        <small>{% block sous_titre %}{{ user.libelle_affectation }}{% endblock %}</small>
+      </div>
+      <div class="jeton-agent">
+        {% if user.photo %}<img class="avatar" src="{{ user.photo.url }}" alt="">{% else %}<span class="avatar">{{ user.initiales }}</span>{% endif %}
+        <span>
+          <strong>{{ user.nom_complet }}</strong><br>
+          <small style="color:#5d7a85">{{ user.fonction|default:user.get_role_display }}</small>
+        </span>
+      </div>
+    </header>
+
+    <div class="contenu">
+      {% if messages %}
+        <div class="sans-impression" style="display:grid;gap:.6rem;margin-bottom:1.2rem">
+          {% for message in messages %}
+            <div class="bloc" style="border-left:4px solid {% if message.tags == 'error' %}#c0392b{% elif message.tags == 'warning' %}#f0a83c{% else %}#14958a{% endif %}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block contenu %}{% endblock %}
+    </div>
+  </div>
+</div>
+<script src="{% static 'js/main.js' %}" defer></script>
+</body>
+</html>

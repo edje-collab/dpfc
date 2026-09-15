@@ -1,0 +1,33 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Droits a conge{% endblock %}
+{% block titre_page %}Droits a conge des agents{% endblock %}
+{% block sous_titre %}Annee de reference {{ annee }}{% endblock %}
+{% block contenu %}
+<div class="grille-2">
+  <div class="bloc">
+    <h2>Attribuer ou corriger un solde</h2>
+    <form method="post" class="formulaire">
+      {% csrf_token %}
+      {% for champ in form %}
+        <div class="champ"><label for="{{ champ.id_for_label }}">{{ champ.label }}</label>{{ champ }}
+          {% if champ.errors %}<p class="erreurs">{{ champ.errors|striptags }}</p>{% endif %}</div>
+      {% endfor %}
+      <div class="actions"><button class="btn btn--principal" type="submit">Enregistrer</button></div>
+    </form>
+  </div>
+  <div class="bloc">
+    <h2>Soldes {{ annee }}</h2>
+    <div class="defilement">
+    <table class="table table--compacte">
+      <thead><tr><th>Agent</th><th>Affectation</th><th>Droits</th><th>Consommes</th><th>Restants</th></tr></thead>
+      <tbody>
+      {% for solde in soldes %}
+        <tr><td>{{ solde.agent.nom_complet }}</td><td>{{ solde.agent.libelle_affectation }}</td>
+          <td>{{ solde.total_droits }}</td><td>{{ solde.jours_consommes }}</td><td><strong>{{ solde.jours_restants }}</strong></td></tr>
+      {% empty %}<tr><td colspan="5" class="aide">Aucun solde enregistre pour cette annee.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

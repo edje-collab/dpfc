@@ -1,0 +1,19 @@
+{% extends "public/base.html" %}
+{% block titre %}{{ evenement.titre }}{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:evenements' %}">Evenements</a> / {{ evenement.titre|truncatechars:45 }}</div>
+<section class="section">
+  <div class="conteneur article">
+    <span class="etiquette">{{ evenement.get_type_display }}</span>
+    <h1>{{ evenement.titre }}</h1>
+    <p class="article__meta">
+      Du {{ evenement.date_debut|date:"j F Y" }}{% if evenement.date_fin %} au {{ evenement.date_fin|date:"j F Y" }}{% endif %}
+      {% if evenement.heure_debut %} a partir de {{ evenement.heure_debut|time:"H:i" }}{% endif %} &middot; {{ evenement.lieu }}
+      {% if evenement.structure %} &middot; organise par {{ evenement.structure.libelle_complet }}{% endif %}
+    </p>
+    {{ evenement.description|linebreaks }}
+    {% if evenement.public_cible %}<p><strong>Public cible :</strong> {{ evenement.public_cible }}</p>{% endif %}
+    {% if evenement.inscription_requise %}<a class="bouton bouton--vert" href="{% url 'contenus:contact' %}">Demander une inscription</a>{% endif %}
+  </div>
+</section>
+{% endblock %}

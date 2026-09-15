@@ -1,0 +1,11 @@
+{% extends "public/base.html" %}
+{% block titre %}Erreur du serveur{% endblock %}
+{% block contenu %}
+<section class="section">
+  <div class="conteneur article">
+    <h1>Le service rencontre une difficulte</h1>
+    <p>L'incident a ete enregistre. Reessayez dans quelques minutes ; si le probleme persiste, signalez-le a l'administrateur du portail.</p>
+    <a class="bouton bouton--vert" href="{% url 'contenus:accueil' %}">Retour a l'accueil</a>
+  </div>
+</section>
+{% endblock %}

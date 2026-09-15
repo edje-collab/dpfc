@@ -1,0 +1,168 @@
+from datetime import date, timedelta
+
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
+from django.urls import reverse
+
+from apps.core.models import Region, Structure
+from apps.rh.models import Demande, TypeDemande
+from apps.rh.services import soumettre
+from apps.signature.services import creer_cle
+
+Agent = get_user_model()
+CODE_SIGNATURE = "signature2026"
+
+
+class ApiTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.direction = Structure.objects.create(
+            nom="Direction de la Pedagogie", sigle="DPFC", type=Structure.Type.DIRECTION
+        )
+        cls.rh = Agent.objects.create_user("R0001", password="motdepasse123", last_name="TRAORE",
+                                           first_name="Ibrahim", role=Agent.Role.RH, structure=cls.direction)
+        cls.agent = Agent.objects.create_user("A0001", password="motdepasse123", last_name="DIALLO",
+                                              first_name="Mariam", structure=cls.direction, superieur=cls.rh)
+
+    def _jeton(self):
+        reponse = self.client.post(
+            reverse("api:connexion"), {"matricule": "A0001", "password": "motdepasse123"},
+            content_type="application/json",
+        )
+        self.assertEqual(reponse.status_code, 200)
+        return reponse.json()
+
+    def test_connexion_retourne_le_profil(self):
+        donnees = self._jeton()
+        self.assertIn("access", donnees)
+        self.assertEqual(donnees["agent"]["matricule"], "A0001")
+
+    def test_acces_refuse_sans_jeton(self):
+        self.assertEqual(self.client.get("/api/v1/demandes/").status_code, 401)
+
+    def test_cycle_de_vie_d_une_demande(self):
+        jeton = self._jeton()["access"]
+        entetes = {"HTTP_AUTHORIZATION": f"Bearer {jeton}"}
+        debut = date.today() + timedelta(days=10)
+        creation = self.client.post(
+            "/api/v1/demandes/",
+            {"type": "PERMISSION", "motif": "Demarche administrative",
+             "date_debut": str(debut), "date_fin": str(debut)},
+            content_type="application/json", **entetes,
+        )
+        self.assertEqual(creation.status_code, 201, creation.content)
+        identifiant = creation.json()["id"]
+        soumission = self.client.post(f"/api/v1/demandes/{identifiant}/soumettre/", **entetes)
+        self.assertEqual(soumission.status_code, 200)
+        self.assertEqual(soumission.json()["statut"], "SOUMISE")
+
+    def test_contenus_publics_sans_authentification(self):
+        for chemin in ["/api/v1/public/actualites/", "/api/v1/public/ressources/",
+                       "/api/v1/public/projets/", "/api/v1/public/antennes/"]:
+            with self.subTest(chemin=chemin):
+                self.assertEqual(self.client.get(chemin).status_code, 200)
+
+
+class ApiAntenneTest(TestCase):
+    """Parcours terrain : depot d'une mission hors perimetre et signature mobile."""
+
+    @classmethod
+    def setUpTestData(cls):
+        region = Region.objects.create(nom="Gbeke", code="GBK", chef_lieu="Bouake")
+        cls.drenaet = Structure.objects.create(
+            nom="DRENAET de Bouake", sigle="DRENAET-GBK", type=Structure.Type.DRENAET, region=region
+        )
+        cls.antenne = Structure.objects.create(
+            nom="Antenne de Bouake", sigle="APFC-GBK", type=Structure.Type.ANTENNE,
+            region=region, drenaet=cls.drenaet,
+        )
+        cls.dr = Agent.objects.create_user(
+            "G0001", password="motdepasse123", last_name="ADJOUMANI", first_name="Kouadio",
+            role=Agent.Role.DIRECTEUR_REGIONAL, structure=cls.drenaet,
+        )
+        cls.drenaet.responsable = cls.dr
+        cls.drenaet.save()
+        cls.chef = Agent.objects.create_user(
+            "C0001", password="motdepasse123", last_name="KONE", first_name="Adama",
+            role=Agent.Role.CHEF_ANTENNE, structure=cls.antenne,
+        )
+        cls.antenne.responsable = cls.chef
+        cls.antenne.save()
+        cls.agent = Agent.objects.create_user(
+            "A0001", password="motdepasse123", last_name="OUATTARA", first_name="Fatoumata",
+            structure=cls.antenne, superieur=cls.chef,
+        )
+
+    def _entetes(self, matricule):
+        reponse = self.client.post(
+            reverse("api:connexion"), {"matricule": matricule, "password": "motdepasse123"},
+            content_type="application/json",
+        )
+        return {"HTTP_AUTHORIZATION": f"Bearer {reponse.json()['access']}"}
+
+    def test_depot_de_pieces_et_circuit_hors_perimetre(self):
+        entetes = self._entetes("A0001")
+        debut = date.today() + timedelta(days=15)
+        creation = self.client.post(
+            "/api/v1/demandes/",
+            {"type": "ORDRE_MISSION", "motif": "Atelier national", "destination": "Abidjan",
+             "hors_perimetre_drenaet": True, "date_debut": str(debut),
+             "date_fin": str(debut + timedelta(days=2))},
+            content_type="application/json", **entetes,
+        )
+        self.assertEqual(creation.status_code, 201, creation.content)
+        identifiant = creation.json()["id"]
+        self.assertEqual(creation.json()["autorite_signataire"], "DRENAET")
+
+        depot = self.client.post(
+            f"/api/v1/demandes/{identifiant}/pieces/",
+            {
+                "termes_de_reference": SimpleUploadedFile("tdr.txt", b"Termes de reference"),
+                "lettre_invitation": SimpleUploadedFile("invitation.txt", b"Invitation"),
+            },
+            **entetes,
+        )
+        self.assertEqual(depot.status_code, 200, depot.content)
+        self.assertEqual(sorted(depot.json()["pieces_enregistrees"]),
+                         ["lettre_invitation", "termes_de_reference"])
+
+        soumission = self.client.post(f"/api/v1/demandes/{identifiant}/soumettre/", **entetes)
+        self.assertEqual(soumission.status_code, 200)
+        validations = soumission.json()["validations"]
+        self.assertEqual(len(validations), 2)
+        self.assertIn("DRENAET", validations[-1]["libelle"])
+
+    def test_signature_mobile_a_la_derniere_etape(self):
+        creer_cle(self.chef, CODE_SIGNATURE)
+        debut = date.today() + timedelta(days=10)
+        demande = Demande.objects.create(
+            agent=self.agent, type=TypeDemande.PERMISSION, motif="Demarche",
+            date_debut=debut, date_fin=debut,
+        )
+        soumettre(demande)
+        entetes = self._entetes("C0001")
+
+        sans_code = self.client.post(
+            f"/api/v1/demandes/{demande.pk}/decision/", {"favorable": True, "commentaire": "Accorde"},
+            content_type="application/json", **entetes,
+        )
+        self.assertEqual(sans_code.status_code, 400)
+
+        avec_code = self.client.post(
+            f"/api/v1/demandes/{demande.pk}/decision/",
+            {"favorable": True, "commentaire": "Accorde", "code_signature": CODE_SIGNATURE},
+            content_type="application/json", **entetes,
+        )
+        self.assertEqual(avec_code.status_code, 200, avec_code.content)
+        code = avec_code.json()["code_verification"]
+        demande.refresh_from_db()
+        self.assertEqual(demande.statut, Demande.Statut.APPROUVEE)
+
+        verification = self.client.get(f"/api/v1/verification/{code}/")
+        self.assertEqual(verification.status_code, 200)
+        self.assertTrue(verification.json()["signature_valide"])
+        self.assertTrue(verification.json()["document_intact"])
+
+    def test_verification_code_inconnu(self):
+        self.assertEqual(self.client.get("/api/v1/verification/DPFC-0000-0000-0000/").status_code, 404)

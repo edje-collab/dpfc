@@ -1,0 +1,37 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Comptes des agents{% endblock %}
+{% block titre_page %}Comptes des agents{% endblock %}
+{% block sous_titre %}Creation, affectation et acces au portail{% endblock %}
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="actions" style="align-items:end">
+    <div class="champ"><label for="q">Recherche</label><input type="search" id="q" name="q" value="{{ q }}" placeholder="Nom ou matricule"></div>
+    <button class="btn btn--principal" type="submit">Filtrer</button>
+    <a class="btn btn--secondaire" href="{% url 'accounts:compte_creer' %}">Creer un compte</a>
+  </form>
+</div>
+<div class="bloc defilement">
+  <table class="table">
+    <thead><tr><th>Matricule</th><th>Agent</th><th>Structure</th><th>Role</th><th>Etat</th><th>Derniere activite</th><th></th></tr></thead>
+    <tbody>
+    {% for agent in agents %}
+      <tr>
+        <td>{{ agent.matricule }}</td>
+        <td>{{ agent.nom_complet }}<br><small class="aide">{{ agent.fonction }}</small></td>
+        <td>{{ agent.libelle_affectation }}</td>
+        <td>{{ agent.get_role_display }}</td>
+        <td><span class="pastille pastille--{% if agent.is_active %}ok{% else %}ko{% endif %}">{% if agent.is_active %}Actif{% else %}Desactive{% endif %}</span></td>
+        <td class="aide">{{ agent.derniere_activite|date:"d/m/Y H:i"|default:"jamais connecte" }}</td>
+        <td style="white-space:nowrap">
+          <a class="btn btn--secondaire btn--petit" href="{% url 'accounts:compte_modifier' agent.pk %}">Modifier</a>
+          <form method="post" action="{% url 'accounts:compte_mdp' agent.pk %}" style="display:inline" data-confirmer="Reinitialiser le mot de passe de {{ agent.nom_complet }} ?">{% csrf_token %}
+            <button class="btn btn--secondaire btn--petit" type="submit">Mot de passe</button></form>
+          <form method="post" action="{% url 'accounts:compte_activation' agent.pk %}" style="display:inline" data-confirmer="Confirmer le changement d'etat du compte ?">{% csrf_token %}
+            <button class="btn btn--danger btn--petit" type="submit">{% if agent.is_active %}Desactiver{% else %}Activer{% endif %}</button></form>
+        </td>
+      </tr>
+    {% empty %}<tr><td colspan="7" class="aide">Aucun compte.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

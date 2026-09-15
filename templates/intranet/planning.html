@@ -1,0 +1,39 @@
+{% extends "intranet/base_intranet.html" %}
+{% load dpfc %}
+{% block titre %}Planning{% endblock %}
+{% block titre_page %}Planning des absences{% endblock %}
+{% block sous_titre %}{{ debut|date:"F Y" }}{% endblock %}
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="actions" style="align-items:end">
+    <a class="btn btn--secondaire" href="?mois={{ mois_precedent|date:'n' }}&annee={{ mois_precedent|date:'Y' }}{% if structure_active %}&structure={{ structure_active }}{% endif %}">Mois precedent</a>
+    <a class="btn btn--secondaire" href="?mois={{ mois_suivant|date:'n' }}&annee={{ mois_suivant|date:'Y' }}{% if structure_active %}&structure={{ structure_active }}{% endif %}">Mois suivant</a>
+    <div class="champ"><label for="structure">Structure</label>
+      <select name="structure" id="structure">
+        <option value="">Toutes celles que je peux voir</option>
+        {% for s in structures %}<option value="{{ s.slug }}" {% if structure_active == s.slug %}selected{% endif %}>{{ s.libelle_complet }}</option>{% endfor %}
+      </select></div>
+    <input type="hidden" name="mois" value="{{ debut|date:'n' }}"><input type="hidden" name="annee" value="{{ debut|date:'Y' }}">
+    <button class="btn btn--principal" type="submit">Afficher</button>
+  </form>
+</div>
+
+<div class="bloc defilement">
+  <table class="planning">
+    <thead>
+      <tr><th class="agent">Agent</th>{% for jour in jours %}<th>{{ jour|date:"j" }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for ligne in lignes %}
+        <tr>
+          <td class="agent">{{ ligne.demande.agent.nom_complet }}
+            <span class="puce-type {{ ligne.demande.type|classe_type }}">{{ ligne.demande.get_type_display }}</span></td>
+          {% for case in ligne.cases %}<td class="{% if case.occupee %}occupee {% endif %}{% if case.weekend %}weekend{% endif %}"></td>{% endfor %}
+        </tr>
+      {% empty %}
+        <tr><td class="agent" colspan="32">Aucune absence approuvee sur cette periode.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

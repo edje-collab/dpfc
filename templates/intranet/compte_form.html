@@ -1,0 +1,22 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Compte agent{% endblock %}
+{% block titre_page %}{% if agent_edite %}Modifier le compte de {{ agent_edite.nom_complet }}{% else %}Creer un compte agent{% endif %}{% endblock %}
+{% block contenu %}
+<div class="bloc" style="max-width:840px">
+  <form method="post" class="formulaire">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<p class="erreurs">{{ form.non_field_errors|striptags }}</p>{% endif %}
+    <div class="paire">
+      {% for champ in form %}
+        <div class="champ"><label for="{{ champ.id_for_label }}">{{ champ.label }}</label>{{ champ }}
+          {% if champ.help_text %}<p class="aide">{{ champ.help_text }}</p>{% endif %}
+          {% if champ.errors %}<p class="erreurs">{{ champ.errors|striptags }}</p>{% endif %}</div>
+      {% endfor %}
+    </div>
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Enregistrer</button>
+      <a class="btn btn--secondaire" href="{% url 'accounts:comptes_liste' %}">Retour</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "public/base.html" %}
+{% load static %}
+{% block titre %}Connexion a l'espace agent{% endblock %}
+{% block entete_supplementaire %}<link rel="stylesheet" href="{% static 'css/intranet.css' %}">{% endblock %}
+{% block contenu %}
+<div class="page-connexion" style="min-height:auto">
+  <div class="page-connexion__visuel">
+    <h1>Vos actes administratifs, en ligne</h1>
+    <p>Conge, permission, ordre de mission ou declaration d'absence : deposez votre demande, suivez son circuit de validation et recuperez le document signe.</p>
+    <p style="margin-top:1.5rem;font-size:.95rem">Agents de la direction centrale comme des antennes regionales utilisent le meme espace.</p>
+  </div>
+  <div class="page-connexion__formulaire">
+    <div class="carte-connexion">
+      <h2>Connexion</h2>
+      <p class="aide">Identifiez-vous avec votre matricule ou votre courriel professionnel.</p>
+      <form method="post" class="formulaire">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<p class="erreurs">{{ form.non_field_errors|striptags }}</p>{% endif %}
+        {% for champ in form %}
+          <div class="champ">
+            <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>
+            {{ champ }}
+            {% if champ.errors %}<p class="erreurs">{{ champ.errors|striptags }}</p>{% endif %}
+          </div>
+        {% endfor %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <button class="btn btn--principal" type="submit">Se connecter</button>
+      </form>
+      <p class="aide" style="margin-top:1rem">Mot de passe oublie ou compte bloque : contactez le service du personnel de la direction.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

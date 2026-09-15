@@ -1,0 +1,196 @@
+/* ==========================================================================
+   Portail DPFC - espace agent (intranet)
+   Interface de travail : plus sobre que le site public, dense et lisible.
+   ========================================================================== */
+:root {
+  --i-encre: #12323f;
+  --i-doux: #5d7a85;
+  --i-teal: #14958a;
+  --i-teal-fonce: #0d6b64;
+  --i-fond: #eef3f2;
+  --i-papier: #ffffff;
+  --i-trait: #dfe8e6;
+  --i-ocre: #f0a83c;
+  --i-rouge: #c0392b;
+  --i-vert: #3fa45f;
+  --i-rayon: 12px;
+}
+
+body.intranet {
+  margin: 0; background: var(--i-fond); color: var(--i-encre);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif; font-size: 16px; line-height: 1.6;
+}
+body.intranet h1, body.intranet h2, body.intranet h3 {
+  font-family: "Poppins", "Source Sans 3", system-ui, sans-serif; line-height: 1.25; margin: 0 0 .5em;
+}
+body.intranet h1 { font-size: 1.6rem; }
+body.intranet h2 { font-size: 1.2rem; }
+body.intranet a { color: var(--i-teal-fonce); }
+
+.appli { display: grid; grid-template-columns: 258px 1fr; min-height: 100vh; }
+
+/* --- Barre laterale ------------------------------------------------------- */
+.lateral { background: #0c2a34; color: #cfe2e5; padding: 1.1rem 0 2rem; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.lateral__marque { display: flex; gap: .7rem; align-items: center; padding: 0 1.1rem 1.2rem; }
+.lateral__marque img { width: 38px; }
+.lateral__marque strong { color: #fff; font-size: .98rem; font-family: "Poppins", sans-serif; }
+.lateral__marque span { display: block; font-size: .75rem; color: #8fb3bb; }
+.lateral h4 { color: #7fa7b1; font-size: .76rem; letter-spacing: .06em; margin: 1.4rem 1.1rem .4rem; font-weight: 600; }
+.lateral nav a {
+  display: flex; align-items: center; gap: .6rem; padding: .55rem 1.1rem; color: #cfe2e5;
+  text-decoration: none; font-size: .96rem; border-left: 3px solid transparent;
+}
+.lateral nav a:hover { background: rgba(255,255,255,.07); color: #fff; }
+.lateral nav a.actif { background: rgba(20,149,138,.22); border-left-color: var(--i-teal); color: #fff; font-weight: 600; }
+.badge-compteur {
+  margin-left: auto; background: var(--i-ocre); color: #3b2503; border-radius: 999px;
+  font-size: .74rem; font-weight: 700; padding: .05rem .45rem;
+}
+
+/* --- Zone principale ------------------------------------------------------ */
+.principal { display: flex; flex-direction: column; min-width: 0; }
+.barre-haute {
+  background: var(--i-papier); border-bottom: 1px solid var(--i-trait);
+  display: flex; align-items: center; gap: 1rem; padding: .7rem 1.6rem; position: sticky; top: 0; z-index: 20;
+}
+.barre-haute__titre { font-family: "Poppins", sans-serif; font-weight: 600; flex: 1; }
+.barre-haute__titre small { display: block; font-weight: 400; color: var(--i-doux); font-size: .82rem; font-family: inherit; }
+.jeton-agent { display: flex; align-items: center; gap: .6rem; }
+.avatar {
+  width: 38px; height: 38px; border-radius: 50%; background: var(--i-teal); color: #fff;
+  display: grid; place-items: center; font-weight: 700; font-size: .85rem; flex: none; object-fit: cover;
+}
+.avatar--grand { width: 78px; height: 78px; font-size: 1.5rem; }
+.contenu { padding: 1.6rem; max-width: 1280px; width: 100%; }
+
+/* --- Blocs ---------------------------------------------------------------- */
+.bloc { background: var(--i-papier); border: 1px solid var(--i-trait); border-radius: var(--i-rayon); padding: 1.2rem 1.3rem; }
+.bloc + .bloc { margin-top: 1.2rem; }
+.bloc__tete { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .9rem; }
+.bloc__tete h2 { margin: 0; }
+.grille-tb { display: grid; gap: 1.2rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.grille-2 { display: grid; gap: 1.2rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: start; }
+
+.indicateur { background: var(--i-papier); border: 1px solid var(--i-trait); border-radius: var(--i-rayon); padding: 1.1rem 1.2rem; }
+.indicateur strong { display: block; font-size: 2rem; font-family: "Poppins", sans-serif; color: var(--i-teal-fonce); line-height: 1.1; }
+.indicateur span { color: var(--i-doux); font-size: .92rem; }
+.jauge { height: 8px; background: var(--i-fond); border-radius: 999px; overflow: hidden; margin-top: .7rem; }
+.jauge i { display: block; height: 100%; background: var(--i-teal); }
+
+/* --- Pastilles et etiquettes --------------------------------------------- */
+.pastille { display: inline-block; font-size: .78rem; font-weight: 600; padding: .15rem .65rem; border-radius: 999px; white-space: nowrap; }
+.pastille--neutre { background: #e9eef0; color: #4a6873; }
+.pastille--attente { background: #fff2dc; color: #96601a; }
+.pastille--ok { background: #e0f5e6; color: #22713c; }
+.pastille--ko { background: #fdecea; color: #a5261a; }
+.puce-type { display: inline-block; font-size: .78rem; padding: .12rem .55rem; border-radius: 6px; background: #eaf4f3; color: var(--i-teal-fonce); font-weight: 600; }
+.puce-type.mission { background: #fff0d8; color: #8a5a12; }
+.puce-type.permission { background: #e8f1fd; color: #24548f; }
+.puce-type.absence { background: #f1eaf7; color: #5b3a86; }
+
+/* --- Tableaux ------------------------------------------------------------- */
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: .6rem .55rem; border-bottom: 1px solid var(--i-trait); text-align: left; font-size: .94rem; vertical-align: middle; }
+.table th { font-size: .78rem; color: var(--i-doux); font-weight: 600; letter-spacing: .02em; }
+.table tr:last-child td { border-bottom: 0; }
+.table--compacte td, .table--compacte th { padding: .45rem .4rem; }
+.defilement { overflow-x: auto; }
+
+/* --- Formulaires ---------------------------------------------------------- */
+.formulaire { display: grid; gap: 1rem; }
+.formulaire .champ { display: flex; flex-direction: column; gap: .3rem; }
+.formulaire label { font-weight: 600; font-size: .9rem; }
+.formulaire input, .formulaire select, .formulaire textarea {
+  font-family: inherit; font-size: 1rem; padding: .6rem .75rem; border: 1px solid var(--i-trait);
+  border-radius: 8px; background: #fff; width: 100%;
+}
+.formulaire input:focus, .formulaire select:focus, .formulaire textarea:focus { outline: 2px solid var(--i-teal); border-color: var(--i-teal); }
+.formulaire .paire { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.actions { display: flex; gap: .7rem; flex-wrap: wrap; margin-top: .5rem; }
+.btn {
+  display: inline-flex; align-items: center; gap: .4rem; padding: .58rem 1.1rem; border-radius: 8px;
+  border: 1px solid transparent; font-weight: 600; font-size: .95rem; cursor: pointer;
+  font-family: inherit; text-decoration: none;
+}
+.btn--principal { background: var(--i-teal); color: #fff; }
+.btn--principal:hover { background: var(--i-teal-fonce); color: #fff; }
+.btn--secondaire { background: #fff; border-color: var(--i-trait); color: var(--i-encre); }
+.btn--secondaire:hover { border-color: var(--i-teal); }
+.btn--danger { background: #fff; border-color: #e6b6b0; color: var(--i-rouge); }
+.btn--danger:hover { background: #fdecea; }
+.btn--petit { padding: .3rem .7rem; font-size: .85rem; }
+.erreurs { color: var(--i-rouge); font-size: .88rem; margin: .2rem 0 0; }
+.aide { color: var(--i-doux); font-size: .86rem; }
+
+/* --- Circuit de validation ------------------------------------------------ */
+.circuit { list-style: none; margin: 0; padding: 0; }
+.circuit li { display: flex; gap: .9rem; padding: .8rem 0; border-bottom: 1px dashed var(--i-trait); }
+.circuit li:last-child { border-bottom: 0; }
+.circuit__rang {
+  width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  font-weight: 700; font-size: .85rem; background: #e9eef0; color: #4a6873;
+}
+.circuit li.faite .circuit__rang { background: var(--i-vert); color: #fff; }
+.circuit li.refusee .circuit__rang { background: var(--i-rouge); color: #fff; }
+.circuit li.courante .circuit__rang { background: var(--i-ocre); color: #3b2503; }
+.circuit strong { display: block; font-size: .96rem; }
+.circuit small { color: var(--i-doux); }
+
+/* --- Planning ------------------------------------------------------------- */
+.planning { border-collapse: collapse; font-size: .8rem; }
+.planning th, .planning td { border: 1px solid var(--i-trait); padding: 2px; text-align: center; }
+.planning th.agent, .planning td.agent { text-align: left; padding: .35rem .5rem; white-space: nowrap; position: sticky; left: 0; background: #fff; }
+.planning td.occupee { background: var(--i-teal); }
+.planning td.weekend { background: #f2f5f6; }
+.planning td.occupee.weekend { background: #86c4bf; }
+
+/* --- Connexion ------------------------------------------------------------ */
+.page-connexion {
+  min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; background: var(--i-fond);
+}
+.page-connexion__visuel {
+  background: linear-gradient(160deg, #0d6b64, #0c2a34); color: #fff; padding: 3rem;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.page-connexion__visuel h1 { color: #fff; font-size: 2rem; max-width: 18ch; }
+.page-connexion__visuel p { color: #bfe0dc; max-width: 44ch; }
+.page-connexion__formulaire { display: grid; place-items: center; padding: 2rem; }
+.carte-connexion { background: #fff; border-radius: 16px; padding: 2rem; width: min(420px, 100%); box-shadow: 0 16px 40px rgba(12,42,52,.12); }
+
+/* --- Signature et QR ------------------------------------------------------ */
+.qr { text-align: center; }
+.qr svg { width: 118px; height: 118px; }
+.cartouche-signature {
+  border: 1px solid var(--i-trait); border-radius: 8px; padding: .9rem 1rem;
+  display: flex; gap: 1rem; align-items: center; justify-content: space-between;
+}
+.cartouche-signature small { color: var(--i-doux); }
+
+/* --- Document officiel imprimable ---------------------------------------- */
+.document {
+  background: #fff; max-width: 820px; margin: 0 auto; padding: 3rem 3.2rem;
+  border: 1px solid var(--i-trait); font-size: 15px; line-height: 1.7;
+}
+.document__entete { text-align: center; border-bottom: 2px solid var(--i-encre); padding-bottom: 1rem; margin-bottom: 1.6rem; }
+.document__entete p { margin: 0; font-size: .9rem; }
+.document h1 { text-align: center; font-size: 1.3rem; letter-spacing: .04em; margin: 2rem 0; }
+.document__signature { margin-top: 3rem; text-align: right; }
+.document dl { display: grid; grid-template-columns: 210px 1fr; gap: .4rem 1rem; }
+.document dt { font-weight: 600; }
+.document dd { margin: 0; }
+
+@media print {
+  .lateral, .barre-haute, .actions, .sans-impression { display: none !important; }
+  .appli { display: block; }
+  .contenu { padding: 0; }
+  .document { border: 0; padding: 0; }
+  body.intranet { background: #fff; }
+}
+
+@media (max-width: 980px) {
+  .appli { grid-template-columns: 1fr; }
+  .lateral { position: static; height: auto; }
+  .page-connexion { grid-template-columns: 1fr; }
+  .page-connexion__visuel { padding: 2rem; }
+  .formulaire .paire { grid-template-columns: 1fr; }
+}

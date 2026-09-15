@@ -1,0 +1,18 @@
+{% extends "public/base.html" %}
+{% block titre %}Recherche{% endblock %}
+{% block contenu %}
+<section class="section">
+  <div class="conteneur">
+    <h1>Rechercher sur le portail</h1>
+    <form class="filtres" method="get" role="search">
+      <div class="champ"><label for="q">Votre recherche</label><input type="search" id="q" name="q" value="{{ q }}" style="min-width:320px"></div>
+      <button class="bouton bouton--vert" type="submit">Rechercher</button>
+    </form>
+    {% if q %}<p>{{ total }} resultat{{ total|pluralize }} pour &laquo; {{ q }} &raquo;.</p>{% endif %}
+    {% if resultats.actualites %}<h2>Actualites</h2><ul class="liste-nue">{% for a in resultats.actualites %}<li><a href="{{ a.get_absolute_url }}">{{ a.titre }}</a> <span class="aide">{{ a.date_publication|date:"d/m/Y" }}</span></li>{% endfor %}</ul>{% endif %}
+    {% if resultats.ressources %}<h2>Ressources</h2><ul class="liste-nue">{% for r in resultats.ressources %}<li><a href="{{ r.get_absolute_url }}">{{ r.titre }}</a> <span class="aide">{{ r.get_type_display }}</span></li>{% endfor %}</ul>{% endif %}
+    {% if resultats.projets %}<h2>Projets</h2><ul class="liste-nue">{% for p in resultats.projets %}<li><a href="{{ p.get_absolute_url }}">{{ p.sigle }} - {{ p.nom }}</a></li>{% endfor %}</ul>{% endif %}
+    {% if resultats.evenements %}<h2>Evenements</h2><ul class="liste-nue">{% for e in resultats.evenements %}<li><a href="{{ e.get_absolute_url }}">{{ e.titre }}</a> <span class="aide">{{ e.date_debut|date:"d/m/Y" }}</span></li>{% endfor %}</ul>{% endif %}
+  </div>
+</section>
+{% endblock %}

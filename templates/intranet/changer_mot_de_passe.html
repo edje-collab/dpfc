@@ -1,0 +1,19 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Mot de passe{% endblock %}
+{% block titre_page %}Changer mon mot de passe{% endblock %}
+{% block contenu %}
+<div class="bloc" style="max-width:520px">
+  <form method="post" class="formulaire">
+    {% csrf_token %}
+    {% for champ in form %}
+      <div class="champ">
+        <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>
+        {{ champ }}
+        {% if champ.help_text %}<p class="aide">{{ champ.help_text|safe }}</p>{% endif %}
+        {% if champ.errors %}<p class="erreurs">{{ champ.errors|striptags }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <div class="actions"><button class="btn btn--principal" type="submit">Enregistrer</button></div>
+  </form>
+</div>
+{% endblock %}

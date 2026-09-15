@@ -1,0 +1,75 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}{{ demande.libelle_document }}{% endblock %}
+{% block titre_page %}{{ demande.libelle_document }}{% endblock %}
+{% block contenu %}
+<div class="actions sans-impression">
+  <button class="btn btn--principal" onclick="window.print()">Imprimer</button>
+  <a class="btn btn--secondaire" href="{{ demande.get_absolute_url }}">Retour a la demande</a>
+</div>
+
+<article class="document">
+  <div class="document__entete">
+    <p><strong>REPUBLIQUE DE COTE D'IVOIRE</strong></p>
+    <p>Union &mdash; Discipline &mdash; Travail</p>
+    <p style="margin-top:.6rem">{{ config_site.ministere }}</p>
+    <p><strong>{{ config_site.nom_site }}</strong></p>
+    {% if demande.agent.est_en_region %}<p>{{ demande.agent.structure.libelle_complet }}</p>{% endif %}
+  </div>
+
+  <p style="text-align:right">{{ config_site.adresse|default:"Abidjan" }}, le {{ demande.cloturee_le|date:"j F Y" }}</p>
+  <h1>{{ demande.libelle_document|upper }}<br><small>N&deg; {{ demande.numero }}</small></h1>
+
+  <dl>
+    <dt>Nom et prenoms</dt><dd>{{ demande.agent.titre_civilite }} {{ demande.agent.nom_complet }}</dd>
+    <dt>Matricule</dt><dd>{{ demande.agent.matricule }}</dd>
+    <dt>Grade / fonction</dt><dd>{{ demande.agent.grade|default:"-" }} &mdash; {{ demande.agent.fonction|default:"-" }}</dd>
+    <dt>Structure d'affectation</dt><dd>{{ demande.agent.libelle_affectation }}</dd>
+    <dt>Objet</dt><dd>{{ demande.get_type_display }}</dd>
+    <dt>Periode</dt><dd>du {{ demande.date_debut|date:"j F Y" }} au {{ demande.date_fin|date:"j F Y" }} ({{ demande.nb_jours }} jour{{ demande.nb_jours|pluralize }} ouvrable{{ demande.nb_jours|pluralize }})</dd>
+    {% if demande.destination %}<dt>Destination</dt><dd>{{ demande.destination }}{% if demande.region_mission %} ({{ demande.region_mission }}){% endif %}</dd>{% endif %}
+    {% if demande.moyen_transport %}<dt>Moyen de transport</dt><dd>{{ demande.moyen_transport }}</dd>{% endif %}
+    {% if demande.structures_visitees %}<dt>Structures a visiter</dt><dd>{{ demande.structures_visitees }}</dd>{% endif %}
+    {% if demande.lieu_jouissance %}<dt>Lieu de jouissance</dt><dd>{{ demande.lieu_jouissance }}</dd>{% endif %}
+    {% if demande.interimaire %}<dt>Interim assure par</dt><dd>{{ demande.interimaire.nom_complet }}</dd>{% endif %}
+  </dl>
+
+  <p style="margin-top:1.5rem">{{ demande.motif|linebreaksbr }}</p>
+
+  <p style="margin-top:1.5rem">Les autorites administratives et militaires sont priees de faciliter l'accomplissement de la presente mission le cas echeant.</p>
+
+  <h3 style="margin-top:2rem">Visas</h3>
+  <table class="table table--compacte">
+    <tbody>
+      {% for visa in signataires %}
+        <tr><td>{{ visa.libelle }}</td><td>{{ visa.valideur.nom_complet }}</td><td>{{ visa.decide_le|date:"d/m/Y" }}</td>
+          <td>{{ visa.commentaire|default:"Avis favorable" }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="document__signature">
+    <p>Pour le Ministre et par delegation,<br>{{ demande.autorite_signataire }}</p>
+    <p style="margin-top:3.5rem">{% for visa in signataires %}{% if forloop.last %}{{ visa.valideur.nom_complet }}{% endif %}{% endfor %}</p>
+  </div>
+
+  {% if signatures %}
+    <h3 style="margin-top:2rem">Signature electronique</h3>
+    {% for signature in signatures %}
+      <div class="cartouche-signature" style="margin-bottom:.7rem">
+        <div>
+          <strong>{{ signature.signataire.nom_complet }}</strong> &mdash; {{ signature.qualite }}<br>
+          <small>Signe le {{ signature.horodatage|date:"j F Y a H:i" }} &middot; {{ signature.algorithme }}</small><br>
+          <small>Code de verification : <code>{{ signature.code_verification }}</code></small><br>
+          <small>Empreinte SHA-256 : <code style="font-size:.72rem">{{ signature.empreinte_lisible }}</code></small>
+        </div>
+        {% if forloop.last and qr %}{% include "intranet/_qr.html" with svg=qr.svg url=qr.url signature=signature %}{% endif %}
+      </div>
+    {% endfor %}
+    <p class="aide" style="font-size:.78rem">Authenticite verifiable en ligne a l'adresse {{ qr.url }} ou depuis la rubrique « Verifier un acte signe » du portail.</p>
+  {% else %}
+    <p class="aide" style="margin-top:1.5rem;font-size:.8rem">Cet acte n'a pas encore recu de signature electronique : il doit etre signe de facon manuscrite par l'autorite competente.</p>
+  {% endif %}
+
+  <p class="aide" style="margin-top:1.5rem;font-size:.78rem">Document genere par le portail de la DPFC le {% now "d/m/Y a H:i" %}. Reference de controle : {{ demande.numero }}/{{ demande.pk }}.</p>
+</article>
+{% endblock %}

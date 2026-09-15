@@ -1,0 +1,47 @@
+{% extends "intranet/base_intranet.html" %}
+{% load dpfc %}
+{% block titre %}Registre des actes{% endblock %}
+{% block titre_page %}Registre des actes administratifs{% endblock %}
+{% block sous_titre %}{{ stats.total }} acte{{ stats.total|pluralize }} &middot; {{ stats.jours }} jour{{ stats.jours|pluralize }} accordes{% endblock %}
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="actions" style="align-items:end">
+    {% for champ in form %}
+      <div class="champ"><label for="{{ champ.id_for_label }}">{{ champ.label }}</label>{{ champ }}</div>
+    {% endfor %}
+    <button class="btn btn--principal" type="submit">Filtrer</button>
+    <a class="btn btn--secondaire" href="?{{ parametres }}&export=csv">Exporter en CSV</a>
+  </form>
+</div>
+
+<div class="grille-tb">
+  {% for ligne in stats.par_type %}
+    <div class="indicateur"><strong>{{ ligne.n }}</strong><span>{{ ligne.type }}</span></div>
+  {% endfor %}
+</div>
+
+<div class="bloc">
+  <div class="defilement">
+  <table class="table">
+    <thead><tr><th>Numero</th><th>Agent</th><th>Affectation</th><th>Acte</th><th>Periode</th><th>Jours</th><th>Statut</th><th></th></tr></thead>
+    <tbody>
+    {% for demande in page_obj %}
+      <tr>
+        <td>{{ demande.numero }}</td>
+        <td>{{ demande.agent.nom_complet }}<br><small class="aide">{{ demande.agent.matricule }}</small></td>
+        <td>{{ demande.agent.libelle_affectation }}</td>
+        <td><span class="puce-type {{ demande.type|classe_type }}">{{ demande.get_type_display }}</span></td>
+        <td>{{ demande.date_debut|date:"d/m/Y" }} &rarr; {{ demande.date_fin|date:"d/m/Y" }}</td>
+        <td>{{ demande.nb_jours }}</td>
+        <td>{{ demande|pastille_statut }}</td>
+        <td><a class="btn btn--secondaire btn--petit" href="{{ demande.get_absolute_url }}">Ouvrir</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="8" class="aide">Aucun acte ne correspond a ces criteres.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% include "public/_pagination.html" %}
+</div>
+{% endblock %}

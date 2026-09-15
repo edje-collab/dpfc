@@ -1,0 +1,29 @@
+{% extends "public/base.html" %}
+{% block titre %}Actualites{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / Actualites</div>
+<section class="section">
+  <div class="conteneur">
+    <h1>Actualites de la direction</h1>
+    <form class="filtres" method="get" role="search">
+      <div class="champ">
+        <label for="q">Rechercher</label>
+        <input type="search" id="q" name="q" value="{{ q }}" placeholder="Mot-cle, titre...">
+      </div>
+      <button class="bouton bouton--vert" type="submit">Filtrer</button>
+    </form>
+    <div class="puces-filtre">
+      <a href="{% url 'contenus:actualites' %}" class="{% if not categorie_active %}active{% endif %}">Toutes</a>
+      {% for categorie in categories %}
+        <a href="?categorie={{ categorie.slug }}" class="{% if categorie_active == categorie.slug %}active{% endif %}">{{ categorie.nom }} ({{ categorie.n }})</a>
+      {% endfor %}
+    </div>
+    <div class="grille grille--3">
+      {% for article in page_obj %}{% include "public/_carte_actualite.html" %}{% empty %}
+        <p class="aide">Aucune publication ne correspond a cette recherche.</p>
+      {% endfor %}
+    </div>
+    {% include "public/_pagination.html" %}
+  </div>
+</section>
+{% endblock %}

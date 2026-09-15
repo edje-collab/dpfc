@@ -1,0 +1,26 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Jours feries{% endblock %}
+{% block titre_page %}Jours feries{% endblock %}
+{% block sous_titre %}Ces dates sont exclues du decompte des jours ouvrables{% endblock %}
+{% block contenu %}
+<div class="grille-2">
+  <div class="bloc">
+    <h2>Ajouter un jour ferie</h2>
+    <form method="post" class="formulaire">
+      {% csrf_token %}
+      {% for champ in form %}
+        <div class="champ"><label for="{{ champ.id_for_label }}">{{ champ.label }}</label>{{ champ }}
+          {% if champ.errors %}<p class="erreurs">{{ champ.errors|striptags }}</p>{% endif %}</div>
+      {% endfor %}
+      <div class="actions"><button class="btn btn--principal" type="submit">Enregistrer</button></div>
+    </form>
+  </div>
+  <div class="bloc">
+    <h2>Calendrier</h2>
+    <table class="table table--compacte">
+      <tbody>{% for jour in jours %}<tr><td>{{ jour.date|date:"l j F Y" }}</td><td>{{ jour.libelle }}</td></tr>
+      {% empty %}<tr><td class="aide">Aucun jour ferie enregistre.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

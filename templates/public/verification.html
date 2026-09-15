@@ -1,0 +1,38 @@
+{% extends "public/base.html" %}
+{% block titre %}Verification d'un acte{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / Verification d'un acte</div>
+<section class="section">
+  <div class="conteneur" style="max-width:760px">
+    <h1>Verifier un acte signe electroniquement</h1>
+    <p>Saisissez le code de verification figurant sur le document (ou scannez son QR code) pour controler son authenticite.</p>
+    <form class="filtres" method="get">
+      <div class="champ"><label for="id_code">Code de verification</label>{{ form.code }}</div>
+      <button class="bouton bouton--vert" type="submit">Verifier</button>
+    </form>
+
+    {% if introuvable %}
+      <div class="message error"><strong>Code inconnu.</strong> Aucun acte signe ne correspond au code {{ code }}. Verifiez la saisie ou rapprochez-vous de la structure emettrice.</div>
+    {% endif %}
+
+    {% if signature %}
+      <div class="message {% if resultat.signature_valide and resultat.document_intact and not resultat.cle_revoquee %}success{% elif resultat.signature_valide and resultat.cle_revoquee %}warning{% else %}error{% endif %}">
+        <strong>{{ resultat.message }}</strong>
+      </div>
+      <table class="tableau">
+        <tbody>
+          <tr><th>Nature de l'acte</th><td>{{ signature.demande.get_type_display }}</td></tr>
+          <tr><th>Numero</th><td>{{ signature.demande.numero }}</td></tr>
+          <tr><th>Beneficiaire</th><td>{{ signature.demande.agent.nom_complet }} ({{ signature.demande.agent.matricule }})</td></tr>
+          <tr><th>Periode</th><td>du {{ signature.demande.date_debut|date:"j F Y" }} au {{ signature.demande.date_fin|date:"j F Y" }}</td></tr>
+          <tr><th>Signataire</th><td>{{ signature.signataire.nom_complet }} &mdash; {{ signature.qualite }}</td></tr>
+          <tr><th>Signe le</th><td>{{ signature.horodatage|date:"j F Y a H:i" }}</td></tr>
+          <tr><th>Algorithme</th><td>{{ signature.algorithme }}</td></tr>
+          <tr><th>Empreinte de l'acte</th><td><code style="font-size:.8rem">{{ signature.empreinte_lisible }}</code></td></tr>
+        </tbody>
+      </table>
+      <p class="aide">Cette page atteste uniquement de l'integrite et de l'origine du document electronique. Pour toute contestation, adressez-vous a la structure emettrice.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

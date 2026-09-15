@@ -1,0 +1,125 @@
+{% extends "intranet/base_intranet.html" %}
+{% load dpfc %}
+{% block titre %}{{ demande.numero|default:"Demande" }}{% endblock %}
+{% block titre_page %}{{ demande.get_type_display }} {% if demande.numero %}&mdash; {{ demande.numero }}{% endif %}{% endblock %}
+{% block sous_titre %}Depose par {{ demande.agent.nom_complet }} ({{ demande.agent.matricule }}) &middot; {{ demande.agent.libelle_affectation }}{% endblock %}
+{% block contenu %}
+<div class="grille-2">
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete">
+        <h2>Details</h2>
+        {{ demande|pastille_statut }}
+      </div>
+      <table class="table table--compacte">
+        <tbody>
+          <tr><th>Periode</th><td>du {{ demande.date_debut|date:"j F Y" }} au {{ demande.date_fin|date:"j F Y" }}
+            {% if demande.heure_debut %}({{ demande.heure_debut|time:"H:i" }} - {{ demande.heure_fin|time:"H:i" }}){% endif %}</td></tr>
+          <tr><th>Duree</th><td>{{ demande.nb_jours }} jour{{ demande.nb_jours|pluralize }} ouvrable{{ demande.nb_jours|pluralize }}</td></tr>
+          <tr><th>Motif</th><td>{{ demande.motif|linebreaksbr }}</td></tr>
+          {% if demande.destination %}<tr><th>Destination</th><td>{{ demande.destination }}{% if demande.region_mission %} ({{ demande.region_mission }}){% endif %}</td></tr>{% endif %}
+          {% if demande.moyen_transport %}<tr><th>Transport</th><td>{{ demande.moyen_transport }}</td></tr>{% endif %}
+          {% if demande.structures_visitees %}<tr><th>Structures visitees</th><td>{{ demande.structures_visitees }}</td></tr>{% endif %}
+          {% if demande.accompagnants %}<tr><th>Accompagnants</th><td>{{ demande.accompagnants }}</td></tr>{% endif %}
+          {% if demande.lieu_jouissance %}<tr><th>Lieu de jouissance</th><td>{{ demande.lieu_jouissance }}</td></tr>{% endif %}
+          {% if demande.interimaire %}<tr><th>Interim</th><td>{{ demande.interimaire.nom_complet }}</td></tr>{% endif %}
+          {% if demande.contact_pendant_absence %}<tr><th>Contact</th><td>{{ demande.contact_pendant_absence }}</td></tr>{% endif %}
+          {% if demande.hors_perimetre_drenaet %}<tr><th>Perimetre</th><td>Mission hors perimetre DRENAET &mdash; ordre de mission etabli par le DRENAET</td></tr>{% endif %}
+          {% if demande.termes_de_reference %}<tr><th>Termes de reference</th><td><a href="{{ demande.termes_de_reference.url }}">Consulter les TDR</a></td></tr>{% endif %}
+          {% if demande.lettre_invitation %}<tr><th>Lettre d'invitation</th><td><a href="{{ demande.lettre_invitation.url }}">Consulter la lettre</a></td></tr>{% endif %}
+          {% if demande.depose_par %}<tr><th>Depot</th><td>Effectue au secretariat par {{ demande.depose_par.nom_complet }}</td></tr>{% endif %}
+          {% if demande.justificatif %}<tr><th>Justificatif</th><td><a href="{{ demande.justificatif.url }}">Consulter la piece jointe</a></td></tr>{% endif %}
+          <tr><th>Depot</th><td>{{ demande.soumise_le|date:"d/m/Y H:i"|default:"non transmise" }}</td></tr>
+          {% if demande.motif_rejet %}<tr><th>Motif du rejet</th><td>{{ demande.motif_rejet }}</td></tr>{% endif %}
+        </tbody>
+      </table>
+
+      <div class="actions sans-impression">
+        {% if demande.est_modifiable and demande.agent_id == user.id %}
+          <a class="btn btn--secondaire" href="{% url 'rh:demande_modifier' demande.pk %}">Modifier</a>
+          <form method="post" action="{% url 'rh:demande_soumettre' demande.pk %}">{% csrf_token %}
+            <button class="btn btn--principal" type="submit">Transmettre pour validation</button></form>
+        {% endif %}
+        {% if demande.statut == 'APPROUVEE' %}
+          <a class="btn btn--principal" href="{% url 'rh:document' demande.pk %}">{{ demande.libelle_document }}</a>
+        {% endif %}
+        {% if demande.type == 'ORDRE_MISSION' and demande.statut == 'APPROUVEE' and demande.agent_id == user.id %}
+          <a class="btn btn--secondaire" href="{% url 'rh:rapport_mission' demande.pk %}">{% if rapport %}Modifier le rapport{% else %}Deposer le rapport de mission{% endif %}</a>
+        {% endif %}
+        {% if demande.est_annulable and demande.agent_id == user.id or user.est_rh and demande.est_annulable %}
+          <form method="post" action="{% url 'rh:demande_annuler' demande.pk %}" data-confirmer="Confirmez-vous l'annulation de cette demande ?">{% csrf_token %}
+            <button class="btn btn--danger" type="submit">Annuler la demande</button></form>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if signatures %}
+    <div class="bloc">
+      <h2>Signature electronique</h2>
+      {% for signature in signatures %}
+        <div class="cartouche-signature" style="margin-bottom:.6rem">
+          <div>
+            <strong>{{ signature.signataire.nom_complet }}</strong> &mdash; {{ signature.qualite }}<br>
+            <small>{{ signature.horodatage|date:"d/m/Y H:i" }} &middot; {{ signature.algorithme }}</small>
+          </div>
+          <div style="text-align:right">
+            <code>{{ signature.code_verification }}</code><br>
+            <a class="btn btn--secondaire btn--petit" href="{% url 'signature:verification' signature.code_verification %}">Verifier</a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if rapport %}
+    <div class="bloc">
+      <h2>Rapport de mission</h2>
+      <p class="aide">Depose le {{ rapport.depose_le|date:"d/m/Y H:i" }}</p>
+      <p>{{ rapport.resume|linebreaksbr }}</p>
+      {% if rapport.resultats %}<h3>Resultats</h3><p>{{ rapport.resultats|linebreaksbr }}</p>{% endif %}
+      {% if rapport.recommandations %}<h3>Recommandations</h3><p>{{ rapport.recommandations|linebreaksbr }}</p>{% endif %}
+      {% if rapport.fichier %}<p><a href="{{ rapport.fichier.url }}">Telecharger le rapport detaille</a></p>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="bloc">
+      <h2>Circuit de validation</h2>
+      <ol class="circuit">
+        {% for validation in validations %}
+          <li class="{% if validation.decision == 'FAVORABLE' %}faite{% elif validation.decision == 'DEFAVORABLE' %}refusee{% elif etape and etape.id == validation.id %}courante{% endif %}">
+            <span class="circuit__rang">{{ validation.ordre }}</span>
+            <span>
+              <strong>{{ validation.libelle }}</strong>
+              <small>{{ validation.valideur.nom_complet }}{% if validation.valideur.fonction %} &middot; {{ validation.valideur.fonction }}{% endif %}</small>
+              <small>{{ validation.get_decision_display }}{% if validation.decide_le %} le {{ validation.decide_le|date:"d/m/Y H:i" }}{% endif %}</small>
+              {% if validation.commentaire %}<small>&laquo; {{ validation.commentaire }} &raquo;</small>{% endif %}
+            </span>
+          </li>
+        {% empty %}
+          <li class="aide">Le circuit sera construit lors de la transmission de la demande.</li>
+        {% endfor %}
+      </ol>
+    </div>
+
+    {% if peut_decider %}
+    <div class="bloc sans-impression">
+      <h2>Votre decision</h2>
+      <p class="aide">Etape : {{ etape.libelle }}{% if etape_de_signature %} &middot; derniere etape : votre avis favorable vaut signature de l'acte.{% endif %}</p>
+      <form method="post" action="{% url 'rh:demande_decider' demande.pk %}" class="formulaire">
+        {% csrf_token %}
+        {% for champ in form_decision %}
+          <div class="champ">
+            <label>{{ champ.label }}</label>
+            {{ champ }}
+            {% if champ.errors %}<p class="erreurs">{{ champ.errors|striptags }}</p>{% endif %}
+          </div>
+        {% endfor %}
+        <div class="actions"><button class="btn btn--principal" type="submit">Enregistrer ma decision</button></div>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

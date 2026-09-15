@@ -1,0 +1,28 @@
+{% extends "intranet/base_intranet.html" %}
+{% load dpfc %}
+{% block titre %}A valider{% endblock %}
+{% block titre_page %}Dossiers attendant votre decision{% endblock %}
+{% block sous_titre %}{{ total }} dossier{{ total|pluralize }} en attente{% endblock %}
+{% block contenu %}
+<div class="bloc">
+  <div class="defilement">
+  <table class="table">
+    <thead><tr><th>Agent</th><th>Affectation</th><th>Acte</th><th>Periode</th><th>Jours</th><th></th></tr></thead>
+    <tbody>
+    {% for demande in demandes %}
+      <tr>
+        <td><strong>{{ demande.agent.nom_complet }}</strong><br><small class="aide">{{ demande.agent.matricule }}</small></td>
+        <td>{{ demande.agent.libelle_affectation }}</td>
+        <td><span class="puce-type {{ demande.type|classe_type }}">{{ demande.get_type_display }}</span><br><small class="aide">{{ demande.numero }}</small></td>
+        <td>{{ demande.date_debut|date:"d/m/Y" }} &rarr; {{ demande.date_fin|date:"d/m/Y" }}</td>
+        <td>{{ demande.nb_jours }}</td>
+        <td><a class="btn btn--principal btn--petit" href="{{ demande.get_absolute_url }}">Examiner</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="aide">Rien a valider pour le moment.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

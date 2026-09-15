@@ -1,0 +1,76 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Import des agents{% endblock %}
+{% block titre_page %}Import Excel des agents{% endblock %}
+{% block sous_titre %}Analyse puis application : rien n'est ecrit avant votre confirmation{% endblock %}
+{% block contenu %}
+<div class="grille-2">
+  <div class="bloc">
+    <h2>1. Deposer le fichier</h2>
+    <form method="post" enctype="multipart/form-data" class="formulaire">
+      {% csrf_token %}
+      <div class="champ">
+        <label for="{{ form.fichier.id_for_label }}">{{ form.fichier.label }}</label>
+        {{ form.fichier }}
+        <p class="aide">{{ form.fichier.help_text }}</p>
+        {% if form.fichier.errors %}<p class="erreurs">{{ form.fichier.errors|striptags }}</p>{% endif %}
+      </div>
+      <div class="actions">
+        <button class="btn btn--principal" type="submit" name="action" value="analyser">Analyser le fichier</button>
+        <a class="btn btn--secondaire" href="{% url 'accounts:modele_import' %}">Telecharger le modele Excel</a>
+      </div>
+    </form>
+  </div>
+  <aside class="bloc">
+    <h2>Colonnes attendues</h2>
+    <p class="aide"><code>matricule</code> et <code>nom</code> sont obligatoires ; les autres colonnes sont facultatives.</p>
+    <ul class="aide" style="padding-left:1.1rem">
+      <li><code>structure</code> : sigle de la structure (ex. <code>SDPRPN</code>, <code>APFC-GBK</code>) ; la feuille « Aide » du modele en donne la liste.</li>
+      <li><code>role</code> : AGENT, SECRETARIAT, CHEF_SERVICE, SOUS_DIRECTEUR, CHEF_ANTENNE, DIRECTEUR_REGIONAL, RH, DIRECTEUR.</li>
+      <li><code>superieur</code> : matricule du superieur hierarchique, rattache apres l'import.</li>
+      <li><code>date_prise_service</code> : JJ/MM/AAAA ou AAAA-MM-JJ.</li>
+      <li><code>droit_conge</code> : nombre de jours pour l'annee en cours (30 par defaut).</li>
+    </ul>
+    <p class="aide">Un agent deja connu est mis a jour ; un nouvel agent recoit son matricule comme mot de passe initial, a changer a la premiere connexion.</p>
+  </aside>
+</div>
+
+{% if resultats %}
+<div class="bloc">
+  <div class="bloc__tete">
+    <h2>2. Verifier et confirmer</h2>
+    <span>
+      <span class="pastille pastille--ok">{{ nb_creations }} creation{{ nb_creations|pluralize }}</span>
+      <span class="pastille pastille--attente">{{ nb_maj }} mise{{ nb_maj|pluralize }} a jour</span>
+      <span class="pastille pastille--ko">{{ nb_erreurs }} anomalie{{ nb_erreurs|pluralize }}</span>
+    </span>
+  </div>
+  <div class="defilement">
+    <table class="table table--compacte">
+      <thead><tr><th>Ligne</th><th>Matricule</th><th>Agent</th><th>Structure</th><th>Role</th><th>Superieur</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for r in resultats %}
+          <tr>
+            <td>{{ r.ligne }}</td>
+            <td>{{ r.matricule }}</td>
+            <td>{{ r.nom }} {{ r.prenoms }}</td>
+            <td>{{ r.structure_libelle|default:"-" }}</td>
+            <td>{{ r.role }}</td>
+            <td>{{ r.superieur|default:"-" }}</td>
+            <td>
+              {% if r.action == 'erreur' %}<span class="pastille pastille--ko">{{ r.erreurs|join:", " }}</span>
+              {% elif r.action == 'creation' %}<span class="pastille pastille--ok">Creation</span>
+              {% else %}<span class="pastille pastille--attente">Mise a jour</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <form method="post" class="actions" data-confirmer="Confirmez-vous l'import des lignes valides ?">
+    {% csrf_token %}
+    <button class="btn btn--principal" type="submit" name="action" value="appliquer">Importer les lignes valides</button>
+    <button class="btn btn--secondaire" type="submit" name="action" value="abandonner">Abandonner</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

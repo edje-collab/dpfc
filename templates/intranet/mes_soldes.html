@@ -1,0 +1,39 @@
+{% extends "intranet/base_intranet.html" %}
+{% load dpfc %}
+{% block titre %}Mes conges{% endblock %}
+{% block titre_page %}Mes droits a conge{% endblock %}
+{% block contenu %}
+<div class="grille-tb">
+  <div class="indicateur"><strong>{{ solde.total_droits }}</strong><span>jours de droits ({{ solde.annee }})</span></div>
+  <div class="indicateur"><strong>{{ solde.jours_consommes }}</strong><span>jours consommes</span></div>
+  <div class="indicateur"><strong>{{ solde.jours_restants }}</strong><span>jours restants</span>
+    <div class="jauge"><i style="width: {{ solde.taux_consommation }}%"></i></div></div>
+</div>
+
+<div class="bloc">
+  <h2>Historique des droits</h2>
+  <table class="table">
+    <thead><tr><th>Annee</th><th>Droit annuel</th><th>Reports</th><th>Consommes</th><th>Restants</th></tr></thead>
+    <tbody>
+      {% for s in soldes %}
+        <tr><td>{{ s.annee }}</td><td>{{ s.droit_jours }}</td><td>{{ s.jours_reportes }}</td><td>{{ s.jours_consommes }}</td><td><strong>{{ s.jours_restants }}</strong></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="bloc">
+  <h2>Mes conges</h2>
+  <table class="table">
+    <thead><tr><th>Numero</th><th>Type</th><th>Periode</th><th>Jours</th><th>Statut</th></tr></thead>
+    <tbody>
+      {% for demande in conges %}
+        <tr><td><a href="{{ demande.get_absolute_url }}">{{ demande.numero|default:"brouillon" }}</a></td>
+          <td>{{ demande.get_type_display }}</td>
+          <td>{{ demande.date_debut|date:"d/m/Y" }} &rarr; {{ demande.date_fin|date:"d/m/Y" }}</td>
+          <td>{{ demande.nb_jours }}</td><td>{{ demande|pastille_statut }}</td></tr>
+      {% empty %}<tr><td colspan="5" class="aide">Aucun conge enregistre.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

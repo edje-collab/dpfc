@@ -1,0 +1,13 @@
+{% extends "public/base.html" %}
+{% block titre %}{{ page.titre }}{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / {{ page.titre }}</div>
+<section class="section">
+  <div class="conteneur article">
+    <h1>{{ page.titre }}</h1>
+    {% if page.chapeau %}<p><strong>{{ page.chapeau }}</strong></p>{% endif %}
+    {% if page.image %}<img src="{{ page.image.url }}" alt="">{% endif %}
+    {{ page.contenu|safe }}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "intranet/base_intranet.html" %}
+{% load dpfc %}
+{% block titre %}Mes demandes{% endblock %}
+{% block titre_page %}Mes demandes{% endblock %}
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="actions" style="align-items:end">
+    <div class="champ"><label for="type">Type d'acte</label>
+      <select name="type" id="type">
+        <option value="">Tous</option>
+        {% for valeur, libelle in types %}<option value="{{ valeur }}" {% if type_actif == valeur %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+      </select></div>
+    <div class="champ"><label for="statut">Statut</label>
+      <select name="statut" id="statut">
+        <option value="">Tous</option>
+        {% for valeur, libelle in statuts %}<option value="{{ valeur }}" {% if statut_actif == valeur %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+      </select></div>
+    <button class="btn btn--principal" type="submit">Filtrer</button>
+    <a class="btn btn--secondaire" href="{% url 'rh:mes_demandes' %}">Reinitialiser</a>
+  </form>
+</div>
+
+<div class="bloc">
+  <div class="defilement">
+  <table class="table">
+    <thead><tr><th>Numero</th><th>Type</th><th>Periode</th><th>Jours</th><th>Statut</th><th>Avancement</th><th></th></tr></thead>
+    <tbody>
+    {% for demande in page_obj %}
+      <tr>
+        <td>{{ demande.numero|default:"-" }}</td>
+        <td><span class="puce-type {{ demande.type|classe_type }}">{{ demande.get_type_display }}</span></td>
+        <td>{{ demande.date_debut|date:"d/m/Y" }} &rarr; {{ demande.date_fin|date:"d/m/Y" }}</td>
+        <td>{{ demande.nb_jours }}</td>
+        <td>{{ demande|pastille_statut }}</td>
+        <td style="min-width:110px"><div class="jauge"><i style="width:{{ demande.progression }}%"></i></div></td>
+        <td><a class="btn btn--secondaire btn--petit" href="{{ demande.get_absolute_url }}">Ouvrir</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7" class="aide">Aucune demande enregistree. Utilisez le tableau de bord pour en deposer une.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% include "public/_pagination.html" %}
+</div>
+{% endblock %}

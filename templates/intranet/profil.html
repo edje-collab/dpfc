@@ -1,0 +1,34 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Mon profil{% endblock %}
+{% block titre_page %}Mon profil{% endblock %}
+{% block contenu %}
+<div class="grille-2">
+  <div class="bloc">
+    <h2>Mes informations</h2>
+    <form method="post" enctype="multipart/form-data" class="formulaire">
+      {% csrf_token %}
+      {% for champ in form %}
+        <div class="champ"><label for="{{ champ.id_for_label }}">{{ champ.label }}</label>{{ champ }}
+          {% if champ.errors %}<p class="erreurs">{{ champ.errors|striptags }}</p>{% endif %}</div>
+      {% endfor %}
+      <div class="actions"><button class="btn btn--principal" type="submit">Enregistrer</button>
+        <a class="btn btn--secondaire" href="{% url 'accounts:changer_mot_de_passe' %}">Changer mon mot de passe</a></div>
+    </form>
+  </div>
+  <div class="bloc">
+    <h2>Donnees administratives</h2>
+    <p class="aide">Ces informations sont gerees par le service du personnel. Signalez toute erreur par courriel.</p>
+    <table class="table table--compacte">
+      <tbody>
+        <tr><th>Matricule</th><td>{{ user.matricule }}</td></tr>
+        <tr><th>Fonction</th><td>{{ user.fonction|default:"-" }}</td></tr>
+        <tr><th>Grade</th><td>{{ user.grade|default:"-" }}</td></tr>
+        <tr><th>Structure</th><td>{{ user.libelle_affectation }}</td></tr>
+        <tr><th>Role dans le portail</th><td>{{ user.get_role_display }}</td></tr>
+        <tr><th>Superieur hierarchique</th><td>{{ user.superieur.nom_complet|default:"-" }}</td></tr>
+        <tr><th>Prise de service</th><td>{{ user.date_prise_service|date:"d/m/Y"|default:"-" }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

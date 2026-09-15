@@ -1,0 +1,26 @@
+{% extends "public/base.html" %}
+{% block titre %}{{ article.titre }}{% endblock %}
+{% block description %}{{ article.chapeau }}{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / <a href="{% url 'contenus:actualites' %}">Actualites</a> / {{ article.titre|truncatechars:45 }}</div>
+<section class="section">
+  <div class="conteneur">
+    <article class="article">
+      {% if article.categorie %}<span class="etiquette">{{ article.categorie }}</span>{% endif %}
+      <h1>{{ article.titre }}</h1>
+      <p class="article__meta">
+        Publie le {{ article.date_publication|date:"j F Y" }}
+        {% if article.structure %} par {{ article.structure.libelle_complet }}{% endif %}
+        &middot; {{ article.vues }} lecture{{ article.vues|pluralize }}
+      </p>
+      {% if article.image %}<img src="{{ article.image.url }}" alt="">{% endif %}
+      <p><strong>{{ article.chapeau }}</strong></p>
+      {{ article.contenu|linebreaks }}
+    </article>
+    {% if similaires %}
+      <h2 style="margin-top:3rem">A lire aussi</h2>
+      <div class="grille grille--3">{% for article in similaires %}{% include "public/_carte_actualite.html" %}{% endfor %}</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

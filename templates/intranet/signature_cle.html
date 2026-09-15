@@ -1,0 +1,65 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Ma signature electronique{% endblock %}
+{% block titre_page %}Ma signature electronique{% endblock %}
+{% block sous_titre %}Cle personnelle de signature des actes administratifs{% endblock %}
+{% block contenu %}
+<div class="grille-2">
+  <div class="bloc">
+    {% if cle and cle.est_valide %}
+      <h2>Cle active</h2>
+      <table class="table table--compacte">
+        <tbody>
+          <tr><th>Algorithme</th><td>{{ cle.algorithme }}</td></tr>
+          <tr><th>Empreinte</th><td><code>{{ cle.empreinte_lisible }}</code></td></tr>
+          <tr><th>Creee le</th><td>{{ cle.creee_le|date:"d/m/Y H:i" }}</td></tr>
+          <tr><th>Valable jusqu'au</th><td>{{ cle.expire_le|date:"d/m/Y" }}</td></tr>
+        </tbody>
+      </table>
+      <form method="post" class="formulaire" style="margin-top:1.2rem"
+            data-confirmer="La revocation empeche toute nouvelle signature. Confirmer ?">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="revoquer">
+        <div class="champ"><label for="id_motif">{{ form_revocation.motif.label }}</label>{{ form_revocation.motif }}</div>
+        <div class="actions"><button class="btn btn--danger" type="submit">Revoquer ma cle</button></div>
+      </form>
+    {% else %}
+      <h2>{% if cle %}Renouveler ma cle{% else %}Creer ma cle de signature{% endif %}</h2>
+      {% if cle and cle.revoquee %}<p class="aide">Cle revoquee : {{ cle.motif_revocation }}</p>{% endif %}
+      <form method="post" class="formulaire">
+        {% csrf_token %}
+        {% for champ in form %}
+          <div class="champ">
+            <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>
+            {{ champ }}
+            {% if champ.help_text %}<p class="aide">{{ champ.help_text }}</p>{% endif %}
+            {% if champ.errors %}<p class="erreurs">{{ champ.errors|striptags }}</p>{% endif %}
+          </div>
+        {% endfor %}
+        <div class="actions"><button class="btn btn--principal" type="submit">Generer ma bi-cle</button></div>
+      </form>
+    {% endif %}
+  </div>
+
+  <aside class="bloc">
+    <h2>Comment cela fonctionne</h2>
+    <ul class="aide" style="padding-left:1.1rem">
+      <li>Le portail genere une bi-cle RSA 2048 bits. La cle privee est chiffree par votre code : le serveur ne le conserve jamais.</li>
+      <li>A la signature, le code dechiffre la cle et appose une signature RSASSA-PSS/SHA-256 sur l'empreinte de l'acte.</li>
+      <li>Toute modification ulterieure de l'acte rend la verification negative.</li>
+      <li>Chaque acte signe porte un code et un QR code renvoyant a la page publique de verification.</li>
+      <li>Code perdu : revoquez la cle et generez-en une nouvelle. Les actes deja signes restent verifiables.</li>
+    </ul>
+
+    <h3 style="margin-top:1.4rem">Mes dernieres signatures</h3>
+    <table class="table table--compacte">
+      <tbody>
+      {% for signature in signatures %}
+        <tr><td><a href="{{ signature.demande.get_absolute_url }}">{{ signature.demande.numero }}</a></td>
+          <td><code>{{ signature.code_verification }}</code></td>
+          <td class="aide">{{ signature.horodatage|date:"d/m/Y H:i" }}</td></tr>
+      {% empty %}<tr><td class="aide">Aucune signature apposee.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </aside>
+</div>
+{% endblock %}

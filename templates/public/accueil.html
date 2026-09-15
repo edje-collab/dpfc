@@ -1,0 +1,112 @@
+{% extends "public/base.html" %}
+{% load static %}
+{% block titre %}Accueil{% endblock %}
+{% block banniere %}
+<section class="banniere">
+  {% if config_site.image_hero %}<img class="banniere__fond" src="{{ config_site.image_hero.url }}" alt="">{% endif %}
+  <div class="conteneur banniere__contenu">
+    <h1>{{ config_site.slogan }}</h1>
+    <p>{{ config_site.sous_titre_hero }}</p>
+    <div class="banniere__actions">
+      <a class="bouton bouton--primaire" href="{% url 'contenus:ressources' %}">Consulter les ressources</a>
+      <a class="bouton bouton--clair" href="{% url 'contenus:foad' %}">Se former a distance</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block contenu %}
+<section class="section">
+  <div class="conteneur">
+    <div class="section__tete">
+      <h2>Actualites</h2>
+      <a href="{% url 'contenus:actualites' %}">Toutes les actualites</a>
+    </div>
+    {% if actualites %}
+      <div class="grille grille--3">
+        {% for article in actualites %}{% include "public/_carte_actualite.html" %}{% endfor %}
+      </div>
+    {% else %}
+      <p class="aide">Les premieres publications de la direction paraitront ici.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section section--fond">
+  <div class="conteneur">
+    <div class="section__tete">
+      <h2>Ressources pedagogiques</h2>
+      <a href="{% url 'contenus:ressources' %}">Toute la mediatheque ({{ nb_ressources }})</a>
+    </div>
+    <div class="grille grille--3">
+      {% for famille in familles_ressources %}
+        <a class="tuile-ressource ton-{{ famille.ton }}" href="{% url 'contenus:ressources' %}?type={{ famille.code }}">
+          {% include "public/_icones.html" with cle=famille.icone %}
+          <span>
+            <strong>{{ famille.libelle }}</strong>
+            <span>{{ famille.texte }}</span>
+          </span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="conteneur">
+    <div class="section__tete">
+      <h2>Projets strategiques</h2>
+      <a href="{% url 'contenus:projets' %}">Tous les projets</a>
+    </div>
+    <div class="grille grille--4">
+      {% for projet in projets %}
+        <article class="carte-projet">
+          <a href="{{ projet.get_absolute_url }}" class="carte-projet__visuel" style="background: {{ projet.couleur }}">
+            {% if projet.icone == 'sigle' %}{{ projet.sigle }}{% else %}{% include "public/_icones.html" with cle=projet.icone %}{% endif %}
+          </a>
+          <div class="carte-projet__corps">
+            <h3><a href="{{ projet.get_absolute_url }}" style="color: {{ projet.couleur }}">{{ projet.sigle }}</a></h3>
+            <p>{{ projet.accroche|default:projet.nom }}</p>
+          </div>
+        </article>
+      {% empty %}
+        <p class="aide">Les projets portes par la direction seront presentes ici.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section--fond">
+  <div class="conteneur">
+    <div class="section__tete">
+      <h2>Evenements et formations a venir</h2>
+      <a href="{% url 'contenus:evenements' %}">Tout l'agenda</a>
+    </div>
+    {% for evenement in evenements %}
+      <div class="evenement">
+        <div class="date-bloc">
+          <strong>{{ evenement.date_debut|date:"d" }}</strong>
+          <span>{{ evenement.date_debut|date:"M Y" }}</span>
+        </div>
+        <div class="evenement__corps">
+          <h3><a href="{{ evenement.get_absolute_url }}">{{ evenement.titre }}</a></h3>
+          <p>{{ evenement.get_type_display }}{% if evenement.public_cible %} &middot; {{ evenement.public_cible }}{% endif %}</p>
+        </div>
+        <div class="evenement__lieu">{{ evenement.lieu }}</div>
+      </div>
+    {% empty %}
+      <p class="aide">Aucune activite n'est encore inscrite a l'agenda.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="conteneur">
+    <div class="chiffres">
+      <div class="chiffre"><strong>{{ nb_antennes }}</strong><span>antennes regionales de la pedagogie et de la formation continue</span></div>
+      <div class="chiffre"><strong>{{ nb_ressources }}</strong><span>ressources pedagogiques en telechargement</span></div>
+      <div class="chiffre"><strong>{{ nb_formations }}</strong><span>formations programmees cette annee</span></div>
+    </div>
+  </div>
+</section>
+{% endblock %}

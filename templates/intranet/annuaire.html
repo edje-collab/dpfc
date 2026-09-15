@@ -1,0 +1,41 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Annuaire{% endblock %}
+{% block titre_page %}Annuaire des agents{% endblock %}
+{% block sous_titre %}{{ total }} agent{{ total|pluralize }}{% endblock %}
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="actions" style="align-items:end">
+    <div class="champ"><label for="q">Recherche</label><input type="search" id="q" name="q" value="{{ q }}" placeholder="Nom, matricule, fonction"></div>
+    <div class="champ"><label for="rattachement">Affectation</label>
+      <select name="rattachement" id="rattachement">
+        <option value="">Toutes</option>
+        {% for valeur, libelle in rattachements %}<option value="{{ valeur }}" {% if rattachement == valeur %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+      </select></div>
+    <div class="champ"><label for="region">Region</label>
+      <select name="region" id="region">
+        <option value="">Toutes</option>
+        {% for r in regions %}<option value="{{ r.code }}" {% if region_active == r.code %}selected{% endif %}>{{ r.nom }}</option>{% endfor %}
+      </select></div>
+    <button class="btn btn--principal" type="submit">Filtrer</button>
+    <a class="btn btn--secondaire" href="{% url 'accounts:annuaire' %}">Reinitialiser</a>
+  </form>
+</div>
+
+<div class="bloc defilement">
+  <table class="table">
+    <thead><tr><th></th><th>Agent</th><th>Fonction</th><th>Structure</th><th>Contact</th><th>Situation</th></tr></thead>
+    <tbody>
+    {% for agent in agents %}
+      <tr>
+        <td>{% if agent.photo %}<img class="avatar" src="{{ agent.photo.url }}" alt="">{% else %}<span class="avatar">{{ agent.initiales }}</span>{% endif %}</td>
+        <td><a href="{% url 'accounts:agent_detail' agent.pk %}">{{ agent.nom_complet }}</a><br><small class="aide">{{ agent.matricule }}</small></td>
+        <td>{{ agent.fonction|default:agent.get_role_display }}</td>
+        <td>{{ agent.libelle_affectation }}</td>
+        <td>{% if agent.email %}<a href="mailto:{{ agent.email }}">{{ agent.email }}</a><br>{% endif %}{{ agent.telephone }}</td>
+        <td><span class="pastille pastille--{% if agent.situation == 'EN_POSTE' %}ok{% else %}attente{% endif %}">{{ agent.get_situation_display }}</span></td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="aide">Aucun agent ne correspond a cette recherche.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "public/base.html" %}
+{% block titre %}Projets strategiques{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / Projets</div>
+<section class="section">
+  <div class="conteneur">
+    <h1>Projets strategiques</h1>
+    <p>Les programmes structurants pilotes par la direction, en lien avec les partenaires techniques et financiers du systeme educatif.</p>
+    <div class="grille grille--3">
+      {% for projet in projets %}
+        <article class="carte-projet">
+          <a class="carte-projet__visuel" href="{{ projet.get_absolute_url }}" style="background: {{ projet.couleur }}">
+            {% if projet.icone == 'sigle' %}{{ projet.sigle }}{% else %}{% include "public/_icones.html" with cle=projet.icone %}{% endif %}
+          </a>
+          <div class="carte-projet__corps">
+            <h3><a href="{{ projet.get_absolute_url }}">{{ projet.sigle }} - {{ projet.nom }}</a></h3>
+            <p>{{ projet.accroche|default:projet.description|truncatechars:150 }}</p>
+            <p class="aide">{{ projet.get_etat_display }}{% if projet.partenaires %} &middot; {{ projet.partenaires }}{% endif %}</p>
+          </div>
+        </article>
+      {% empty %}<p class="aide">Aucun projet publie pour le moment.</p>{% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,25 @@
+services:
+  base:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: dpfc
+      POSTGRES_USER: dpfc
+      POSTGRES_PASSWORD: motdepasse
+    volumes: ["donnees:/var/lib/postgresql/data"]
+
+  portail:
+    build:
+      context: ..
+      dockerfile: deploiement/Dockerfile
+    environment:
+      DJANGO_DEBUG: "False"
+      DJANGO_SECRET_KEY: a-remplacer
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      DATABASE_URL: postgres://dpfc:motdepasse@base:5432/dpfc
+    depends_on: [base]
+    ports: ["8000:8000"]
+    volumes: ["medias:/app/media"]
+
+volumes:
+  donnees:
+  medias:

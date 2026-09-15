@@ -1,0 +1,51 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}{{ libelle_type }}{% endblock %}
+{% block titre_page %}{% if demande %}Modifier la demande{% else %}Nouvelle demande{% endif %} : {{ libelle_type|lower }}{% endblock %}
+{% block sous_titre %}{{ aide }}{% endblock %}
+{% block contenu %}
+<div class="grille-2">
+  <div class="bloc">
+    <form method="post" enctype="multipart/form-data" class="formulaire">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<p class="erreurs">{{ form.non_field_errors|striptags }}</p>{% endif %}
+      {% for champ in form %}
+        <div class="champ">
+          <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>
+          {{ champ }}
+          {% if champ.help_text %}<p class="aide">{{ champ.help_text }}</p>{% endif %}
+          {% if champ.errors %}<p class="erreurs">{{ champ.errors|striptags }}</p>{% endif %}
+        </div>
+      {% endfor %}
+      <div class="actions">
+        <button class="btn btn--principal" type="submit" name="action" value="soumettre">Transmettre pour validation</button>
+        <button class="btn btn--secondaire" type="submit" name="action" value="brouillon">Enregistrer comme brouillon</button>
+        <a class="btn btn--secondaire" href="{% url 'rh:mes_demandes' %}">Annuler</a>
+      </div>
+    </form>
+  </div>
+
+  <aside class="bloc">
+    {% if peut_deposer_pour_autrui %}
+      <p class="aide" style="margin-top:0">
+        {% if pour_autrui %}Depot au secretariat pour un agent de l'antenne.
+          <a href="?">Deposer pour moi-meme</a>
+        {% else %}Vous deposez pour vous-meme.
+          <a href="?pour=agent">Deposer au secretariat pour un agent</a>{% endif %}
+      </p>
+    {% endif %}
+    <h2>Ce qu'il faut savoir</h2>
+    <p class="aide">{{ aide }}</p>
+    <ul class="aide" style="padding-left:1.1rem">
+      <li>Les jours sont decomptes en jours ouvrables, hors samedis, dimanches et jours feries.</li>
+      <li>En antenne, la demande est adressee directement au chef d'antenne (APFC), le depot etant assure par le secretariat.</li>
+      <li>A la direction centrale : chef de service, sous-directeur, service du personnel puis, selon l'acte, signature du directeur.</li>
+      <li>Mission hors perimetre DRENAET : l'ordre de mission est etabli par le DRENAET, sur presentation des TDR et de la lettre d'invitation.</li>
+      <li>Un interim peut etre designe pour assurer la continuite du service pendant votre absence.</li>
+      <li>Vous pouvez enregistrer un brouillon et le completer plus tard.</li>
+    </ul>
+    <h3>Solde de conge {{ solde.annee }}</h3>
+    <p><strong>{{ solde.jours_restants }}</strong> jours restants sur {{ solde.total_droits }}.</p>
+    <div class="jauge"><i style="width: {{ solde.taux_consommation }}%"></i></div>
+  </aside>
+</div>
+{% endblock %}

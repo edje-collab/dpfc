@@ -1,0 +1,4 @@
+<div class="qr">
+  {% if svg %}{{ svg|safe }}{% endif %}
+  <p class="aide">Verification : {{ url }}<br>Code {{ signature.code_verification }}</p>
+</div>

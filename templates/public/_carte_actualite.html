@@ -1,0 +1,13 @@
+<article class="carte-actu">
+  {% if article.image %}
+    <a href="{{ article.get_absolute_url }}"><img src="{{ article.image.url }}" alt=""></a>
+  {% else %}
+    <a href="{{ article.get_absolute_url }}"><span class="carte-actu__vide"></span></a>
+  {% endif %}
+  <div class="carte-actu__corps">
+    {% if article.categorie %}<span class="etiquette">{{ article.categorie }}</span>{% endif %}
+    <h3><a href="{{ article.get_absolute_url }}">{{ article.titre }}</a></h3>
+    <p>{{ article.chapeau|truncatechars:130 }}</p>
+    <time datetime="{{ article.date_publication|date:'c' }}">{{ article.date_publication|date:"j F Y" }}</time>
+  </div>
+</article>

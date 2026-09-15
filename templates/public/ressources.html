@@ -1,0 +1,54 @@
+{% extends "public/base.html" %}
+{% block titre %}Ressources pedagogiques{% endblock %}
+{% block contenu %}
+<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / Ressources</div>
+<section class="section">
+  <div class="conteneur">
+    <h1>Ressources pedagogiques</h1>
+    <p>Programmes educatifs, guides d'execution, fiches de travaux pratiques et modules de formation, du prescolaire a l'enseignement technique. {{ total }} document{{ total|pluralize }} disponible{{ total|pluralize }}.</p>
+    <form class="filtres" method="get">
+      <div class="champ">
+        <label for="q">Rechercher</label>
+        <input type="search" id="q" name="q" value="{{ q }}" placeholder="Titre, discipline...">
+      </div>
+      <div class="champ">
+        <label for="type">Type</label>
+        <select name="type" id="type">
+          <option value="">Tous les types</option>
+          {% for valeur, libelle in types %}<option value="{{ valeur }}" {% if type_actif == valeur %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="champ">
+        <label for="niveau">Niveau</label>
+        <select name="niveau" id="niveau">
+          <option value="">Tous les niveaux</option>
+          {% for valeur, libelle in niveaux %}<option value="{{ valeur }}" {% if niveau_actif == valeur %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+        </select>
+      </div>
+      <button class="bouton bouton--vert" type="submit">Filtrer</button>
+      <a class="bouton bouton--ligne" href="{% url 'contenus:ressources' %}">Reinitialiser</a>
+    </form>
+
+    <div class="defilement">
+      <table class="tableau">
+        <thead><tr><th>Titre</th><th>Type</th><th>Niveau</th><th>Discipline</th><th>Annee</th><th></th></tr></thead>
+        <tbody>
+        {% for ressource in page_obj %}
+          <tr>
+            <td><a href="{{ ressource.get_absolute_url }}">{{ ressource.titre }}</a>{% if ressource.classe %} <span class="etiquette">{{ ressource.classe }}</span>{% endif %}</td>
+            <td>{{ ressource.get_type_display }}</td>
+            <td>{{ ressource.get_niveau_display }}</td>
+            <td>{{ ressource.discipline|default:"-" }}</td>
+            <td>{{ ressource.annee|default:"-" }}</td>
+            <td>{% if ressource.url_fichier %}<a href="{% url 'contenus:ressource_telecharger' ressource.slug %}">Telecharger</a>{% else %}<span class="aide">A paraitre</span>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="aide">Aucune ressource ne correspond a ces criteres.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "public/_pagination.html" %}
+  </div>
+</section>
+{% endblock %}

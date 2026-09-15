@@ -1,0 +1,82 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titre %}Espace agent{% endblock %} | Portail {{ config_site.sigle }}</title>
+<link rel="stylesheet" href="{% static 'css/intranet.css' %}">
+<link rel="icon" href="{% static 'img/armoiries.svg' %}">
+</head>
+<body>
+<div class="appli">
+  <aside class="rail">
+    <a class="rail__marque" href="{% url 'contenus:accueil' %}">
+      <img src="{% static 'img/armoiries.svg' %}" alt="" width="34" height="34">
+      <strong>Portail {{ config_site.sigle }}<span>Espace agent</span></strong>
+    </a>
+
+    <nav aria-label="Navigation de l'espace agent">
+      <p class="rail__groupe">Mon activité</p>
+      <a href="{% url 'rh:tableau_bord' %}" class="{% if request.resolver_match.url_name == 'tableau_bord' %}actif{% endif %}">Tableau de bord</a>
+      <a href="{% url 'rh:mes_demandes' %}" class="{% if request.resolver_match.url_name == 'mes_demandes' %}actif{% endif %}">Mes demandes</a>
+      <a href="{% url 'rh:mes_soldes' %}" class="{% if request.resolver_match.url_name == 'mes_soldes' %}actif{% endif %}">Mes congés</a>
+      <a href="{% url 'accounts:notifications' %}" class="{% if request.resolver_match.url_name == 'notifications' %}actif{% endif %}">Notifications
+        {% if nb_notifications %}<span class="rail__badge">{{ nb_notifications }}</span>{% endif %}</a>
+
+      {% if user.est_valideur or user.est_rh or user.est_direction or user.peut_administrer %}
+      <p class="rail__groupe">Encadrement</p>
+      <a href="{% url 'rh:a_valider' %}" class="{% if request.resolver_match.url_name == 'a_valider' %}actif{% endif %}">À valider
+        {% if nb_a_valider %}<span class="rail__badge">{{ nb_a_valider }}</span>{% endif %}</a>
+      <a href="{% url 'rh:planning' %}" class="{% if request.resolver_match.url_name == 'planning' %}actif{% endif %}">Planning des absences</a>
+      <a href="{% url 'rh:registre' %}" class="{% if request.resolver_match.url_name == 'registre' %}actif{% endif %}">Registre des actes</a>
+      {% endif %}
+
+      {% if user.est_rh or user.peut_administrer %}
+      <p class="rail__groupe">Service du personnel</p>
+      <a href="{% url 'accounts:comptes_liste' %}" class="{% if request.resolver_match.url_name == 'comptes_liste' %}actif{% endif %}">Comptes agents</a>
+      <a href="{% url 'rh:soldes_gestion' %}" class="{% if request.resolver_match.url_name == 'soldes_gestion' %}actif{% endif %}">Droits à congé</a>
+      <a href="{% url 'rh:jours_feries' %}" class="{% if request.resolver_match.url_name == 'jours_feries' %}actif{% endif %}">Jours fériés</a>
+      {% endif %}
+
+      <p class="rail__groupe">La direction</p>
+      <a href="{% url 'accounts:annuaire' %}" class="{% if request.resolver_match.url_name == 'annuaire' %}actif{% endif %}">Annuaire</a>
+      <a href="{% url 'accounts:organigramme' %}" class="{% if request.resolver_match.url_name == 'organigramme' %}actif{% endif %}">Organisation</a>
+      <a href="{% url 'contenus:accueil' %}">Site public</a>
+      {% if user.is_staff %}<a href="/admin/">Administration</a>{% endif %}
+    </nav>
+
+    <div class="rail__pied">
+      <form method="post" action="{% url 'accounts:deconnexion' %}">{% csrf_token %}
+        <button class="bouton bouton--contour bouton--petit" type="submit">Se déconnecter</button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="zone">
+    <header class="barre">
+      <div class="barre__titre">
+        <h1>{% block entete %}{% endblock %}</h1>
+        <p>{% block sous_entete %}{{ user.libelle_affectation }}{% endblock %}</p>
+      </div>
+      <a class="jeton" href="{% url 'accounts:profil' %}">
+        {% if user.photo %}<img class="pastille-avatar" src="{{ user.photo.url }}" alt="">
+        {% else %}<span class="pastille-avatar">{{ user.initiales }}</span>{% endif %}
+        <span>{{ user.nom_complet }}<br><small class="discret">{{ user.get_role_display }}</small></span>
+      </a>
+    </header>
+
+    <main class="contenu">
+      {% if messages %}{% for message in messages %}
+        <div class="alerte alerte--{{ message.tags }}">{{ message }}</div>
+      {% endfor %}{% endif %}
+      {% if user.doit_changer_mot_de_passe %}
+        <div class="alerte alerte--warning">Votre mot de passe est provisoire.
+          <a href="{% url 'accounts:changer_mot_de_passe' %}">Changez-le maintenant</a>.</div>
+      {% endif %}
+      {% block contenu %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>
