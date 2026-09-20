@@ -1,10 +1,11 @@
 {% extends "public/base.html" %}
-{% block titre %}Actualites{% endblock %}
+{% load wagtailcore_tags %}
 {% block contenu %}
-<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / Actualites</div>
+{% include "public/_fil.html" with courant=page.title %}
 <section class="section">
   <div class="conteneur">
     <h1>Actualites de la direction</h1>
+    {% if page.introduction %}<p>{{ page.introduction }}</p>{% endif %}
     <form class="filtres" method="get" role="search">
       <div class="champ">
         <label for="q">Rechercher</label>
@@ -13,7 +14,7 @@
       <button class="bouton bouton--vert" type="submit">Filtrer</button>
     </form>
     <div class="puces-filtre">
-      <a href="{% url 'contenus:actualites' %}" class="{% if not categorie_active %}active{% endif %}">Toutes</a>
+      <a href="{% pageurl page %}" class="{% if not categorie_active %}active{% endif %}">Toutes</a>
       {% for categorie in categories %}
         <a href="?categorie={{ categorie.slug }}" class="{% if categorie_active == categorie.slug %}active{% endif %}">{{ categorie.nom }} ({{ categorie.n }})</a>
       {% endfor %}

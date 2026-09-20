@@ -1,0 +1,6 @@
+{% load wagtailcore_tags %}{% comment %}Fil d'Ariane : {% include "public/_fil.html" with courant=page.title %}{% endcomment %}
+<div class="conteneur fil">
+  <a href="{% if accueil %}{% pageurl accueil %}{% else %}/{% endif %}">Accueil</a>
+  {% if parent %} / <a href="{% pageurl parent %}">{{ parent.title }}</a>{% endif %}
+  / {{ courant|truncatechars:45 }}
+</div>

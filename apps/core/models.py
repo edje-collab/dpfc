@@ -1,6 +1,7 @@
 from django.db import models
-from django.urls import reverse
 from django.utils.text import slugify
+from wagtail.admin.panels import FieldPanel, MultiFieldPanel
+from wagtail.contrib.settings.models import BaseGenericSetting, register_setting
 
 
 class Horodate(models.Model):
@@ -126,7 +127,9 @@ class Structure(Horodate):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse("contenus:antenne_detail", args=[self.slug])
+        from apps.site_public.models import url_antenne
+
+        return url_antenne(self)
 
     @property
     def est_antenne(self):
@@ -165,8 +168,9 @@ class Structure(Horodate):
         return self.nom
 
 
-class ConfigurationSite(Horodate):
-    """Parametres editoriaux du site public (instance unique)."""
+@register_setting(icon="cog")
+class ConfigurationSite(BaseGenericSetting, Horodate):
+    """Parametres editoriaux du site public (instance unique, editee dans Wagtail)."""
 
     nom_site = models.CharField(
         "nom du site", max_length=200, default="Direction de la Pedagogie et de la Formation Continue"
@@ -177,17 +181,14 @@ class ConfigurationSite(Horodate):
         max_length=250,
         default="Ministere de l'Education Nationale, de l'Alphabetisation et de l'Enseignement Technique",
     )
-    slogan = models.CharField(
-        "slogan de la banniere", max_length=200, default="Oeuvrons pour une ecole ivoirienne de qualite"
-    )
-    sous_titre_hero = models.CharField(
-        "sous-titre de la banniere",
-        max_length=300,
+    logo = models.ForeignKey(
+        "wagtailimages.Image",
+        verbose_name="logo",
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        default="Programmes, guides et formations au service des enseignants de Cote d'Ivoire.",
+        related_name="+",
     )
-    image_hero = models.ImageField("image de la banniere", upload_to="site/", blank=True)
-    logo = models.ImageField("logo", upload_to="site/", blank=True)
     adresse = models.CharField("adresse", max_length=255, default="Cocody II Plateaux, Abidjan")
     telephone = models.CharField("telephone", max_length=40, default="+225 27 22 41 00 00")
     email = models.EmailField("courriel", default="contact@dpfc.education.ci")
@@ -199,6 +200,22 @@ class ConfigurationSite(Horodate):
         blank=True,
         default="La DPFC concoit les programmes educatifs, les guides d'execution et pilote la formation continue des enseignants.",
     )
+    afficher_espace_agent = models.BooleanField(
+        "afficher le bouton « Espace agent »",
+        default=True,
+        help_text="Decochez pour masquer l'acces a l'espace agent (menu et pied de page) sur le site public. "
+        "La page de connexion reste accessible par son adresse directe.",
+    )
+
+    panels = [
+        MultiFieldPanel([FieldPanel("nom_site"), FieldPanel("sigle"), FieldPanel("ministere"), FieldPanel("logo")],
+                        heading="Identite"),
+        MultiFieldPanel([FieldPanel("adresse"), FieldPanel("telephone"), FieldPanel("email"),
+                         FieldPanel("facebook"), FieldPanel("youtube"), FieldPanel("lien_foad")],
+                        heading="Coordonnees"),
+        FieldPanel("pied_de_page"),
+        MultiFieldPanel([FieldPanel("afficher_espace_agent")], heading="Espace agent"),
+    ]
 
     class Meta:
         verbose_name = "configuration du site"
@@ -207,14 +224,9 @@ class ConfigurationSite(Horodate):
     def __str__(self):
         return self.nom_site
 
-    def save(self, *args, **kwargs):
-        self.pk = 1
-        super().save(*args, **kwargs)
-
     @classmethod
-    def actuelle(cls):
-        objet, _ = cls.objects.get_or_create(pk=1)
-        return objet
+    def actuelle(cls, request=None):
+        return cls.load(request_or_site=request)
 
 
 class JournalAction(models.Model):

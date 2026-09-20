@@ -1,7 +1,8 @@
 {% extends "public/base.html" %}
+{% load wagtailcore_tags %}
 {% block titre %}{{ antenne.nom }}{% endblock %}
 {% block contenu %}
-<div class="conteneur fil"><a href="{% url 'contenus:antennes' %}">Antennes</a> / {{ antenne.nom }}</div>
+{% include "public/_fil.html" with parent=page courant=antenne.nom %}
 <section class="section">
   <div class="conteneur">
     <h1>{{ antenne.nom }}</h1>
@@ -14,7 +15,7 @@
       <div class="chiffre">
         <h3>Contact</h3>
         <p>{{ antenne.adresse|default:"Adresse a preciser" }}<br>
-          {% if antenne.telephone %}{{ antenne.telephone }}<br>{% endif %}
+          {% if antenne.telephone %}<a href="tel:{{ antenne.telephone|cut:' ' }}">{{ antenne.telephone }}</a><br>{% endif %}
           {% if antenne.email %}<a href="mailto:{{ antenne.email }}">{{ antenne.email }}</a>{% endif %}</p>
       </div>
     </div>
@@ -27,7 +28,7 @@
       {% for evenement in evenements %}
         <div class="evenement">
           <div class="date-bloc"><strong>{{ evenement.date_debut|date:"d" }}</strong><span>{{ evenement.date_debut|date:"M Y" }}</span></div>
-          <div class="evenement__corps"><h3><a href="{{ evenement.get_absolute_url }}">{{ evenement.titre }}</a></h3><p>{{ evenement.get_type_display }}</p></div>
+          <div class="evenement__corps"><h3><a href="{% pageurl evenement %}">{{ evenement.title }}</a></h3><p>{{ evenement.get_type_display }}</p></div>
           <div class="evenement__lieu">{{ evenement.lieu }}</div>
         </div>
       {% endfor %}

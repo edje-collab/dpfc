@@ -1,0 +1,5 @@
+{% load wagtailimages_tags %}
+<figure class="figure">
+  {% image value.image width-1000 %}
+  {% if value.legende %}<figcaption>{{ value.legende }}</figcaption>{% endif %}
+</figure>

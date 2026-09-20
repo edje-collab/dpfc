@@ -1,0 +1,7 @@
+{% load wagtailcore_tags %}{% comment %}Rendu d'un StreamField editorial : {% include "public/_corps.html" with corps=page.corps %}{% endcomment %}
+{% for bloc in corps %}
+  {% if bloc.block_type == 'titre' %}<h2>{{ bloc.value }}</h2>
+  {% elif bloc.block_type == 'paragraphe' %}{{ bloc.value }}
+  {% elif bloc.block_type == 'video' %}<div class="video">{{ bloc.value }}</div>
+  {% else %}{% include_block bloc %}{% endif %}
+{% endfor %}

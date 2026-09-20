@@ -1,11 +1,12 @@
 {% extends "public/base.html" %}
+{% load wagtailcore_tags %}
 {% block titre %}Ressources pedagogiques{% endblock %}
 {% block contenu %}
-<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / Ressources</div>
+{% include "public/_fil.html" with courant=page.title %}
 <section class="section">
   <div class="conteneur">
     <h1>Ressources pedagogiques</h1>
-    <p>Programmes educatifs, guides d'execution, fiches de travaux pratiques et modules de formation, du prescolaire a l'enseignement technique. {{ total }} document{{ total|pluralize }} disponible{{ total|pluralize }}.</p>
+    <p>{{ page.introduction }} {{ total }} document{{ total|pluralize }} disponible{{ total|pluralize }}.</p>
     <form class="filtres" method="get">
       <div class="champ">
         <label for="q">Rechercher</label>
@@ -26,7 +27,7 @@
         </select>
       </div>
       <button class="bouton bouton--vert" type="submit">Filtrer</button>
-      <a class="bouton bouton--ligne" href="{% url 'contenus:ressources' %}">Reinitialiser</a>
+      <a class="bouton bouton--ligne" href="{% pageurl page %}">Reinitialiser</a>
     </form>
 
     <div class="defilement">
@@ -35,12 +36,12 @@
         <tbody>
         {% for ressource in page_obj %}
           <tr>
-            <td><a href="{{ ressource.get_absolute_url }}">{{ ressource.titre }}</a>{% if ressource.classe %} <span class="etiquette">{{ ressource.classe }}</span>{% endif %}</td>
+            <td><a href="{% pageurl page %}{{ ressource.slug }}/">{{ ressource.titre }}</a>{% if ressource.classe %} <span class="etiquette">{{ ressource.classe }}</span>{% endif %}</td>
             <td>{{ ressource.get_type_display }}</td>
             <td>{{ ressource.get_niveau_display }}</td>
             <td>{{ ressource.discipline|default:"-" }}</td>
             <td>{{ ressource.annee|default:"-" }}</td>
-            <td>{% if ressource.url_fichier %}<a href="{% url 'contenus:ressource_telecharger' ressource.slug %}">Telecharger</a>{% else %}<span class="aide">A paraitre</span>{% endif %}</td>
+            <td>{% if ressource.url_fichier %}<a href="{% pageurl page %}{{ ressource.slug }}/telecharger/">Telecharger</a>{% else %}<span class="aide">A paraitre</span>{% endif %}</td>
           </tr>
         {% empty %}
           <tr><td colspan="6" class="aide">Aucune ressource ne correspond a ces criteres.</td></tr>

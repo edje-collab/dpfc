@@ -1,11 +1,12 @@
 {% extends "public/base.html" %}
+{% load wagtailcore_tags %}
 {% block titre %}Antennes regionales{% endblock %}
 {% block contenu %}
-<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / Antennes</div>
+{% include "public/_fil.html" with courant=page.title %}
 <section class="section">
   <div class="conteneur">
     <h1>Antennes de la pedagogie et de la formation continue</h1>
-    <p>Relais de la direction centrale dans les regions, les antennes accompagnent les enseignants au plus pres des ecoles : encadrement pedagogique, formation continue et remontee des besoins du terrain.</p>
+    {% if page.introduction %}<p>{{ page.introduction }}</p>{% endif %}
     <form class="filtres" method="get">
       <div class="champ">
         <label for="region">Region</label>
@@ -21,7 +22,7 @@
         <article class="carte-actu">
           <div class="carte-actu__corps">
             <span class="etiquette">{{ antenne.region.nom }}</span>
-            <h3><a href="{{ antenne.get_absolute_url }}">{{ antenne.nom }}</a></h3>
+            <h3><a href="{% pageurl page %}{{ antenne.slug }}/">{{ antenne.nom }}</a></h3>
             <p>{{ antenne.adresse|default:"Adresse a preciser" }}</p>
             <p class="aide">
               {{ antenne.nb_agents }} agent{{ antenne.nb_agents|pluralize }}

@@ -1,46 +1,34 @@
 {% extends "public/base.html" %}
-{% load static %}
+{% load static wagtailcore_tags wagtailimages_tags %}
 {% block titre %}Accueil{% endblock %}
 {% block banniere %}
-<section class="banniere">
-  {% if config_site.image_hero %}<img class="banniere__fond" src="{{ config_site.image_hero.url }}" alt="">{% endif %}
+<section class="banniere banniere--compacte">
+  {% if page.image_banniere %}{% image page.image_banniere fill-1600x600 class="banniere__fond" alt="" %}{% endif %}
   <div class="conteneur banniere__contenu">
-    <h1>{{ config_site.slogan }}</h1>
-    <p>{{ config_site.sous_titre_hero }}</p>
-    <div class="banniere__actions">
-      <a class="bouton bouton--primaire" href="{% url 'contenus:ressources' %}">Consulter les ressources</a>
-      <a class="bouton bouton--clair" href="{% url 'contenus:foad' %}">Se former a distance</a>
+    <div class="banniere__texte">
+      <h1>{{ page.slogan }}</h1>
+      <p>{{ page.sous_titre }}</p>
+      <div class="banniere__actions">
+        {% if pages_cles.ressources %}<a class="bouton bouton--primaire" href="{% pageurl pages_cles.ressources %}">Consulter les ressources</a>{% endif %}
+        {% if pages_cles.foad %}<a class="bouton bouton--clair" href="{% pageurl pages_cles.foad %}">Se former a distance</a>{% endif %}
+      </div>
+    </div>
+    <div class="banniere__chiffres">
+      <div class="chiffre chiffre--clair"><strong>{{ nb_antennes }}</strong><span>antennes regionales</span></div>
+      <div class="chiffre chiffre--clair"><strong>{{ nb_ressources }}</strong><span>ressources en telechargement</span></div>
+      <div class="chiffre chiffre--clair"><strong>{{ nb_formations }}</strong><span>formations cette annee</span></div>
     </div>
   </div>
 </section>
 {% endblock %}
 
 {% block contenu %}
-<section class="section">
+{% if pages_cles.ressources %}
+<section class="section section--compacte">
   <div class="conteneur">
-    <div class="section__tete">
-      <h2>Actualites</h2>
-      <a href="{% url 'contenus:actualites' %}">Toutes les actualites</a>
-    </div>
-    {% if actualites %}
-      <div class="grille grille--3">
-        {% for article in actualites %}{% include "public/_carte_actualite.html" %}{% endfor %}
-      </div>
-    {% else %}
-      <p class="aide">Les premieres publications de la direction paraitront ici.</p>
-    {% endif %}
-  </div>
-</section>
-
-<section class="section section--fond">
-  <div class="conteneur">
-    <div class="section__tete">
-      <h2>Ressources pedagogiques</h2>
-      <a href="{% url 'contenus:ressources' %}">Toute la mediatheque ({{ nb_ressources }})</a>
-    </div>
-    <div class="grille grille--3">
+    <div class="grille grille--3 grille--serree">
       {% for famille in familles_ressources %}
-        <a class="tuile-ressource ton-{{ famille.ton }}" href="{% url 'contenus:ressources' %}?type={{ famille.code }}">
+        <a class="tuile-ressource tuile-ressource--compacte ton-{{ famille.ton }}" href="{% pageurl pages_cles.ressources %}?type={{ famille.code }}">
           {% include "public/_icones.html" with cle=famille.icone %}
           <span>
             <strong>{{ famille.libelle }}</strong>
@@ -51,62 +39,81 @@
     </div>
   </div>
 </section>
+{% endif %}
 
-<section class="section">
-  <div class="conteneur">
-    <div class="section__tete">
-      <h2>Projets strategiques</h2>
-      <a href="{% url 'contenus:projets' %}">Tous les projets</a>
-    </div>
-    <div class="grille grille--4">
-      {% for projet in projets %}
-        <article class="carte-projet">
-          <a href="{{ projet.get_absolute_url }}" class="carte-projet__visuel" style="background: {{ projet.couleur }}">
-            {% if projet.icone == 'sigle' %}{{ projet.sigle }}{% else %}{% include "public/_icones.html" with cle=projet.icone %}{% endif %}
-          </a>
-          <div class="carte-projet__corps">
-            <h3><a href="{{ projet.get_absolute_url }}" style="color: {{ projet.couleur }}">{{ projet.sigle }}</a></h3>
-            <p>{{ projet.accroche|default:projet.nom }}</p>
-          </div>
-        </article>
-      {% empty %}
-        <p class="aide">Les projets portes par la direction seront presentes ici.</p>
-      {% endfor %}
-    </div>
-  </div>
-</section>
+<section class="section section--compacte section--fond">
+  <div class="conteneur accueil-grille">
 
-<section class="section section--fond">
-  <div class="conteneur">
-    <div class="section__tete">
-      <h2>Evenements et formations a venir</h2>
-      <a href="{% url 'contenus:evenements' %}">Tout l'agenda</a>
-    </div>
-    {% for evenement in evenements %}
-      <div class="evenement">
-        <div class="date-bloc">
-          <strong>{{ evenement.date_debut|date:"d" }}</strong>
-          <span>{{ evenement.date_debut|date:"M Y" }}</span>
-        </div>
-        <div class="evenement__corps">
-          <h3><a href="{{ evenement.get_absolute_url }}">{{ evenement.titre }}</a></h3>
-          <p>{{ evenement.get_type_display }}{% if evenement.public_cible %} &middot; {{ evenement.public_cible }}{% endif %}</p>
-        </div>
-        <div class="evenement__lieu">{{ evenement.lieu }}</div>
+    <div class="accueil-colonne">
+      <div class="section__tete">
+        <h2>Actualites</h2>
+        {% if pages_cles.actualites %}<a href="{% pageurl pages_cles.actualites %}">Toutes les actualites</a>{% endif %}
       </div>
-    {% empty %}
-      <p class="aide">Aucune activite n'est encore inscrite a l'agenda.</p>
-    {% endfor %}
-  </div>
-</section>
-
-<section class="section">
-  <div class="conteneur">
-    <div class="chiffres">
-      <div class="chiffre"><strong>{{ nb_antennes }}</strong><span>antennes regionales de la pedagogie et de la formation continue</span></div>
-      <div class="chiffre"><strong>{{ nb_ressources }}</strong><span>ressources pedagogiques en telechargement</span></div>
-      <div class="chiffre"><strong>{{ nb_formations }}</strong><span>formations programmees cette annee</span></div>
+      {% if une %}
+        <div class="actu-une">
+          {% with article=une %}{% include "public/_carte_actualite.html" %}{% endwith %}
+          <ul class="actu-liste liste-nue">
+            {% for article in actualites %}
+              <li>
+                {% if article.categorie %}<span class="etiquette">{{ article.categorie }}</span>{% endif %}
+                <a href="{% pageurl article %}">{{ article.title }}</a>
+                <time datetime="{{ article.date_publication|date:'c' }}">{{ article.date_publication|date:"j F Y" }}</time>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% else %}
+        <p class="aide">Les premieres publications de la direction paraitront ici.</p>
+      {% endif %}
     </div>
+
+    <aside class="accueil-colonne accueil-colonne--laterale">
+      <div class="panneau">
+        <div class="section__tete">
+          <h2 class="panneau__titre">Agenda</h2>
+          {% if pages_cles.evenements %}<a href="{% pageurl pages_cles.evenements %}">Tout l'agenda</a>{% endif %}
+        </div>
+        {% for evenement in evenements %}
+          <div class="evenement evenement--compact">
+            <div class="date-bloc">
+              <strong>{{ evenement.date_debut|date:"d" }}</strong>
+              <span>{{ evenement.date_debut|date:"M" }}</span>
+            </div>
+            <div class="evenement__corps">
+              <h3><a href="{% pageurl evenement %}">{{ evenement.title }}</a></h3>
+              <p>{{ evenement.get_type_display }}{% if evenement.lieu %} &middot; {{ evenement.lieu }}{% endif %}</p>
+            </div>
+          </div>
+        {% empty %}
+          <p class="aide">Aucune activite n'est encore inscrite a l'agenda.</p>
+        {% endfor %}
+      </div>
+
+      <div class="panneau">
+        <div class="section__tete">
+          <h2 class="panneau__titre">Projets strategiques</h2>
+          {% if pages_cles.projets %}<a href="{% pageurl pages_cles.projets %}">Tous les projets</a>{% endif %}
+        </div>
+        <ul class="projets-liste liste-nue">
+          {% for projet in projets %}
+            <li>
+              <a href="{% pageurl projet %}">
+                <span class="projets-liste__pastille" style="background: {{ projet.couleur }}">
+                  {% if projet.icone == 'sigle' %}{{ projet.sigle|slice:":3" }}{% else %}{% include "public/_icones.html" with cle=projet.icone %}{% endif %}
+                </span>
+                <span>
+                  <strong>{{ projet.sigle }}</strong>
+                  <span>{{ projet.accroche|default:projet.title|truncatechars:70 }}</span>
+                </span>
+              </a>
+            </li>
+          {% empty %}
+            <li class="aide">Les projets portes par la direction seront presentes ici.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </aside>
+
   </div>
 </section>
 {% endblock %}

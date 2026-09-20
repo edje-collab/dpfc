@@ -1,7 +1,7 @@
 {% extends "public/base.html" %}
-{% block titre %}Agenda{% endblock %}
+{% load wagtailcore_tags %}
 {% block contenu %}
-<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / Evenements</div>
+{% include "public/_fil.html" with courant=page.title %}
 <section class="section">
   <div class="conteneur">
     <h1>Evenements et formations</h1>
@@ -10,7 +10,7 @@
       <div class="evenement">
         <div class="date-bloc"><strong>{{ evenement.date_debut|date:"d" }}</strong><span>{{ evenement.date_debut|date:"M Y" }}</span></div>
         <div class="evenement__corps">
-          <h3><a href="{{ evenement.get_absolute_url }}">{{ evenement.titre }}</a></h3>
+          <h3><a href="{% pageurl evenement %}">{{ evenement.title }}</a></h3>
           <p>{{ evenement.get_type_display }}{% if evenement.public_cible %} &middot; {{ evenement.public_cible }}{% endif %}</p>
         </div>
         <div class="evenement__lieu">{{ evenement.lieu }}</div>
@@ -22,7 +22,7 @@
       {% for evenement in passes %}
         <div class="evenement">
           <div class="date-bloc" style="background:#8aa5ad"><strong>{{ evenement.date_debut|date:"d" }}</strong><span>{{ evenement.date_debut|date:"M Y" }}</span></div>
-          <div class="evenement__corps"><h3><a href="{{ evenement.get_absolute_url }}">{{ evenement.titre }}</a></h3><p>{{ evenement.get_type_display }}</p></div>
+          <div class="evenement__corps"><h3><a href="{% pageurl evenement %}">{{ evenement.title }}</a></h3><p>{{ evenement.get_type_display }}</p></div>
           <div class="evenement__lieu">{{ evenement.lieu }}</div>
         </div>
       {% endfor %}

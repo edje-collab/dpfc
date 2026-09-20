@@ -1,17 +1,15 @@
 {% extends "public/base.html" %}
-{% block titre %}Formation ouverte et a distance{% endblock %}
+{% load wagtailcore_tags %}
 {% block contenu %}
-<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / FOAD</div>
+{% include "public/_fil.html" with courant=page.title %}
 <section class="section">
   <div class="conteneur">
-    <h1>{% if page %}{{ page.titre }}{% else %}Formation ouverte et a distance{% endif %}</h1>
+    <h1>{{ page.seo_title|default:page.title }}</h1>
     <div class="article">
-      {% if page %}{{ page.contenu|safe }}
-      {% else %}
-        <p><strong>La formation continue des enseignants se poursuit en ligne, entre deux regroupements presentiels.</strong></p>
-        <p>Les modules sont accessibles depuis la plateforme nationale et utilisables sur ordinateur comme sur telephone, y compris dans les antennes regionales disposant d'une connexion limitee.</p>
-      {% endif %}
-      {% if config_site.lien_foad %}<a class="bouton bouton--vert" href="{{ config_site.lien_foad }}" rel="noopener">Acceder a la plateforme</a>{% endif %}
+      {% include "public/_corps.html" with corps=page.corps %}
+      {% with lien=page.lien_plateforme|default:config_site.lien_foad %}
+        {% if lien %}<a class="bouton bouton--vert" href="{{ lien }}" rel="noopener">Acceder a la plateforme</a>{% endif %}
+      {% endwith %}
     </div>
 
     {% if modules %}
@@ -32,7 +30,7 @@
       {% for evenement in formations %}
         <div class="evenement">
           <div class="date-bloc"><strong>{{ evenement.date_debut|date:"d" }}</strong><span>{{ evenement.date_debut|date:"M Y" }}</span></div>
-          <div class="evenement__corps"><h3><a href="{{ evenement.get_absolute_url }}">{{ evenement.titre }}</a></h3><p>{{ evenement.public_cible }}</p></div>
+          <div class="evenement__corps"><h3><a href="{% pageurl evenement %}">{{ evenement.title }}</a></h3><p>{{ evenement.public_cible }}</p></div>
           <div class="evenement__lieu">{{ evenement.lieu }}</div>
         </div>
       {% endfor %}

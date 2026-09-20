@@ -2,8 +2,10 @@
 Configuration du portail de la Direction de la Pedagogie
 et de la Formation Continue (DPFC) - MENAET, Cote d'Ivoire.
 
-Projet monolithique : site public (rendu serveur) + intranet agents
-+ API REST (application mobile Flutter).
+Projet monolithique :
+  - site public gere par Wagtail (administration sur /cms/) ;
+  - espace agent Django (intranet sur /intranet/, administration sur /admin/) ;
+  - API REST pour l'application mobile Flutter (/api/v1/).
 """
 from pathlib import Path
 import os
@@ -50,10 +52,25 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "widget_tweaks",
+    # Wagtail (site public)
+    "wagtail.contrib.settings",
+    "wagtail.contrib.redirects",
+    "wagtail.contrib.routable_page",
+    "wagtail.embeds",
+    "wagtail.sites",
+    "wagtail.users",
+    "wagtail.snippets",
+    "wagtail.documents",
+    "wagtail.images",
+    "wagtail.search",
+    "wagtail.admin",
+    "wagtail",
+    "modelcluster",
+    "taggit",
     # Locales
     "apps.core",
     "apps.accounts",
-    "apps.contenus",
+    "apps.site_public",
     "apps.rh",
     "apps.signature",
     "apps.api",
@@ -70,6 +87,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.accounts.middleware.DerniereActiviteMiddleware",
+    "wagtail.contrib.redirects.middleware.RedirectMiddleware",
 ]
 
 # WhiteNoise est optionnel en developpement
@@ -92,6 +110,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.configuration_site",
+                "apps.site_public.context_processors.navigation_publique",
                 "apps.rh.context_processors.compteurs_intranet",
             ],
         },
@@ -143,7 +162,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LOGIN_URL = "accounts:connexion"
 LOGIN_REDIRECT_URL = "rh:tableau_bord"
-LOGOUT_REDIRECT_URL = "contenus:accueil"
+LOGOUT_REDIRECT_URL = "/"
 
 # --- Internationalisation ---------------------------------------------------
 LANGUAGE_CODE = "fr-fr"
@@ -174,6 +193,23 @@ except ImportError:
     )
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# --- Wagtail (site public) --------------------------------------------------
+WAGTAIL_SITE_NAME = "Portail DPFC"
+WAGTAILADMIN_BASE_URL = env("WAGTAILADMIN_BASE_URL", "http://localhost:8000")
+WAGTAIL_I18N_ENABLED = False
+WAGTAILSEARCH_BACKENDS = {"default": {"BACKEND": "wagtail.search.backends.database"}}
+WAGTAILDOCS_EXTENSIONS = ["pdf", "docx", "doc", "odt", "pptx", "xlsx", "csv", "txt", "zip"]
+WAGTAILDOCS_MAX_UPLOAD_SIZE = 20 * 1024 * 1024
+WAGTAILIMAGES_MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+WAGTAIL_PASSWORD_RESET_ENABLED = False
+WAGTAIL_ENABLE_UPDATE_CHECK = False
+WAGTAILADMIN_RICH_TEXT_EDITORS = {
+    "default": {
+        "WIDGET": "wagtail.admin.rich_text.DraftailRichTextArea",
+        "OPTIONS": {"features": ["bold", "italic", "h3", "h4", "ol", "ul", "link", "document-link", "hr"]},
+    }
+}
 
 # --- API REST ---------------------------------------------------------------
 REST_FRAMEWORK = {
@@ -244,4 +280,5 @@ LOGGING = {
         },
     },
     "root": {"handlers": ["console", "fichier"], "level": "INFO"},
+    "loggers": {"django_tasks": {"level": "WARNING"}},
 }

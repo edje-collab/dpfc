@@ -10,7 +10,7 @@
 <body>
 <div class="appli">
   <aside class="rail">
-    <a class="rail__marque" href="{% url 'contenus:accueil' %}">
+    <a class="rail__marque" href="/">
       <img src="{% static 'img/armoiries.svg' %}" alt="" width="34" height="34">
       <strong>Portail {{ config_site.sigle }}<span>Espace agent</span></strong>
     </a>
@@ -41,7 +41,7 @@
       <p class="rail__groupe">La direction</p>
       <a href="{% url 'accounts:annuaire' %}" class="{% if request.resolver_match.url_name == 'annuaire' %}actif{% endif %}">Annuaire</a>
       <a href="{% url 'accounts:organigramme' %}" class="{% if request.resolver_match.url_name == 'organigramme' %}actif{% endif %}">Organisation</a>
-      <a href="{% url 'contenus:accueil' %}">Site public</a>
+      <a href="/">Site public</a>
       {% if user.is_staff %}<a href="/admin/">Administration</a>{% endif %}
     </nav>
 

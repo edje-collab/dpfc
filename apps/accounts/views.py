@@ -34,7 +34,7 @@ class ConnexionView(LoginView):
 
 
 class DeconnexionView(LogoutView):
-    next_page = reverse_lazy("contenus:accueil")
+    next_page = "/"
 
 
 class ChangerMotDePasseView(PasswordChangeView):

@@ -1,15 +1,16 @@
 {% extends "public/base.html" %}
+{% load wagtailcore_tags wagtailimages_tags %}
 {% block titre %}{{ projet.sigle }}{% endblock %}
 {% block contenu %}
-<div class="conteneur fil"><a href="{% url 'contenus:projets' %}">Projets</a> / {{ projet.sigle }}</div>
+{% include "public/_fil.html" with parent=page.get_parent courant=projet.sigle %}
 <section class="section">
   <div class="conteneur article">
     <span class="etiquette" style="background: {{ projet.couleur }}22; color: {{ projet.couleur }}">{{ projet.get_etat_display }}</span>
-    <h1>{{ projet.nom }}</h1>
-    <p><strong>{{ projet.accroche }}</strong></p>
-    {% if projet.image %}<img src="{{ projet.image.url }}" alt="">{% endif %}
-    {{ projet.description|linebreaks }}
-    {% if projet.objectifs %}<h2>Objectifs</h2>{{ projet.objectifs|linebreaks }}{% endif %}
+    <h1>{{ projet.title }}</h1>
+    {% if projet.accroche %}<p><strong>{{ projet.accroche }}</strong></p>{% endif %}
+    {% if projet.image %}{% image projet.image width-1000 alt="" %}{% endif %}
+    {% include "public/_corps.html" with corps=projet.corps %}
+    {% if projet.objectifs %}<h2>Objectifs</h2>{{ projet.objectifs|richtext }}{% endif %}
     {% if projet.partenaires %}<h2>Partenaires</h2><p>{{ projet.partenaires }}</p>{% endif %}
   </div>
   {% if autres %}
@@ -18,8 +19,8 @@
     <div class="grille grille--3">
       {% for p in autres %}
       <article class="carte-projet">
-        <a class="carte-projet__visuel" href="{{ p.get_absolute_url }}" style="background: {{ p.couleur }}">{{ p.sigle }}</a>
-        <div class="carte-projet__corps"><h3><a href="{{ p.get_absolute_url }}">{{ p.nom }}</a></h3></div>
+        <a class="carte-projet__visuel" href="{% pageurl p %}" style="background: {{ p.couleur }}">{{ p.sigle }}</a>
+        <div class="carte-projet__corps"><h3><a href="{% pageurl p %}">{{ p.title }}</a></h3></div>
       </article>
       {% endfor %}
     </div>

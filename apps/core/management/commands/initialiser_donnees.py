@@ -12,8 +12,9 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from apps.contenus.models import Actualite, Categorie, Evenement, PageStatique, Projet, Ressource
 from apps.core.models import ConfigurationSite, Region, Structure
+from apps.site_public import arborescence
+from apps.site_public.models import PageActualite, PageEvenement, PageProjet, Ressource
 from apps.rh.models import Demande, JourFerie, SoldeConge, TypeDemande
 from apps.rh.services import decider, soumettre
 
@@ -47,10 +48,10 @@ class Command(BaseCommand):
             Agent.objects.filter(is_superuser=False).delete()
             Structure.objects.all().delete()
             Region.objects.all().delete()
-            Actualite.objects.all().delete()
+            PageActualite.objects.all().delete()
+            PageProjet.objects.all().delete()
+            PageEvenement.objects.all().delete()
             Ressource.objects.all().delete()
-            Projet.objects.all().delete()
-            Evenement.objects.all().delete()
             self.stdout.write("Donnees precedentes supprimees.")
 
         self.configurer_site()
@@ -74,13 +75,15 @@ class Command(BaseCommand):
 
     # ------------------------------------------------------------------
     def configurer_site(self):
-        config = ConfigurationSite.actuelle()
-        config.slogan = "Oeuvrons pour une ecole ivoirienne de qualite"
-        config.sous_titre_hero = (
+        ConfigurationSite.actuelle().save()
+        self.pages = arborescence.assurer_site()
+        accueil = self.pages["accueil"]
+        accueil.slogan = "Oeuvrons pour une ecole ivoirienne de qualite"
+        accueil.sous_titre = (
             "Programmes educatifs, guides d'execution et formation continue "
             "au service des enseignants de Cote d'Ivoire."
         )
-        config.save()
+        accueil.save_revision().publish()
 
     def creer_regions(self):
         regions = {}
@@ -225,10 +228,11 @@ class Command(BaseCommand):
         }
 
     def creer_contenus(self, antennes, agents):
+        pages = self.pages
         categories = {}
         for nom, couleur in [("Communique", "#0e9b8c"), ("Formation", "#45b65c"),
                              ("Atelier", "#f5a623"), ("Numerique educatif", "#4fc3f7")]:
-            categories[nom], _ = Categorie.objects.get_or_create(nom=nom, defaults={"couleur": couleur})
+            categories[nom] = arborescence.ajouter_categorie(nom, couleur)
 
         articles = [
             ("Validation des nouveaux guides d'execution du primaire",
@@ -247,23 +251,17 @@ class Command(BaseCommand):
              "Les priorites pedagogiques de l'annee scolaire ont ete presentees aux inspections.",
              "Communique"),
         ]
+        suite = (
+            "Les travaux ont reuni les responsables de la direction centrale, les chefs "
+            "d'antennes regionales et les partenaires techniques. Les conclusions seront "
+            "diffusees aux inspections et aux etablissements dans les prochains jours."
+        )
         for i, (titre, chapeau, categorie) in enumerate(articles):
-            Actualite.objects.get_or_create(
-                titre=titre,
-                defaults={
-                    "chapeau": chapeau,
-                    "contenu": chapeau + "\n\n" + (
-                        "Les travaux ont reuni les responsables de la direction centrale, les chefs "
-                        "d'antennes regionales et les partenaires techniques. Les conclusions seront "
-                        "diffusees aux inspections et aux etablissements dans les prochains jours."
-                    ),
-                    "categorie": categories[categorie],
-                    "auteur": agents["chef_service"],
-                    "structure": antennes["GB"] if i == 2 else None,
-                    "publiee": True,
-                    "a_la_une": i == 0,
-                    "date_publication": timezone.now() - timedelta(days=i * 6),
-                },
+            arborescence.ajouter_actualite(
+                pages["actualites"], titre, chapeau, f"<p>{chapeau}</p><p>{suite}</p>",
+                categorie=categories[categorie], auteur=agents["chef_service"],
+                structure=antennes["GB"] if i == 2 else None, a_la_une=i == 0,
+                date_publication=timezone.now() - timedelta(days=i * 6),
             )
 
         ressources = [
@@ -285,13 +283,10 @@ class Command(BaseCommand):
              Ressource.Niveau.TOUS, "Textes officiels", ""),
         ]
         for titre, type_, niveau, discipline, classe in ressources:
-            Ressource.objects.get_or_create(
-                titre=titre,
-                defaults={
-                    "type": type_, "niveau": niveau, "discipline": discipline, "classe": classe,
-                    "description": f"{titre}. Document elabore et valide par la direction.",
-                    "annee": 2025, "publiee": True,
-                },
+            arborescence.ajouter_ressource(
+                titre, type=type_, niveau=niveau, discipline=discipline, classe=classe,
+                description=f"{titre}. Document elabore et valide par la direction.",
+                annee=2025, publiee=True,
             )
 
         projets = [
@@ -305,60 +300,29 @@ class Command(BaseCommand):
              "Production et diffusion des ressources pedagogiques numeriques.", "#4fc3f7", "livre", 4),
         ]
         for sigle, nom, accroche, couleur, icone, ordre in projets:
-            Projet.objects.get_or_create(
-                sigle=sigle,
-                defaults={
-                    "nom": nom, "accroche": accroche, "couleur": couleur, "icone": icone, "ordre": ordre,
-                    "description": accroche + " Le projet est pilote par la direction avec l'appui de ses "
-                                              "antennes regionales et de ses partenaires.",
-                    "objectifs": "Renforcer la qualite des apprentissages et l'encadrement des enseignants.",
-                    "partenaires": "Etat de Cote d'Ivoire, partenaires techniques et financiers",
-                },
+            arborescence.ajouter_projet(
+                pages["projets"], sigle, nom, accroche,
+                f"<p>{accroche} Le projet est pilote par la direction avec l'appui de ses "
+                "antennes regionales et de ses partenaires.</p>",
+                couleur=couleur, icone=icone, ordre=ordre,
+                objectifs="<p>Renforcer la qualite des apprentissages et l'encadrement des enseignants.</p>",
+                partenaires="Etat de Cote d'Ivoire, partenaires techniques et financiers",
             )
 
         aujourdhui = timezone.localdate()
         evenements = [
-            ("Atelier national de validation des ressources numeriques", Evenement.Type.ATELIER, 12, "Grand-Bassam"),
-            ("Session de formation des conseillers pedagogiques", Evenement.Type.FORMATION, 25, "Bouake"),
-            ("Seminaire sur l'evaluation par competences", Evenement.Type.SEMINAIRE, 40, "Abidjan"),
-            ("Reunion des chefs d'antennes regionales", Evenement.Type.REUNION, 55, "Yamoussoukro"),
+            ("Atelier national de validation des ressources numeriques", PageEvenement.Type.ATELIER, 12, "Grand-Bassam"),
+            ("Session de formation des conseillers pedagogiques", PageEvenement.Type.FORMATION, 25, "Bouake"),
+            ("Seminaire sur l'evaluation par competences", PageEvenement.Type.SEMINAIRE, 40, "Abidjan"),
+            ("Reunion des chefs d'antennes regionales", PageEvenement.Type.REUNION, 55, "Yamoussoukro"),
         ]
         for titre, type_, jours, lieu in evenements:
-            Evenement.objects.get_or_create(
-                titre=titre,
-                defaults={
-                    "type": type_, "date_debut": aujourdhui + timedelta(days=jours),
-                    "date_fin": aujourdhui + timedelta(days=jours + 2), "lieu": lieu,
-                    "description": f"{titre}, organise par la direction.",
-                    "public_cible": "Encadreurs pedagogiques et enseignants",
-                    "publie": True,
-                },
+            arborescence.ajouter_evenement(
+                pages["evenements"], titre, aujourdhui + timedelta(days=jours),
+                f"{titre}, organise par la direction.",
+                type=type_, date_fin=aujourdhui + timedelta(days=jours + 2), lieu=lieu,
+                public_cible="Encadreurs pedagogiques et enseignants",
             )
-
-        PageStatique.objects.get_or_create(
-            slug="presentation",
-            defaults={
-                "titre": "Presentation de la direction",
-                "chapeau": "Missions, organisation et implantation territoriale.",
-                "contenu": (
-                    "<h2>Missions</h2><p>La direction elabore les programmes educatifs et les guides "
-                    "d'execution, encadre les pratiques de classe, organise la formation continue des "
-                    "enseignants et pilote le numerique educatif.</p>"
-                    "<h2>Organisation</h2><p>Elle comprend des sous-directions et services au niveau "
-                    "central, et des antennes de la pedagogie et de la formation continue en region.</p>"
-                ),
-            },
-        )
-        PageStatique.objects.get_or_create(
-            slug="foad",
-            defaults={
-                "titre": "Formation ouverte et a distance",
-                "contenu": (
-                    "<p>La FOAD permet aux enseignants de se former depuis leur localite, avec "
-                    "l'accompagnement des antennes regionales et des conseillers pedagogiques.</p>"
-                ),
-            },
-        )
         self.stdout.write("Contenus publics enregistres.")
 
     def creer_jours_feries(self):

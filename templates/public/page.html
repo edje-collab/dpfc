@@ -1,13 +1,42 @@
 {% extends "public/base.html" %}
-{% block titre %}{{ page.titre }}{% endblock %}
+{% load wagtailcore_tags wagtailimages_tags %}
 {% block contenu %}
-<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / {{ page.titre }}</div>
+{% include "public/_fil.html" with courant=page.title %}
 <section class="section">
-  <div class="conteneur article">
-    <h1>{{ page.titre }}</h1>
-    {% if page.chapeau %}<p><strong>{{ page.chapeau }}</strong></p>{% endif %}
-    {% if page.image %}<img src="{{ page.image.url }}" alt="">{% endif %}
-    {{ page.contenu|safe }}
+  <div class="conteneur">
+    <div class="article">
+      <h1>{{ page.title }}</h1>
+      {% if page.chapeau %}<p><strong>{{ page.chapeau }}</strong></p>{% endif %}
+      {% if page.image %}{% image page.image width-1000 alt="" %}{% endif %}
+      {% include "public/_corps.html" with corps=page.corps %}
+    </div>
+
+    {% if page.afficher_organisation %}
+      <h2 style="margin-top:2.5rem">Organisation de la direction centrale</h2>
+      <div class="defilement">
+        <table class="tableau">
+          <thead><tr><th>Structure</th><th>Type</th><th>Responsable</th><th>Contact</th></tr></thead>
+          <tbody>
+            {% for structure in structures %}
+              <tr>
+                <td>{{ structure.nom }}{% if structure.sigle %} ({{ structure.sigle }}){% endif %}</td>
+                <td>{{ structure.get_type_display }}</td>
+                <td>{{ structure.responsable.nom_complet|default:"-" }}</td>
+                <td>{{ structure.email|default:"-" }}</td>
+              </tr>
+            {% empty %}<tr><td colspan="4" class="aide">Organisation en cours de publication.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if pages_cles.antennes %}<p style="margin-top:1.5rem"><a class="bouton bouton--ligne" href="{% pageurl pages_cles.antennes %}">Decouvrir les {{ nb_antennes }} antennes regionales</a></p>{% endif %}
+    {% endif %}
+
+    {% with sous_pages=page.get_children.live.in_menu %}
+      {% if sous_pages %}
+        <h2 style="margin-top:2.5rem">Voir aussi</h2>
+        <ul class="liste-nue">{% for sp in sous_pages %}<li><a href="{% pageurl sp %}">{{ sp.title }}</a></li>{% endfor %}</ul>
+      {% endif %}
+    {% endwith %}
   </div>
 </section>
 {% endblock %}

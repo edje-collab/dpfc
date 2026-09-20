@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.accounts.models import Notification
-from apps.contenus.models import Actualite, Evenement, Projet, Ressource
+from apps.site_public.models import PageActualite, PageEvenement, PageProjet, Ressource
 from apps.core.models import Structure
 from apps.rh.models import Demande, RapportMission, SoldeConge, Validation
 from apps.rh.services import annuler, decider, demandes_a_traiter, soumettre
@@ -247,7 +247,7 @@ class ActualitePubliqueViewSet(LectureLibre):
     lookup_field = "slug"
 
     def get_queryset(self):
-        return Actualite.objects.publiees().select_related("categorie")
+        return PageActualite.publiees().select_related("categorie")
 
 
 class RessourcePubliqueViewSet(LectureLibre):
@@ -266,7 +266,7 @@ class RessourcePubliqueViewSet(LectureLibre):
 class ProjetPubliqueViewSet(LectureLibre):
     serializer_class = s.ProjetSerializer
     lookup_field = "slug"
-    queryset = Projet.objects.filter(publie=True)
+    queryset = PageProjet.publies()
 
 
 class EvenementPubliqueViewSet(LectureLibre):
@@ -274,7 +274,7 @@ class EvenementPubliqueViewSet(LectureLibre):
     lookup_field = "slug"
 
     def get_queryset(self):
-        return Evenement.objects.filter(publie=True, date_debut__gte=timezone.localdate())
+        return PageEvenement.a_venir()
 
 
 class AntennePubliqueViewSet(LectureLibre):

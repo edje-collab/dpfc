@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ConfigurationSite, JournalAction, Region, Structure
+from .models import JournalAction, Region, Structure
 
 
 @admin.register(Region)
@@ -16,15 +16,6 @@ class StructureAdmin(admin.ModelAdmin):
     search_fields = ("nom", "sigle")
     autocomplete_fields = ("parent", "region", "responsable", "drenaet")
     prepopulated_fields = {"slug": ("nom",)}
-
-
-@admin.register(ConfigurationSite)
-class ConfigurationSiteAdmin(admin.ModelAdmin):
-    def has_add_permission(self, request):
-        return not ConfigurationSite.objects.exists()
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 
 @admin.register(JournalAction)

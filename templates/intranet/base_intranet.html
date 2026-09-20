@@ -11,7 +11,7 @@
 <body class="intranet">
 <div class="appli">
   <aside class="lateral">
-    <a class="lateral__marque" href="{% url 'contenus:accueil' %}">
+    <a class="lateral__marque" href="/">
       <img src="{% static 'img/blason.svg' %}" alt="">
       <strong>{{ config_site.sigle }}<span>Espace agent</span></strong>
     </a>
@@ -48,7 +48,7 @@
       <h4>Mon compte</h4>
       <a href="{% url 'accounts:profil' %}" class="{% if url_nom == 'profil' %}actif{% endif %}">Mon profil</a>
       <a href="{% url 'signature:ma_cle' %}" class="{% if url_nom == 'ma_cle' %}actif{% endif %}">Ma signature electronique</a>
-      <a href="{% url 'contenus:accueil' %}">Voir le site public</a>
+      <a href="/">Voir le site public</a>
       <form method="post" action="{% url 'accounts:deconnexion' %}">{% csrf_token %}
         <button class="btn btn--secondaire btn--petit" type="submit" style="margin:.6rem 1.1rem">Se deconnecter</button>
       </form>

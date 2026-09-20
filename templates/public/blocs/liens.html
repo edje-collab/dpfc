@@ -1,0 +1,8 @@
+<div class="bloc-liens">
+  {% if value.titre %}<h3>{{ value.titre }}</h3>{% endif %}
+  <ul class="liste-nue">
+    {% for lien in value.liens %}
+      <li><a href="{% if lien.page %}{{ lien.page.url }}{% else %}{{ lien.url }}{% endif %}">{{ lien.libelle }}</a></li>
+    {% endfor %}
+  </ul>
+</div>

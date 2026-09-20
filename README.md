@@ -4,7 +4,7 @@ Projet **monolithique Django** réunissant dans un seul dépôt :
 
 | Brique | Description |
 |---|---|
-| **Site public** | Rendu serveur (templates Django), accessible sans compte : actualités, ressources pédagogiques, FOAD, projets, agenda, antennes régionales, contact. |
+| **Site public** | Géré par **Wagtail** (CMS, administration sur `/cms/`), accessible sans compte : actualités, ressources pédagogiques, FOAD, projets, agenda, antennes régionales, contact. Contenu par blocs, médiathèque, brouillons/publication, prévisualisation. |
 | **Intranet agents** | Espace authentifié : consignation des actes administratifs (congé, permission, ordre de mission, absence, formation), circuit de validation hiérarchique, planning, registre, annuaire. |
 | **API REST** | `/api/v1/` avec jetons JWT, consommée par l'application mobile **Flutter** livrée dans `mobile/`. |
 | **Signature électronique** | Bi-clés RSA 2048 par signataire, scellement SHA-256 des actes, page publique de vérification et QR code sur le document. |
@@ -25,8 +25,9 @@ python manage.py runserver
 ```
 
 - Site public : http://127.0.0.1:8000/
+- Administration du site public (Wagtail) : http://127.0.0.1:8000/cms/ (`ADMIN01` / `dpfc2026!`)
 - Espace agent : http://127.0.0.1:8000/intranet/connexion/
-- Administration : http://127.0.0.1:8000/admin/ (`ADMIN01` / `dpfc2026!`)
+- Administration de l'espace agent (Django) : http://127.0.0.1:8000/admin/ (`ADMIN01` / `dpfc2026!`)
 - API : http://127.0.0.1:8000/api/v1/
 
 **Comptes de démonstration** (le mot de passe initial est le matricule) :
@@ -55,7 +56,8 @@ dpfc/
 │   │                    configuration éditoriale, journal d'audit
 │   ├── accounts/        modèle Agent (connexion par matricule), rôles, notifications,
 │   │                    annuaire, organigramme, gestion des comptes
-│   ├── contenus/        site public : actualités, ressources, projets, événements, pages, contact
+│   ├── site_public/     site public Wagtail : pages (accueil, éditoriales, actualités, projets,
+│   │                    événements, antennes, contact), snippets (ressources, catégories, messages)
 │   ├── rh/              actes administratifs, circuit de validation, soldes de congé,
 │   │                    planning, registre, documents officiels imprimables
 │   ├── signature/       bi-clés RSA, signature des actes, vérification publique
@@ -215,6 +217,9 @@ En production, HTTPS obligatoire, cookies sécurisés, HSTS et `X-Frame-Options`
 - **Affecter en région** : rattacher l'agent à une structure de type `ANTENNE` ; le circuit d'antenne s'applique alors automatiquement. Renseigner le champ `drenaet` de l'antenne dans l'administration pour que l'exception « mission hors périmètre » désigne le bon directeur régional.
 - **Créer des agents en masse** : Import Excel des agents (voir § 6).
 - **Activer la signature d'une autorité** : l'intéressé génère lui-même sa clé depuis « Ma signature électronique ».
-- **Publier une actualité ou une ressource** : administration Django (`/admin/`), rubriques Actualités et Ressources pédagogiques.
-- **Bannière et coordonnées du site** : administration → Configuration du site.
+- **Publier une actualité, un projet, un événement ou une page** : Wagtail (`/cms/`) → Pages → Accueil → rubrique concernée → « Ajouter une page enfant ». Enregistrer en brouillon, prévisualiser, puis « Publier ». La case « Afficher dans les menus » (onglet Promotion) fait apparaître une page de premier niveau dans la barre de navigation.
+- **Ressources pédagogiques, catégories, messages de contact** : Wagtail → menu Contenus. Les fichiers sont pris dans la médiathèque Documents.
+- **Slogan et image de la bannière** : Wagtail → Pages → Accueil (modifier).
+- **Identité, coordonnées, pied de page, bouton « Espace agent »** : Wagtail → Paramètres → Configuration du site.
+- **Comptes des rédacteurs du site** : ce sont des agents (même modèle) ; leur donner l'accès à Wagtail via Paramètres → Groupes (groupes « Editors » / « Moderators » créés par Wagtail).
 - **Jours fériés** : espace agent → Jours fériés (réservé au service du personnel).

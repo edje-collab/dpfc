@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from apps.accounts.models import Notification
-from apps.contenus.models import Actualite, Evenement, Projet, Ressource
+from apps.site_public.models import PageActualite, PageEvenement, PageProjet, Ressource
 from apps.core.models import Structure
 from apps.rh.models import Demande, RapportMission, SoldeConge, Validation
 
@@ -122,34 +122,77 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = ["id", "titre", "message", "lien", "niveau", "lue", "creee_le"]
 
 
+def _image_url(page, request, spec="width-800"):
+    """URL absolue d'un rendu d'image Wagtail (ou None)."""
+    if not page.image_id:
+        return None
+    url = page.image.get_rendition(spec).url
+    return request.build_absolute_uri(url) if request else url
+
+
 class ActualiteSerializer(serializers.ModelSerializer):
+    titre = serializers.CharField(source="title", read_only=True)
+    contenu = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
     categorie = serializers.StringRelatedField()
+    url = serializers.CharField(read_only=True)
 
     class Meta:
-        model = Actualite
-        fields = ["id", "titre", "slug", "chapeau", "contenu", "image", "categorie", "date_publication"]
+        model = PageActualite
+        fields = ["id", "titre", "slug", "chapeau", "contenu", "image", "categorie", "date_publication", "url"]
+
+    def get_contenu(self, page):
+        return str(page.corps)
+
+    def get_image(self, page):
+        return _image_url(page, self.context.get("request"))
 
 
 class RessourceSerializer(serializers.ModelSerializer):
     type_libelle = serializers.CharField(source="get_type_display", read_only=True)
     niveau_libelle = serializers.CharField(source="get_niveau_display", read_only=True)
+    fichier = serializers.SerializerMethodField()
 
     class Meta:
         model = Ressource
         fields = ["id", "titre", "slug", "type", "type_libelle", "niveau", "niveau_libelle",
                   "discipline", "classe", "description", "fichier", "lien_externe", "annee"]
 
+    def get_fichier(self, ressource):
+        if not ressource.document_id:
+            return None
+        requete = self.context.get("request")
+        url = ressource.document.url
+        return requete.build_absolute_uri(url) if requete else url
+
 
 class ProjetSerializer(serializers.ModelSerializer):
+    nom = serializers.CharField(source="title", read_only=True)
+    description = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+    url = serializers.CharField(read_only=True)
+
     class Meta:
-        model = Projet
-        fields = ["id", "nom", "sigle", "slug", "accroche", "description", "couleur", "etat", "image"]
+        model = PageProjet
+        fields = ["id", "nom", "sigle", "slug", "accroche", "description", "couleur", "etat", "image", "url"]
+
+    def get_description(self, page):
+        return str(page.corps)
+
+    def get_image(self, page):
+        return _image_url(page, self.context.get("request"))
 
 
 class EvenementSerializer(serializers.ModelSerializer):
+    titre = serializers.CharField(source="title", read_only=True)
     type_libelle = serializers.CharField(source="get_type_display", read_only=True)
+    description = serializers.SerializerMethodField()
+    url = serializers.CharField(read_only=True)
 
     class Meta:
-        model = Evenement
+        model = PageEvenement
         fields = ["id", "titre", "slug", "type", "type_libelle", "description", "date_debut",
-                  "date_fin", "heure_debut", "lieu", "public_cible"]
+                  "date_fin", "heure_debut", "lieu", "public_cible", "url"]
+
+    def get_description(self, page):
+        return str(page.corps)

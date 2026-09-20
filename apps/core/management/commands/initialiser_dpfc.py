@@ -12,8 +12,9 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from apps.contenus.models import Actualite, Categorie, Evenement, PageStatique, Projet, Ressource
 from apps.core.models import ConfigurationSite, Region, Structure
+from apps.site_public import arborescence
+from apps.site_public.models import PageEvenement, PageProjet, Ressource
 from apps.rh.models import JourFerie, SoldeConge, TypeDemande
 
 Agent = get_user_model()
@@ -211,11 +212,12 @@ class Command(BaseCommand):
         ]:
             JourFerie.objects.get_or_create(date=date(annee, *jour), defaults={"libelle": libelle})
 
-        # --- Contenus editoriaux -------------------------------------------
+        # --- Site public (Wagtail) -----------------------------------------
+        pages = arborescence.assurer_site()
         categories = {}
         for nom, couleur in [("Vie de la direction", "#14958a"), ("Formation", "#4cbb6d"),
                              ("Programmes", "#f0a83c"), ("Partenariats", "#4ec3e8")]:
-            categories[nom] = Categorie.objects.get_or_create(nom=nom, defaults={"couleur": couleur})[0]
+            categories[nom] = arborescence.ajouter_categorie(nom, couleur)
 
         actualites = [
             ("Validation des guides d'execution du primaire",
@@ -236,13 +238,10 @@ class Command(BaseCommand):
              "des equipes de la direction et des antennes."),
         ]
         for i, (titre, chapeau, categorie, contenu) in enumerate(actualites):
-            Actualite.objects.get_or_create(
-                titre=titre,
-                defaults={
-                    "chapeau": chapeau, "contenu": contenu, "categorie": categories[categorie],
-                    "publiee": True, "a_la_une": i == 0, "auteur": chef_service,
-                    "date_publication": timezone.now() - timedelta(days=3 * i + 1),
-                },
+            arborescence.ajouter_actualite(
+                pages["actualites"], titre, chapeau, f"<p>{contenu}</p>",
+                categorie=categories[categorie], a_la_une=i == 0, auteur=chef_service,
+                date_publication=timezone.now() - timedelta(days=3 * i + 1),
             )
 
         ressources = [
@@ -254,11 +253,9 @@ class Command(BaseCommand):
             ("Arrete portant organisation de la formation continue", Ressource.Type.TEXTE, Ressource.Niveau.TOUS, "Textes", ""),
         ]
         for titre, type_, niveau, discipline, classe in ressources:
-            Ressource.objects.get_or_create(
-                titre=titre,
-                defaults={"type": type_, "niveau": niveau, "discipline": discipline, "classe": classe,
-                          "annee": annee, "description": f"{titre}. Document officiel diffuse par la direction.",
-                          "publiee": True},
+            arborescence.ajouter_ressource(
+                titre, type=type_, niveau=niveau, discipline=discipline, classe=classe, annee=annee,
+                description=f"{titre}. Document officiel diffuse par la direction.", publiee=True,
             )
 
         projets = [
@@ -272,56 +269,25 @@ class Command(BaseCommand):
              "Production et diffusion des ressources pedagogiques numeriques."),
         ]
         for i, (nom, sigle, couleur, icone, accroche) in enumerate(projets):
-            Projet.objects.get_or_create(
-                sigle=sigle,
-                defaults={"nom": nom, "couleur": couleur, "icone": icone, "accroche": accroche,
-                          "ordre": i + 1, "publie": True,
-                          "description": f"{accroche} Le projet est pilote par la direction, en lien avec les antennes regionales.",
-                          "objectifs": "Renforcer la qualite des apprentissages et l'encadrement pedagogique."},
+            arborescence.ajouter_projet(
+                pages["projets"], sigle, nom, accroche,
+                f"<p>{accroche} Le projet est pilote par la direction, en lien avec les antennes regionales.</p>",
+                couleur=couleur, icone=icone, ordre=i + 1,
+                objectifs="<p>Renforcer la qualite des apprentissages et l'encadrement pedagogique.</p>",
             )
 
         aujourdhui = timezone.localdate()
         evenements = [
-            ("Atelier de conception des fiches de lecture", Evenement.Type.ATELIER, 12, "Abidjan", "Concepteurs de programmes"),
-            ("Session de formation des enseignants du prescolaire", Evenement.Type.FORMATION, 25, "Bouake", "Enseignants du prescolaire"),
-            ("Seminaire des chefs d'antenne", Evenement.Type.SEMINAIRE, 40, "Yamoussoukro", "Chefs d'antenne"),
+            ("Atelier de conception des fiches de lecture", PageEvenement.Type.ATELIER, 12, "Abidjan", "Concepteurs de programmes"),
+            ("Session de formation des enseignants du prescolaire", PageEvenement.Type.FORMATION, 25, "Bouake", "Enseignants du prescolaire"),
+            ("Seminaire des chefs d'antenne", PageEvenement.Type.SEMINAIRE, 40, "Yamoussoukro", "Chefs d'antenne"),
         ]
         for titre, type_, delta, lieu, cible in evenements:
-            Evenement.objects.get_or_create(
-                titre=titre,
-                defaults={"type": type_, "date_debut": aujourdhui + timedelta(days=delta),
-                          "date_fin": aujourdhui + timedelta(days=delta + 2), "lieu": lieu,
-                          "public_cible": cible, "publie": True,
-                          "description": f"{titre}. Les modalites de participation sont communiquees aux structures concernees."},
+            arborescence.ajouter_evenement(
+                pages["evenements"], titre, aujourdhui + timedelta(days=delta),
+                f"{titre}. Les modalites de participation sont communiquees aux structures concernees.",
+                type=type_, date_fin=aujourdhui + timedelta(days=delta + 2), lieu=lieu, public_cible=cible,
             )
-
-        PageStatique.objects.get_or_create(
-            slug="presentation",
-            defaults={
-                "titre": "Missions et organisation",
-                "chapeau": "La direction elabore les programmes educatifs et pilote la formation continue des enseignants.",
-                "contenu": (
-                    "<p>La Direction de la Pedagogie et de la Formation Continue conçoit les programmes "
-                    "educatifs, produit les guides d'execution et les supports d'accompagnement, et organise "
-                    "la formation continue des personnels enseignants et d'encadrement.</p>"
-                    "<p>Elle s'appuie sur des sous-directions et services au niveau central, et sur des "
-                    "antennes regionales qui assurent la proximite avec les etablissements.</p>"
-                ),
-                "publiee": True,
-            },
-        )
-        PageStatique.objects.get_or_create(
-            slug="foad",
-            defaults={
-                "titre": "Formation ouverte et a distance",
-                "chapeau": "Se former en ligne, depuis son ecole ou son antenne.",
-                "contenu": (
-                    "<p>Les parcours en ligne prolongent les regroupements presentiels et permettent a chaque "
-                    "enseignant de progresser a son rythme.</p>"
-                ),
-                "publiee": True,
-            },
-        )
 
         if options["demo"]:
             self._cles_de_signature([directeur, chef_bouake, chef_korhogo, dr_bouake, dr_korhogo])

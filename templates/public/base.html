@@ -1,10 +1,10 @@
-{% load static %}<!DOCTYPE html>
+{% load static wagtailcore_tags wagtailimages_tags wagtailuserbar %}<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block titre %}{{ config_site.nom_site }}{% endblock %} | {{ config_site.sigle }}</title>
-  <meta name="description" content="{% block description %}Portail de la Direction de la Pedagogie et de la Formation Continue : programmes scolaires, guides pedagogiques, formation continue des enseignants et antennes regionales.{% endblock %}">
+  <title>{% block titre %}{% if page %}{{ page.seo_title|default:page.title }}{% else %}{{ config_site.nom_site }}{% endif %}{% endblock %} | {{ config_site.sigle }}</title>
+  <meta name="description" content="{% block description %}{% if page and page.search_description %}{{ page.search_description }}{% else %}Portail de la Direction de la Pedagogie et de la Formation Continue : programmes scolaires, guides pedagogiques, formation continue des enseignants et antennes regionales.{% endif %}{% endblock %}">
   <link rel="icon" href="{% static 'img/blason.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,12 +13,13 @@
   {% block entete_supplementaire %}{% endblock %}
 </head>
 <body>
+{% wagtailuserbar %}
 <a class="saut-contenu" href="#contenu">Aller au contenu</a>
 
 <header class="entete">
   <div class="conteneur entete__barre">
-    <a class="marque" href="{% url 'contenus:accueil' %}">
-      {% if config_site.logo %}<img class="marque__blason" src="{{ config_site.logo.url }}" alt="">
+    <a class="marque" href="{% if accueil %}{% pageurl accueil %}{% else %}/{% endif %}">
+      {% if config_site.logo %}{% image config_site.logo max-104x104 class="marque__blason" alt="" %}
       {% else %}<img class="marque__blason" src="{% static 'img/blason.svg' %}" alt="">{% endif %}
       <span class="marque__texte">Direction de la Pedagogie<br>et de la Formation Continue
         <span>{{ config_site.ministere }}</span>
@@ -26,16 +27,13 @@
     </a>
     <button class="bouton-menu" data-menu aria-expanded="false" aria-controls="navigation">Menu</button>
     <nav id="navigation" class="nav" data-nav aria-label="Navigation principale">
-      <a href="{% url 'contenus:accueil' %}" {% if rubrique == 'accueil' %}aria-current="page"{% endif %}>Accueil</a>
-      <a href="{% url 'contenus:presentation' %}" {% if rubrique == 'presentation' %}aria-current="page"{% endif %}>Presentation</a>
-      <a href="{% url 'contenus:ressources' %}" {% if rubrique == 'ressources' %}aria-current="page"{% endif %}>Ressources</a>
-      <a href="{% url 'contenus:foad' %}" {% if rubrique == 'foad' %}aria-current="page"{% endif %}>FOAD</a>
-      <a href="{% url 'contenus:projets' %}" {% if rubrique == 'projets' %}aria-current="page"{% endif %}>Projets</a>
-      <a href="{% url 'contenus:antennes' %}" {% if rubrique == 'antennes' %}aria-current="page"{% endif %}>Antennes</a>
-      <a href="{% url 'contenus:contact' %}" {% if rubrique == 'contact' %}aria-current="page"{% endif %}>Contact</a>
+      <a href="{% if accueil %}{% pageurl accueil %}{% else %}/{% endif %}" {% if rubrique_accueil %}aria-current="page"{% endif %}>Accueil</a>
+      {% for item in menu %}
+        <a href="{% pageurl item.page %}" {% if item.actif %}aria-current="page"{% endif %}>{{ item.page.title }}</a>
+      {% endfor %}
       {% if user.is_authenticated %}
         <a class="nav__acces" href="{% url 'rh:tableau_bord' %}">Mon espace</a>
-      {% else %}
+      {% elif config_site.afficher_espace_agent %}
         <a class="nav__acces" href="{% url 'accounts:connexion' %}">Espace agent</a>
       {% endif %}
     </nav>
@@ -55,7 +53,7 @@
 
 <footer class="pied">
   <div class="conteneur">
-    <div class="pied__grille">
+    <div class="pied__grille{% if not config_site.afficher_espace_agent %} pied__grille--trois{% endif %}">
       <div>
         <h4>{{ config_site.sigle }}</h4>
         <p>{{ config_site.pied_de_page }}</p>
@@ -64,31 +62,36 @@
       </div>
       <div>
         <h4>Ressources</h4>
+        {% if pages_cles.ressources %}{% with url_r=pages_cles.ressources.url %}
         <ul class="liste-nue">
-          <li><a href="{% url 'contenus:ressources' %}?type=PROGRAMME">Programmes scolaires</a></li>
-          <li><a href="{% url 'contenus:ressources' %}?type=GUIDE">Guides pedagogiques</a></li>
-          <li><a href="{% url 'contenus:ressources' %}?type=FICHE_TP">Fiches de travaux pratiques</a></li>
-          <li><a href="{% url 'contenus:ressources' %}?type=TEXTE">Textes officiels</a></li>
+          <li><a href="{{ url_r }}?type=PROGRAMME">Programmes scolaires</a></li>
+          <li><a href="{{ url_r }}?type=GUIDE">Guides pedagogiques</a></li>
+          <li><a href="{{ url_r }}?type=FICHE_TP">Fiches de travaux pratiques</a></li>
+          <li><a href="{{ url_r }}?type=TEXTE">Textes officiels</a></li>
         </ul>
+        {% endwith %}{% endif %}
       </div>
       <div>
         <h4>La direction</h4>
         <ul class="liste-nue">
-          <li><a href="{% url 'contenus:presentation' %}">Missions et organisation</a></li>
-          <li><a href="{% url 'contenus:antennes' %}">Antennes regionales</a></li>
-          <li><a href="{% url 'contenus:projets' %}">Projets strategiques</a></li>
-          <li><a href="{% url 'contenus:evenements' %}">Formations a venir</a></li>
+          {% for item in menu %}{% if item.page.slug == 'presentation' %}<li><a href="{% pageurl item.page %}">Missions et organisation</a></li>{% endif %}{% endfor %}
+          {% if pages_cles.antennes %}<li><a href="{% pageurl pages_cles.antennes %}">Antennes regionales</a></li>{% endif %}
+          {% if pages_cles.projets %}<li><a href="{% pageurl pages_cles.projets %}">Projets strategiques</a></li>{% endif %}
+          {% if pages_cles.evenements %}<li><a href="{% pageurl pages_cles.evenements %}">Formations a venir</a></li>{% endif %}
+          {% if pages_cles.actualites %}<li><a href="{% pageurl pages_cles.actualites %}">Actualites</a></li>{% endif %}
         </ul>
       </div>
+      {% if config_site.afficher_espace_agent %}
       <div>
         <h4>Espace agent</h4>
         <p>Conges, permissions et ordres de mission se deposent en ligne, pour la direction centrale comme pour les antennes.</p>
         <a class="bouton bouton--clair" href="{% url 'accounts:connexion' %}">Se connecter</a>
       </div>
+      {% endif %}
     </div>
     <div class="pied__bas">
       <span>&copy; {% now "Y" %} {{ config_site.nom_site }} - {{ config_site.ministere }}</span>
-      <span><a href="{% url 'contenus:recherche' %}">Rechercher</a> &middot; <a href="{% url 'signature:verification_recherche' %}">Verifier un acte signe</a> &middot; <a href="{% url 'contenus:contact' %}">Nous ecrire</a></span>
+      <span><a href="{% url 'site_public:recherche' %}">Rechercher</a> &middot; <a href="{% url 'signature:verification_recherche' %}">Verifier un acte signe</a>{% if pages_cles.contact %} &middot; <a href="{% pageurl pages_cles.contact %}">Nous ecrire</a>{% endif %}</span>
     </div>
   </div>
 </footer>

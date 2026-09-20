@@ -1,21 +1,21 @@
 {% extends "public/base.html" %}
-{% block titre %}{{ article.titre }}{% endblock %}
+{% load wagtailcore_tags wagtailimages_tags %}
 {% block description %}{{ article.chapeau }}{% endblock %}
 {% block contenu %}
-<div class="conteneur fil"><a href="{% url 'contenus:accueil' %}">Accueil</a> / <a href="{% url 'contenus:actualites' %}">Actualites</a> / {{ article.titre|truncatechars:45 }}</div>
+{% include "public/_fil.html" with parent=page.get_parent courant=page.title %}
 <section class="section">
   <div class="conteneur">
     <article class="article">
       {% if article.categorie %}<span class="etiquette">{{ article.categorie }}</span>{% endif %}
-      <h1>{{ article.titre }}</h1>
+      <h1>{{ article.title }}</h1>
       <p class="article__meta">
         Publie le {{ article.date_publication|date:"j F Y" }}
         {% if article.structure %} par {{ article.structure.libelle_complet }}{% endif %}
         &middot; {{ article.vues }} lecture{{ article.vues|pluralize }}
       </p>
-      {% if article.image %}<img src="{{ article.image.url }}" alt="">{% endif %}
+      {% if article.image %}{% image article.image width-1000 alt="" %}{% endif %}
       <p><strong>{{ article.chapeau }}</strong></p>
-      {{ article.contenu|linebreaks }}
+      {% include "public/_corps.html" with corps=article.corps %}
     </article>
     {% if similaires %}
       <h2 style="margin-top:3rem">A lire aussi</h2>
