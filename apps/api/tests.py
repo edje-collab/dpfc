@@ -567,3 +567,114 @@ class ApiAtelierTest(TestCase):
 
     def test_acces_refuse_sans_jeton(self):
         self.assertEqual(self.client.get("/api/v1/ateliers/").status_code, 401)
+
+
+class ApiAchatsTest(TestCase):
+    """Le magasin se tient aussi depuis le terrain, rayon par rayon."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.achats.models import Article, ExpressionBesoin
+        from apps.achats.services import enregistrer_mouvement
+
+        cls.p_centrale = Perimetre.objects.create(
+            code="DPFC", nom="Direction centrale", type=Perimetre.Type.CENTRALE
+        )
+        cls.p_antenne = Perimetre.objects.create(
+            code="APFC-GBK", nom="Antenne", type=Perimetre.Type.ANTENNE
+        )
+        cls.direction = Structure.objects.create(
+            nom="Direction", sigle="DPFC", type=Structure.Type.DIRECTION,
+            perimetre=cls.p_centrale, perimetre_racine=True,
+        )
+        cls.antenne = Structure.objects.create(
+            nom="Antenne", sigle="APFC-GBK", type=Structure.Type.ANTENNE,
+            perimetre=cls.p_antenne, perimetre_racine=True,
+        )
+        cls.directeur = Agent.objects.create_user(
+            "D0001", password="motdepasse123", last_name="KOUAME", first_name="S",
+            role=Agent.Role.DIRECTEUR, structure=cls.direction,
+        )
+        cls.secretaire = Agent.objects.create_user(
+            "S0001", password="motdepasse123", last_name="ABLE", first_name="C",
+            role=Agent.Role.SECRETARIAT, structure=cls.direction,
+        )
+        cls.agent = Agent.objects.create_user(
+            "A0001", password="motdepasse123", last_name="YAO", first_name="S",
+            role=Agent.Role.AGENT, structure=cls.direction, superieur=cls.directeur,
+        )
+        cls.direction.responsable = cls.directeur
+        cls.direction.save(update_fields=["responsable"])
+
+        cls.article = Article.objects.create(
+            perimetre=cls.p_centrale, code="RAM-A4", designation="Rame A4",
+            unite="rame", seuil_alerte=10,
+        )
+        enregistrer_mouvement(cls.article, "ENTREE", 50, cls.secretaire)
+        Article.objects.create(
+            perimetre=cls.p_antenne, code="CRA", designation="Craie", seuil_alerte=5
+        )
+        cls.besoin = ExpressionBesoin.objects.create(
+            perimetre=cls.p_centrale, objet="Papier", demandeur=cls.agent
+        )
+        cls.besoin.lignes.create(designation="Rame A4", quantite=10, prix_unitaire=5_000)
+
+    def _entetes(self, matricule="S0001"):
+        reponse = self.client.post(
+            reverse("api:connexion"), {"matricule": matricule, "password": "motdepasse123"},
+            content_type="application/json",
+        )
+        return {"HTTP_AUTHORIZATION": f"Bearer {reponse.json()['access']}"}
+
+    def test_le_magasin_est_cloisonne_par_perimetre(self):
+        reponse = self.client.get("/api/v1/articles/", **self._entetes())
+        self.assertEqual(reponse.status_code, 200)
+        codes = [a["code"] for a in reponse.json()["results"]]
+        self.assertEqual(codes, ["RAM-A4"])
+        self.assertEqual(
+            self.client.get("/api/v1/articles/", **self._entetes("D0001")).json()["count"], 2
+        )
+
+    def test_filtre_des_articles_sous_seuil(self):
+        reponse = self.client.get("/api/v1/articles/?alerte=1", **self._entetes())
+        self.assertEqual(reponse.json()["count"], 0)
+
+    def test_sortie_depuis_le_terrain(self):
+        reponse = self.client.post(
+            f"/api/v1/articles/{self.article.pk}/mouvement/",
+            {"type": "SORTIE", "quantite": 12, "beneficiaire": "Service du personnel"},
+            **self._entetes(),
+        )
+        self.assertEqual(reponse.status_code, 200)
+        self.assertEqual(reponse.json()["stock"], 38)
+
+    def test_sortie_superieure_au_stock_refusee(self):
+        reponse = self.client.post(
+            f"/api/v1/articles/{self.article.pk}/mouvement/",
+            {"type": "SORTIE", "quantite": 500, "beneficiaire": "X"}, **self._entetes(),
+        )
+        self.assertEqual(reponse.status_code, 400)
+        self.assertIn("insuffisant", reponse.json()["detail"])
+
+    def test_un_agent_ordinaire_ne_tient_pas_le_magasin(self):
+        reponse = self.client.post(
+            f"/api/v1/articles/{self.article.pk}/mouvement/",
+            {"type": "ENTREE", "quantite": 5}, **self._entetes("A0001"),
+        )
+        self.assertEqual(reponse.status_code, 403)
+
+    def test_journal_des_mouvements(self):
+        reponse = self.client.get(
+            f"/api/v1/articles/{self.article.pk}/mouvements/", **self._entetes()
+        )
+        self.assertEqual(reponse.status_code, 200)
+        self.assertEqual(reponse.json()[0]["stock_apres"], 50)
+
+    def test_mes_besoins(self):
+        reponse = self.client.get("/api/v1/besoins/?mes_besoins=1", **self._entetes("A0001"))
+        donnees = reponse.json()["results"]
+        self.assertEqual(len(donnees), 1)
+        self.assertEqual(donnees[0]["montant_estime"], "50000")
+
+    def test_acces_refuse_sans_jeton(self):
+        self.assertEqual(self.client.get("/api/v1/articles/").status_code, 401)

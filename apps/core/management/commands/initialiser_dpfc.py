@@ -445,6 +445,8 @@ class Command(BaseCommand):
             )
 
         # --- Referentiels des applications metier --------------------------
+        from apps.achats.demo import charger as charger_achats
+        from apps.achats.demo import installer_fournisseurs
         from apps.activites.demo import charger as charger_pilotage
         from apps.activites.demo import installer_axes
         from apps.ateliers.demo import charger as charger_ateliers
@@ -455,11 +457,13 @@ class Command(BaseCommand):
         installer_axes()
         installer_modeles()
         installer_baremes()
+        installer_fournisseurs()
 
         if options["demo"]:
             charger_pilotage(stdout=self.stdout)
             charger_courrier(stdout=self.stdout)
             charger_ateliers(stdout=self.stdout)
+            charger_achats(stdout=self.stdout)
             self._cles_de_signature([directeur, chef_bouake, chef_korhogo, dr_bouake, dr_korhogo])
             self._demandes_demo()
 

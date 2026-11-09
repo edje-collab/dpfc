@@ -1,0 +1,74 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}{{ article.designation }}{% endblock %}
+{% block titre_page %}{{ article.code }} &middot; {{ article.designation }}{% endblock %}
+{% block sous_titre %}{{ article.perimetre.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="grille-2">
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete">
+        <h2>Stock</h2>
+        {% if article.sous_seuil %}<span class="pastille pastille--ko">A reapprovisionner</span>{% endif %}
+      </div>
+      <div class="indicateur" style="border:0;padding:0">
+        <strong>{{ article.stock }}</strong><span>{{ article.unite }}(s) en magasin</span>
+      </div>
+      <table class="table table--compacte" style="margin-top:1rem">
+        <tr><th>Seuil d'alerte</th><td>{{ article.seuil_alerte }} {{ article.unite }}(s)</td></tr>
+        <tr><th>Mouvements</th><td>{{ article.mouvements.count }}</td></tr>
+        <tr><th>Controle du journal</th>
+            <td>{% if ecart %}<span class="pastille pastille--ko">Ecart de {{ ecart }}</span>
+                {% else %}<span class="pastille pastille--ok">Conforme</span>{% endif %}</td></tr>
+      </table>
+      <p class="aide">Le stock derive du journal : chaque quantite s'explique par une entree,
+         une sortie ou un inventaire.</p>
+    </div>
+
+    <div class="bloc">
+      <div class="bloc__tete"><h2>Journal des mouvements</h2></div>
+      {% if mouvements %}
+        <div class="defilement">
+          <table class="table table--compacte">
+            <thead><tr><th>Date</th><th>Type</th><th>Quantite</th><th>Stock apres</th>
+                       <th>Motif / beneficiaire</th><th>Saisi par</th></tr></thead>
+            <tbody>
+              {% for m in mouvements %}
+                <tr>
+                  <td>{{ m.date|date:"d/m/Y" }}</td>
+                  <td>{% if m.type == 'ENTREE' %}<span class="pastille pastille--ok">Entree</span>
+                      {% elif m.type == 'SORTIE' %}<span class="pastille pastille--attente">Sortie</span>
+                      {% else %}<span class="pastille pastille--neutre">Inventaire</span>{% endif %}</td>
+                  <td>{% if m.variation > 0 %}+{{ m.variation }}{% elif m.variation < 0 %}{{ m.variation }}
+                      {% else %}= {{ m.quantite }}{% endif %}</td>
+                  <td><strong>{{ m.stock_apres }}</strong></td>
+                  <td class="aide">{{ m.beneficiaire|default:m.motif|default:"-" }}
+                      {% if m.bon_commande %}<br>{{ m.bon_commande.numero }}{% endif %}</td>
+                  <td class="aide">{{ m.saisi_par.nom_complet|default:"-" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="aide">Aucun mouvement enregistre.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    {% if peut_gerer %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Enregistrer un mouvement</h2></div>
+        <form method="post" action="{% url 'achats:mouvement_creer' article.pk %}" class="formulaire">
+          {% csrf_token %}
+          {% for champ in form.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+          <div class="actions"><button class="btn btn--principal" type="submit">Enregistrer</button></div>
+        </form>
+        <p class="aide">Un inventaire fixe la quantite comptee, quelle qu'elle soit.
+           Une sortie ne peut pas depasser le stock.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

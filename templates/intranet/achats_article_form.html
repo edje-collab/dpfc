@@ -1,0 +1,17 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Article{% endblock %}
+{% block titre_page %}Inscrire un article au magasin{% endblock %}
+{% block sous_titre %}{{ perimetre.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc" style="max-width:600px">
+  <form method="post" class="formulaire">
+    {% csrf_token %}
+    {% include "intranet/_champs.html" %}
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Inscrire</button>
+      <a class="btn btn--secondaire" href="{% url 'achats:magasin' %}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

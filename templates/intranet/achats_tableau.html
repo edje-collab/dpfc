@@ -1,0 +1,84 @@
+{% extends "intranet/base_intranet.html" %}
+{% load humanize %}
+{% block titre %}Achats{% endblock %}
+{% block titre_page %}Achats et stocks{% endblock %}
+{% block sous_titre %}{{ perimetre_courant.nom|default:"Tous perimetres" }}{% endblock %}
+
+{% block contenu %}
+<div class="grille-tb">
+  <div class="indicateur"><strong>{{ nb_besoins }}</strong><span>expressions de besoin</span></div>
+  <div class="indicateur"><strong>{{ nb_en_circuit }}</strong><span>en validation</span></div>
+  <div class="indicateur"><strong>{{ nb_a_receptionner }}</strong><span>commandes a receptionner</span></div>
+  <div class="indicateur"><strong>{{ montant_engage|intcomma }}</strong><span>FCFA engages</span></div>
+</div>
+
+{% if mes_validations %}
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete"><h2>Besoins a valider <span class="pastille pastille--attente">{{ mes_validations|length }}</span></h2></div>
+  <table class="table table--compacte">
+    <thead><tr><th>Numero</th><th>Objet</th><th>Demandeur</th><th>Montant</th><th>Etape</th></tr></thead>
+    <tbody>
+      {% for v in mes_validations %}
+        <tr>
+          <td><a href="{{ v.besoin.get_absolute_url }}">{{ v.besoin.numero }}</a></td>
+          <td>{{ v.besoin.objet }}</td>
+          <td>{{ v.besoin.demandeur.nom_complet }}</td>
+          <td>{{ v.besoin.montant_estime|intcomma }} FCFA</td>
+          <td class="aide">{{ v.libelle }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if sous_seuil %}
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete">
+    <h2>A reapprovisionner <span class="pastille pastille--ko">{{ nb_sous_seuil }}</span></h2>
+    <a class="btn btn--secondaire btn--petit" href="{% url 'achats:magasin' %}?alerte=1">Voir le magasin</a>
+  </div>
+  <table class="table table--compacte">
+    <thead><tr><th>Code</th><th>Article</th><th>Stock</th><th>Seuil</th></tr></thead>
+    <tbody>
+      {% for a in sous_seuil|slice:":8" %}
+        <tr>
+          <td>{{ a.code }}</td>
+          <td><a href="{{ a.get_absolute_url }}">{{ a.designation }}</a></td>
+          <td><span class="pastille pastille--ko">{{ a.stock }} {{ a.unite }}</span></td>
+          <td>{{ a.seuil_alerte }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete">
+    <h2>Besoins recents</h2>
+    <div class="actions">
+      <a class="btn btn--principal btn--petit" href="{% url 'achats:besoin_creer' %}">Exprimer un besoin</a>
+      <a class="btn btn--secondaire btn--petit" href="{% url 'achats:besoins' %}">Tous les besoins</a>
+    </div>
+  </div>
+  {% if recents %}
+    <table class="table">
+      <thead><tr><th>Numero</th><th>Objet</th><th>Demandeur</th><th>Montant estime</th><th>Statut</th></tr></thead>
+      <tbody>
+        {% for b in recents %}
+          <tr>
+            <td><a href="{{ b.get_absolute_url }}">{{ b.numero }}</a></td>
+            <td>{{ b.objet }}</td>
+            <td>{{ b.demandeur.nom_complet }}</td>
+            <td>{{ b.montant_estime|intcomma }} FCFA</td>
+            <td><span class="pastille pastille--{{ b.couleur_statut }}">{{ b.get_statut_display }}</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="aide">Aucune expression de besoin.</p>
+  {% endif %}
+</div>
+{% endblock %}

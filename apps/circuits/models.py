@@ -142,6 +142,13 @@ class Etape(models.Model):
         blank=True,
         help_text="Codes des conditions a remplir simultanement. Vide : l'etape s'applique toujours.",
     )
+    seuil_montant = models.DecimalField(
+        "seuil de montant (FCFA)",
+        max_digits=14,
+        decimal_places=0,
+        default=0,
+        help_text="L'etape ne s'applique qu'au-dela de ce montant. Zero : quel que soit le montant.",
+    )
     facultative = models.BooleanField(
         "etape facultative",
         default=True,

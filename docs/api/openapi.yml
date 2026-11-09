@@ -139,6 +139,132 @@ paths:
               schema:
                 $ref: '#/components/schemas/Agent'
           description: ''
+  /api/v1/articles/:
+    get:
+      operationId: articles_list
+      description: |-
+        Etat du magasin, consultable depuis le terrain.
+
+        Le mouvement de stock se depose par l'action dediee : un releve
+        d'inventaire se fait rayon par rayon, le telephone a la main.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - articles
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedArticleList'
+          description: ''
+  /api/v1/articles/{id}/:
+    get:
+      operationId: articles_retrieve
+      description: |-
+        Etat du magasin, consultable depuis le terrain.
+
+        Le mouvement de stock se depose par l'action dediee : un releve
+        d'inventaire se fait rayon par rayon, le telephone a la main.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this article.
+        required: true
+      tags:
+      - articles
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+          description: ''
+  /api/v1/articles/{id}/mouvement/:
+    post:
+      operationId: articles_mouvement_create
+      description: |-
+        Etat du magasin, consultable depuis le terrain.
+
+        Le mouvement de stock se depose par l'action dediee : un releve
+        d'inventaire se fait rayon par rayon, le telephone a la main.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this article.
+        required: true
+      tags:
+      - articles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaisieMouvementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SaisieMouvementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SaisieMouvementRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+          description: ''
+  /api/v1/articles/{id}/mouvements/:
+    get:
+      operationId: articles_mouvements_list
+      description: |-
+        Etat du magasin, consultable depuis le terrain.
+
+        Le mouvement de stock se depose par l'action dediee : un releve
+        d'inventaire se fait rayon par rayon, le telephone a la main.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this article.
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - articles
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMouvementList'
+          description: ''
   /api/v1/ateliers/:
     get:
       operationId: ateliers_list
@@ -336,6 +462,52 @@ paths:
       responses:
         '200':
           description: No response body
+  /api/v1/besoins/:
+    get:
+      operationId: besoins_list
+      description: Expressions de besoin du perimetre de l'agent.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - besoins
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBesoinList'
+          description: ''
+  /api/v1/besoins/{id}/:
+    get:
+      operationId: besoins_retrieve
+      description: Expressions de besoin du perimetre de l'agent.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this expression de besoin.
+        required: true
+      tags:
+      - besoins
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Besoin'
+          description: ''
   /api/v1/courriers/:
     get:
       operationId: courriers_list
@@ -1500,7 +1672,7 @@ components:
         description:
           type: string
         type:
-          $ref: '#/components/schemas/ActiviteTypeEnum'
+          $ref: '#/components/schemas/TypeActivite'
         type_libelle:
           type: string
           readOnly: true
@@ -1606,26 +1778,6 @@ components:
         * `REALISEE` - Realisee
         * `REPORTEE` - Reportee
         * `ANNULEE` - Annulee
-    ActiviteTypeEnum:
-      enum:
-      - FORMATION
-      - ATELIER
-      - ELABORATION
-      - SUIVI
-      - EVALUATION
-      - PRODUCTION
-      - REUNION
-      - AUTRE
-      type: string
-      description: |-
-        * `FORMATION` - Formation / renforcement de capacites
-        * `ATELIER` - Atelier de production
-        * `ELABORATION` - Elaboration de programmes ou de guides
-        * `SUIVI` - Suivi pedagogique et encadrement
-        * `EVALUATION` - Evaluation des acquis
-        * `PRODUCTION` - Production de ressources
-        * `REUNION` - Reunion et concertation
-        * `AUTRE` - Autre
     Actualite:
       type: object
       properties:
@@ -1787,6 +1939,44 @@ components:
       required:
       - first_name
       - last_name
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          maxLength: 30
+        designation:
+          type: string
+          maxLength: 200
+        unite:
+          type: string
+          maxLength: 20
+        stock:
+          type: integer
+          readOnly: true
+        seuil_alerte:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: Seuil d'alerte
+          description: En dessous ou a ce niveau, l'article est signale a reapprovisionner.
+        sous_seuil:
+          type: boolean
+          readOnly: true
+        perimetre_code:
+          type: string
+          readOnly: true
+      required:
+      - code
+      - designation
+      - id
+      - perimetre_code
+      - sous_seuil
+      - stock
     Atelier:
       type: object
       properties:
@@ -1800,7 +1990,7 @@ components:
           type: string
           maxLength: 255
         type:
-          $ref: '#/components/schemas/AtelierTypeEnum'
+          $ref: '#/components/schemas/TypeAtelier'
         type_libelle:
           type: string
           readOnly: true
@@ -1867,20 +2057,72 @@ components:
         * `EN_COURS` - En cours
         * `CLOS` - Clos
         * `ANNULE` - Annule
-    AtelierTypeEnum:
+    Besoin:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        numero:
+          type: string
+          maxLength: 40
+        objet:
+          type: string
+          maxLength: 255
+        justification:
+          type: string
+        statut:
+          $ref: '#/components/schemas/BesoinStatutEnum'
+        statut_libelle:
+          type: string
+          readOnly: true
+        perimetre_code:
+          type: string
+          readOnly: true
+        demandeur_nom:
+          type: string
+          readOnly: true
+        montant_estime:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,0})?$
+          readOnly: true
+        progression:
+          type: integer
+          readOnly: true
+        date_souhaitee:
+          type: string
+          format: date
+          nullable: true
+          title: Date de mise a disposition souhaitee
+        soumis_le:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - demandeur_nom
+      - id
+      - montant_estime
+      - objet
+      - perimetre_code
+      - progression
+      - statut_libelle
+    BesoinStatutEnum:
       enum:
-      - ATELIER
-      - FORMATION
-      - SEMINAIRE
-      - REUNION
-      - JOURNEE
+      - BROUILLON
+      - EN_CIRCUIT
+      - VALIDE
+      - REJETE
+      - COMMANDE
+      - SOLDE
       type: string
       description: |-
-        * `ATELIER` - Atelier de production
-        * `FORMATION` - Formation
-        * `SEMINAIRE` - Seminaire
-        * `REUNION` - Reunion
-        * `JOURNEE` - Journee pedagogique
+        * `BROUILLON` - Brouillon
+        * `EN_CIRCUIT` - En validation
+        * `VALIDE` - Valide
+        * `REJETE` - Rejete
+        * `COMMANDE` - Commande
+        * `SOLDE` - Solde
     ChangementMotDePasseRequest:
       type: object
       properties:
@@ -1943,7 +2185,7 @@ components:
           type: string
           readOnly: true
         nature:
-          $ref: '#/components/schemas/NatureEnum'
+          $ref: '#/components/schemas/TypeCourrier'
         objet:
           type: string
           maxLength: 255
@@ -2042,7 +2284,7 @@ components:
           nullable: true
         type:
           allOf:
-          - $ref: '#/components/schemas/DemandeTypeEnum'
+          - $ref: '#/components/schemas/TypeDemande'
           title: Type d'acte
         type_libelle:
           type: string
@@ -2203,7 +2445,7 @@ components:
       properties:
         type:
           allOf:
-          - $ref: '#/components/schemas/DemandeTypeEnum'
+          - $ref: '#/components/schemas/TypeDemande'
           title: Type d'acte
         motif:
           type: string
@@ -2297,22 +2539,6 @@ components:
         * `APPROUVEE` - Approuvee
         * `REJETEE` - Rejetee
         * `ANNULEE` - Annulee
-    DemandeTypeEnum:
-      enum:
-      - CONGE_ANNUEL
-      - CONGE_EXCEPTIONNEL
-      - PERMISSION
-      - ORDRE_MISSION
-      - ABSENCE
-      - FORMATION
-      type: string
-      description: |-
-        * `CONGE_ANNUEL` - Conge annuel
-        * `CONGE_EXCEPTIONNEL` - Conge exceptionnel
-        * `PERMISSION` - Permission d'absence
-        * `ORDRE_MISSION` - Ordre de mission
-        * `ABSENCE` - Declaration d'absence
-        * `FORMATION` - Demande de formation
     Document:
       type: object
       properties:
@@ -2550,24 +2776,49 @@ components:
       description: |-
         * `SCAN` - Scan du QR code
         * `MANUEL` - Saisie manuelle
-    NatureEnum:
-      enum:
-      - LETTRE
-      - NOTE
-      - CIRCULAIRE
-      - RAPPORT
-      - INVITATION
-      - DEMANDE
-      - AUTRE
-      type: string
-      description: |-
-        * `LETTRE` - Lettre
-        * `NOTE` - Note de service
-        * `CIRCULAIRE` - Circulaire
-        * `RAPPORT` - Rapport
-        * `INVITATION` - Invitation
-        * `DEMANDE` - Demande
-        * `AUTRE` - Autre
+    Mouvement:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        article:
+          type: integer
+        article_code:
+          type: string
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/TypeMouvementStock'
+        type_libelle:
+          type: string
+          readOnly: true
+        quantite:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: 'Pour un inventaire : la quantite effectivement comptee.'
+        stock_apres:
+          type: integer
+          readOnly: true
+          title: Stock apres le mouvement
+        date:
+          type: string
+          format: date
+        motif:
+          type: string
+          maxLength: 200
+        beneficiaire:
+          type: string
+          maxLength: 150
+      required:
+      - article
+      - article_code
+      - id
+      - quantite
+      - stock_apres
+      - type
+      - type_libelle
     Notification:
       type: object
       properties:
@@ -2691,6 +2942,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Agent'
+    PaginatedArticleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
     PaginatedAtelierList:
       type: object
       required:
@@ -2714,6 +2988,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Atelier'
+    PaginatedBesoinList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Besoin'
     PaginatedCourrierList:
       type: object
       required:
@@ -2829,6 +3126,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Imputation'
+    PaginatedMouvementList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mouvement'
     PaginatedNotificationList:
       type: object
       required:
@@ -3080,7 +3400,7 @@ components:
       properties:
         type:
           allOf:
-          - $ref: '#/components/schemas/DemandeTypeEnum'
+          - $ref: '#/components/schemas/TypeDemande'
           title: Type d'acte
         motif:
           type: string
@@ -3526,6 +3846,27 @@ components:
       required:
       - realisations
       - taux
+    SaisieMouvementRequest:
+      type: object
+      description: Mouvement releve au magasin, depuis le telephone.
+      properties:
+        type:
+          $ref: '#/components/schemas/TypeMouvementStock'
+        quantite:
+          type: integer
+          minimum: 1
+        motif:
+          type: string
+          maxLength: 200
+        beneficiaire:
+          type: string
+          maxLength: 150
+        date:
+          type: string
+          format: date
+      required:
+      - quantite
+      - type
     SensEnum:
       enum:
       - ARRIVEE
@@ -3779,6 +4120,74 @@ components:
           minLength: 1
       required:
       - token
+    TypeActivite:
+      enum:
+      - FORMATION
+      - ATELIER
+      - ELABORATION
+      - SUIVI
+      - EVALUATION
+      - PRODUCTION
+      - REUNION
+      - AUTRE
+      type: string
+      description: |-
+        * `FORMATION` - Formation / renforcement de capacites
+        * `ATELIER` - Atelier de production
+        * `ELABORATION` - Elaboration de programmes ou de guides
+        * `SUIVI` - Suivi pedagogique et encadrement
+        * `EVALUATION` - Evaluation des acquis
+        * `PRODUCTION` - Production de ressources
+        * `REUNION` - Reunion et concertation
+        * `AUTRE` - Autre
+    TypeAtelier:
+      enum:
+      - ATELIER
+      - FORMATION
+      - SEMINAIRE
+      - REUNION
+      - JOURNEE
+      type: string
+      description: |-
+        * `ATELIER` - Atelier de production
+        * `FORMATION` - Formation
+        * `SEMINAIRE` - Seminaire
+        * `REUNION` - Reunion
+        * `JOURNEE` - Journee pedagogique
+    TypeCourrier:
+      enum:
+      - LETTRE
+      - NOTE
+      - CIRCULAIRE
+      - RAPPORT
+      - INVITATION
+      - DEMANDE
+      - AUTRE
+      type: string
+      description: |-
+        * `LETTRE` - Lettre
+        * `NOTE` - Note de service
+        * `CIRCULAIRE` - Circulaire
+        * `RAPPORT` - Rapport
+        * `INVITATION` - Invitation
+        * `DEMANDE` - Demande
+        * `AUTRE` - Autre
+    TypeDemande:
+      enum:
+      - CONGE_ANNUEL
+      - CONGE_EXCEPTIONNEL
+      - PERMISSION
+      - ORDRE_MISSION
+      - ABSENCE
+      - FORMATION
+      type: string
+      description: |-
+        * `CONGE_ANNUEL` - Conge annuel
+        * `CONGE_EXCEPTIONNEL` - Conge exceptionnel
+        * `PERMISSION` - Permission d'absence
+        * `ORDRE_MISSION` - Ordre de mission
+        * `ABSENCE` - Declaration d'absence
+        * `FORMATION` - Demande de formation
     TypeDocumentEnum:
       enum:
       - PROGRAMME
@@ -3803,6 +4212,16 @@ components:
         * `COURRIER` - Courrier
         * `SUPPORT` - Support de formation
         * `AUTRE` - Autre
+    TypeMouvementStock:
+      enum:
+      - ENTREE
+      - SORTIE
+      - INVENTAIRE
+      type: string
+      description: |-
+        * `ENTREE` - Entree
+        * `SORTIE` - Sortie
+        * `INVENTAIRE` - Inventaire
     Validation:
       type: object
       properties:

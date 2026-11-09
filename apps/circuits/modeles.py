@@ -24,6 +24,12 @@ TYPES_ACTES = [
     "FORMATION",
 ]
 TYPE_PARAPHEUR = "PARAPHEUR"
+TYPE_BESOIN = "BESOIN"
+
+# Seuils d'engagement, en francs CFA. Au-dela du premier, le responsable du
+# perimetre vise ; au-dela du second, l'engagement remonte a la direction.
+SEUIL_RESPONSABLE = 100_000
+SEUIL_DIRECTION = 2_000_000
 
 ROLE_RH = "RH"
 ROLE_DIRECTEUR = "DIRECTEUR"
@@ -165,6 +171,52 @@ def _etapes_parapheur(avec_sous_direction):
     return etapes
 
 
+# --- Expressions de besoin ---------------------------------------------------
+# Le circuit s'allonge avec le montant : une fourniture de bureau se regle au
+# niveau du demandeur et de son superieur, un engagement important remonte.
+def _etapes_besoin(avec_sous_direction):
+    etapes = [
+        {
+            "libelle": "Avis du superieur hierarchique",
+            "designation": Designation.SUPERIEUR,
+            "conditions": [],
+            "seuil": 0,
+        },
+    ]
+    if avec_sous_direction:
+        etapes.append(
+            {
+                "libelle": "Avis du sous-directeur",
+                "designation": Designation.RESPONSABLE_SOUS_DIRECTION,
+                "conditions": [],
+                "seuil": SEUIL_RESPONSABLE,
+            }
+        )
+    etapes += [
+        {
+            "libelle": "Visa du responsable du perimetre",
+            "designation": Designation.RESPONSABLE_PERIMETRE,
+            "conditions": [],
+            "seuil": SEUIL_RESPONSABLE,
+        },
+        {
+            "libelle": "Engagement du directeur de la pedagogie",
+            "designation": Designation.ROLE,
+            "role": ROLE_DIRECTEUR,
+            "conditions": [],
+            "seuil": SEUIL_DIRECTION,
+        },
+    ]
+    return etapes
+
+
+MODELES_BESOIN = {
+    Perimetre.Type.CENTRALE: _etapes_besoin(avec_sous_direction=True),
+    Perimetre.Type.ANTENNE: _etapes_besoin(avec_sous_direction=False),
+    Perimetre.Type.CENTRE: _etapes_besoin(avec_sous_direction=False),
+}
+
+
 MODELES_PARAPHEUR = {
     Perimetre.Type.CENTRALE: _etapes_parapheur(avec_sous_direction=True),
     Perimetre.Type.ANTENNE: _etapes_parapheur(avec_sous_direction=False),
@@ -187,6 +239,9 @@ def installer_circuits_modeles(remplacer=False):
     ] + [
         (type_perimetre, TYPE_PARAPHEUR, etapes)
         for type_perimetre, etapes in MODELES_PARAPHEUR.items()
+    ] + [
+        (type_perimetre, TYPE_BESOIN, etapes)
+        for type_perimetre, etapes in MODELES_BESOIN.items()
     ]
 
     for type_perimetre, type_acte, etapes in definitions:
@@ -208,6 +263,7 @@ def installer_circuits_modeles(remplacer=False):
                 designation=etape["designation"],
                 role=etape.get("role", ""),
                 conditions=list(etape["conditions"]),
+                seuil_montant=etape.get("seuil", 0),
             )
         crees += 1
     return crees, inchanges

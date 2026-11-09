@@ -31,6 +31,21 @@
       <a href="{% url 'activites:activites' %}" class="{% if url_nom in 'activites activite_detail activite_form activite_creer activite_modifier' %}actif{% endif %}">Activites</a>
       <a href="{% url 'activites:axes' %}" class="{% if url_nom == 'axes' %}actif{% endif %}">Axes et perimetres</a>
 
+      <h4>Achats</h4>
+      {% if espace == 'achats' %}
+        <a href="{% url 'achats:tableau' %}" class="{% if url_nom == 'tableau' %}actif{% endif %}">Tableau des achats</a>
+        <a href="{% url 'achats:besoins' %}" class="{% if url_nom in 'besoins besoin_detail besoin_creer' %}actif{% endif %}">Expressions de besoin</a>
+        <a href="{% url 'achats:commandes' %}" class="{% if url_nom == 'commandes' %}actif{% endif %}">Bons de commande</a>
+        <a href="{% url 'achats:magasin' %}" class="{% if url_nom in 'magasin article_detail article_creer' %}actif{% endif %}">Magasin</a>
+        <a href="{% url 'achats:equipements' %}" class="{% if url_nom in 'equipements equipement_creer' %}actif{% endif %}">Equipements</a>
+      {% else %}
+        <a href="{% url 'achats:tableau' %}">Tableau des achats</a>
+        <a href="{% url 'achats:besoins' %}">Expressions de besoin</a>
+        <a href="{% url 'achats:commandes' %}">Bons de commande</a>
+        <a href="{% url 'achats:magasin' %}">Magasin</a>
+        <a href="{% url 'achats:equipements' %}">Equipements</a>
+      {% endif %}
+
       <h4>Ateliers</h4>
       {% if espace == 'ateliers' %}
         <a href="{% url 'ateliers:tableau' %}" class="{% if url_nom == 'tableau' %}actif{% endif %}">Tableau des ateliers</a>

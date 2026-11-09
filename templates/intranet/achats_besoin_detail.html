@@ -1,0 +1,204 @@
+{% extends "intranet/base_intranet.html" %}
+{% load humanize %}
+{% block titre %}{{ besoin.numero }}{% endblock %}
+{% block titre_page %}{{ besoin.numero }}{% endblock %}
+{% block sous_titre %}{{ besoin.objet }} &middot; {{ besoin.perimetre.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="grille-2">
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete">
+        <h2>Besoin <span class="pastille pastille--{{ besoin.couleur_statut }}">{{ besoin.get_statut_display }}</span></h2>
+        <strong>{{ besoin.montant_estime|intcomma }} FCFA</strong>
+      </div>
+      {% if besoin.justification %}<p>{{ besoin.justification|linebreaksbr }}</p>{% endif %}
+      {% if besoin.motif_rejet %}<p class="aide"><strong>Rejete :</strong> {{ besoin.motif_rejet }}</p>{% endif %}
+      <table class="table table--compacte">
+        <tr><th>Demandeur</th><td>{{ besoin.demandeur.nom_complet }}</td></tr>
+        {% if besoin.structure %}<tr><th>Structure beneficiaire</th><td>{{ besoin.structure }}</td></tr>{% endif %}
+        {% if besoin.date_souhaitee %}<tr><th>Souhaite pour le</th><td>{{ besoin.date_souhaitee|date:"d/m/Y" }}</td></tr>{% endif %}
+        {% if besoin.activite %}<tr><th>Activite du plan</th>
+            <td><a href="{{ besoin.activite.get_absolute_url }}">{{ besoin.activite.code }} {{ besoin.activite.intitule }}</a></td></tr>{% endif %}
+      </table>
+    </div>
+
+    <div class="bloc">
+      <div class="bloc__tete"><h2>Articles demandes</h2></div>
+      {% if lignes %}
+        <table class="table table--compacte">
+          <thead><tr><th>Designation</th><th>Quantite</th><th>Prix unitaire</th><th>Montant</th><th></th></tr></thead>
+          <tbody>
+            {% for l in lignes %}
+              <tr>
+                <td>{{ l.designation }}
+                    {% if l.article %}<br><small class="aide">Magasin : {{ l.article.code }}</small>{% endif %}</td>
+                <td>{{ l.quantite }} {{ l.unite }}</td>
+                <td>{{ l.prix_unitaire|intcomma }}</td>
+                <td><strong>{{ l.montant|intcomma }}</strong></td>
+                <td>
+                  {% if besoin.est_modifiable and est_demandeur %}
+                    <form method="post" action="{% url 'achats:ligne_supprimer' l.pk %}">{% csrf_token %}
+                      <button class="btn btn--danger btn--petit" type="submit">Retirer</button></form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot><tr><th colspan="3">TOTAL ESTIME</th><th>{{ besoin.montant_estime|intcomma }} FCFA</th><th></th></tr></tfoot>
+        </table>
+      {% else %}
+        <p class="aide">Aucun article inscrit.</p>
+      {% endif %}
+
+      {% if besoin.est_modifiable and est_demandeur %}
+        <form method="post" action="{% url 'achats:ligne_ajouter' besoin.pk %}" class="formulaire" style="margin-top:1rem">
+          {% csrf_token %}
+          <div class="grille-tb">
+            {% for champ in form_ligne.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+          </div>
+          <div class="actions"><button class="btn btn--secondaire" type="submit">Ajouter un article</button></div>
+        </form>
+      {% endif %}
+    </div>
+
+    {% if validations %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Circuit de validation</h2></div>
+        <ul class="circuit">
+          {% for v in validations %}
+            <li>
+              <strong>{{ v.ordre }}. {{ v.libelle }}</strong>
+              {% if v.decision == 'FAVORABLE' %}<span class="pastille pastille--ok">Favorable</span>
+              {% elif v.decision == 'DEFAVORABLE' %}<span class="pastille pastille--ko">Defavorable</span>
+              {% elif v.decision == 'IGNOREE' %}<span class="pastille pastille--neutre">Sans objet</span>
+              {% else %}<span class="pastille pastille--attente">En attente</span>{% endif %}
+              <p class="aide">{{ v.valideur.nom_complet }}{% if v.decide_le %} &middot; {{ v.decide_le|date:"d/m/Y H:i" }}{% endif %}</p>
+              {% if v.commentaire %}<p>{{ v.commentaire|linebreaksbr }}</p>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if besoin.est_validee or besoin.offres.exists %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Consultation des fournisseurs</h2></div>
+        {% if offres %}
+          <table class="table table--compacte">
+            <thead><tr><th>Fournisseur</th><th>Montant</th><th>Delai</th><th></th></tr></thead>
+            <tbody>
+              {% for o in offres %}
+                <tr>
+                  <td>{{ o.fournisseur }}{% if o.retenue %} <span class="pastille pastille--ok">Retenue</span>{% endif %}
+                      {% if o.fichier %}<br><a href="{{ o.fichier.url }}">Offre recue</a>{% endif %}</td>
+                  <td>{{ o.montant|intcomma }} FCFA</td>
+                  <td>{{ o.delai_jours|default:"-" }}{% if o.delai_jours %} j{% endif %}</td>
+                  <td>
+                    {% if peut_gerer and not o.retenue and not commande %}
+                      <form method="post" action="{% url 'achats:offre_retenir' o.pk %}">{% csrf_token %}
+                        <button class="btn btn--secondaire btn--petit" type="submit">Retenir</button></form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <p class="aide">Au moins deux offres sont exigees pour qu'un choix en soit un.</p>
+        {% else %}
+          <p class="aide">Aucune offre enregistree.</p>
+        {% endif %}
+
+        {% if peut_gerer and not commande %}
+          <form method="post" action="{% url 'achats:offre_ajouter' besoin.pk %}" enctype="multipart/form-data" class="formulaire" style="margin-top:1rem">
+            {% csrf_token %}
+            <div class="grille-tb">
+              {% for champ in form_offre.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+            </div>
+            <div class="actions"><button class="btn btn--secondaire" type="submit">Enregistrer l'offre</button></div>
+          </form>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if besoin.est_modifiable and est_demandeur %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Transmettre</h2></div>
+        <p class="aide">Le circuit de validation depend du montant engage.</p>
+        <form method="post" action="{% url 'achats:besoin_soumettre' besoin.pk %}">{% csrf_token %}
+          <button class="btn btn--principal" type="submit">Transmettre pour validation</button></form>
+      </div>
+    {% endif %}
+
+    {% if mon_etape %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Votre avis</h2></div>
+        <p class="aide">{{ mon_etape.libelle }}</p>
+        <form method="post" action="{% url 'achats:besoin_decider' mon_etape.pk 'valider' %}" class="formulaire">
+          {% csrf_token %}
+          {% for champ in form_decision.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+          <div class="actions">
+            <button class="btn btn--principal" type="submit">Avis favorable</button>
+            <button class="btn btn--danger" type="submit"
+                    formaction="{% url 'achats:besoin_decider' mon_etape.pk 'rejeter' %}">Rejeter</button>
+          </div>
+        </form>
+      </div>
+    {% endif %}
+
+    {% if besoin.statut == 'VALIDE' and peut_gerer %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Commander</h2></div>
+        <form method="post" action="{% url 'achats:besoin_commander' besoin.pk %}">{% csrf_token %}
+          <button class="btn btn--principal" type="submit">Emettre le bon de commande</button></form>
+      </div>
+    {% endif %}
+
+    {% if commande %}
+      <div class="bloc">
+        <div class="bloc__tete">
+          <h2>{{ commande.numero }}</h2>
+          <span class="pastille pastille--{{ commande.couleur_statut }}">{{ commande.get_statut_display }}</span>
+        </div>
+        <table class="table table--compacte">
+          <tr><th>Fournisseur</th><td>{{ commande.fournisseur }}</td></tr>
+          <tr><th>Montant</th><td>{{ commande.montant|intcomma }} FCFA</td></tr>
+          <tr><th>Emis le</th><td>{{ commande.date_emission|date:"d/m/Y" }}</td></tr>
+          {% if commande.date_reception %}<tr><th>Receptionne le</th><td>{{ commande.date_reception|date:"d/m/Y" }}</td></tr>{% endif %}
+          {% if commande.observations_reception %}<tr><th>Observations</th><td>{{ commande.observations_reception }}</td></tr>{% endif %}
+          {% if commande.facture_numero %}<tr><th>Facture</th>
+              <td>{{ commande.facture_numero }} &middot; {{ commande.facture_montant|intcomma }} FCFA</td></tr>{% endif %}
+          {% if commande.motif_annulation %}<tr><th>Annulee</th><td>{{ commande.motif_annulation }}</td></tr>{% endif %}
+        </table>
+
+        {% if peut_gerer and commande.statut == 'EMIS' %}
+          <form method="post" action="{% url 'achats:commande_receptionner' commande.pk %}" class="formulaire" style="margin-top:1rem">
+            {% csrf_token %}
+            {% for l in lignes %}
+              {% if l.article %}
+                <div class="champ">
+                  <label for="ligne-{{ l.pk }}">{{ l.designation }} (commande : {{ l.quantite }})</label>
+                  <input type="number" id="ligne-{{ l.pk }}" name="ligne-{{ l.pk }}" min="0" value="{{ l.quantite }}">
+                  <span class="aide">Quantite effectivement livree.</span>
+                </div>
+              {% endif %}
+            {% endfor %}
+            {% for champ in form_reception.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+            <div class="actions"><button class="btn btn--principal" type="submit">Receptionner</button></div>
+          </form>
+        {% endif %}
+
+        {% if peut_gerer and commande.statut == 'RECEPTIONNE' %}
+          <form method="post" action="{% url 'achats:commande_facture' commande.pk %}" enctype="multipart/form-data" class="formulaire" style="margin-top:1rem">
+            {% csrf_token %}
+            {% for champ in form_facture.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+            <div class="actions"><button class="btn btn--principal" type="submit">Enregistrer la facture</button></div>
+          </form>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -5,7 +5,7 @@ Plateforme de gestion de la direction, **monolithe Django modulaire** réunissan
 | Brique | Description |
 |---|---|
 | **Site public** | Géré par **Wagtail** (CMS, administration sur `/cms/`), accessible sans compte : actualités, ressources pédagogiques, FOAD, projets, agenda, antennes régionales, contact. Contenu par blocs, médiathèque, brouillons/publication, prévisualisation. |
-| **Plateforme de gestion** | Espace authentifié : plans d'action annuels, activités, chronogramme et tableaux de bord par périmètre, courrier arrivée/départ, imputations, bibliothèque documentaire et parapheur, **ateliers avec émargement par QR code utilisable hors ligne**, actes administratifs (congé, permission, ordre de mission, absence, formation), circuits de validation **paramétrables par périmètre**, planning, registre, annuaire. |
+| **Plateforme de gestion** | Espace authentifié : plans d'action annuels, activités, chronogramme et tableaux de bord par périmètre, courrier arrivée/départ, imputations, bibliothèque documentaire et parapheur, ateliers avec émargement par QR code utilisable hors ligne, **achats et tenue du magasin**, actes administratifs (congé, permission, ordre de mission, absence, formation), circuits de validation **paramétrables par périmètre**, planning, registre, annuaire. |
 | **API REST** | `/api/v1/` avec jetons JWT, consommée par l'application mobile **Flutter** livrée dans `mobile/`. |
 | **Signature électronique** | Bi-clés RSA 2048 par signataire, scellement SHA-256 des actes, page publique de vérification et QR code sur le document. |
 
@@ -17,7 +17,7 @@ Chaque agent relève d'un **périmètre de gestion** qui détermine son circuit 
 
 ## 1. Démarrage rapide
 
-Avec Docker, voir [§ 12](#12-déploiement). En local, sans conteneur :
+Avec Docker, voir [§ 13](#13-déploiement). En local, sans conteneur :
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
@@ -92,6 +92,8 @@ dpfc/
 │   │                    recherche plein texte, parapheur, modèles de courrier
 │   ├── ateliers/        ateliers, sessions, badges QR, émargement hors ligne,
 │   │                    états de paiement et attestations
+│   ├── achats/          expressions de besoin, consultation, bons de commande,
+│   │                    magasin, mouvements de stock, équipements
 │   ├── site_public/     site public Wagtail : pages (accueil, éditoriales, actualités, projets,
 │   │                    événements, antennes, contact), snippets (ressources, catégories, messages)
 │   ├── rh/              actes administratifs, circuit de validation, soldes de congé,
@@ -265,7 +267,31 @@ Ce qui en découle : l'**état de paiement** ne retient que les participants aya
 | Écran d'émargement | `/intranet/ateliers/<id>/emargement/` |
 | État de paiement (CSV) | `/intranet/ateliers/<id>/paiement/` |
 
-## 8. Signature électronique
+## 8. Achats et stocks
+
+Détail dans [docs/achats.md](docs/achats.md).
+
+```
+Brouillon ──▶ En validation ──▶ Validé ──commande──▶ Commandé ──facture──▶ Soldé
+                    │
+                    └──── avis défavorable (motif) ──▶ Rejeté
+```
+
+- **Le circuit dépend du montant** : jusqu'à 100 000 FCFA, le supérieur suffit ; au-delà de 2 000 000, l'engagement remonte au directeur. Les seuils sont paramétrés dans les circuits, pas codés.
+- **Deux offres font une consultation** : retenir une offre unique est refusé, comme commander à un fournisseur sans compte contribuable.
+- **Le stock dérive du journal** : toute quantité s'explique par une entrée, une sortie ou un inventaire. On ne corrige jamais un compteur — un écart au comptage se solde par un mouvement d'inventaire motivé.
+- **Garde-fous du magasin** : une sortie ne peut pas dépasser le stock et exige un bénéficiaire.
+- **Liens avec le reste** : la réception alimente le magasin, la facture vient grossir le budget exécuté de l'activité rattachée.
+
+| Écran | Adresse |
+|---|---|
+| Tableau des achats | `/intranet/achats/` |
+| Expressions de besoin | `/intranet/achats/besoins/` |
+| Bons de commande | `/intranet/achats/commandes/` |
+| Magasin (export CSV) | `/intranet/achats/magasin/` |
+| Équipements | `/intranet/achats/equipements/` |
+
+## 9. Signature électronique
 
 - **Clé personnelle** : espace agent → « Ma signature électronique ». Le portail génère une bi-clé RSA 2048 ; la clé privée est stockée chiffrée (PKCS#8) par un **code de signature** connu du seul agent, jamais conservé par le serveur.
 - **Apposition** : au moment de la décision, le valideur saisit son code. La signature RSASSA-PSS/SHA-256 porte sur l'empreinte SHA-256 du condensé canonique de l'acte (numéro, agent, structure, type, dates, durée, destination, périmètre, motif). À la dernière étape du circuit, le code est exigé si l'agent dispose d'une clé valide.
@@ -275,7 +301,7 @@ Ce qui en découle : l'**état de paiement** ne retient que les participants aya
 
 Cette implémentation est autoportante (aucune autorité externe). Elle est compatible avec une montée vers un certificat qualifié : il suffit de remplacer la clé auto-générée par une clé adossée à un certificat X.509 délivré par un PSCE agréé, la chaîne de vérification restant identique.
 
-## 9. Import Excel des agents
+## 10. Import Excel des agents
 
 Espace agent → « Import Excel des agents » (réservé au service du personnel et à l'administrateur).
 
@@ -293,7 +319,7 @@ python manage.py importer_agents agents.xlsx            # analyse seule
 python manage.py importer_agents agents.xlsx --appliquer
 ```
 
-## 10. API REST (application Flutter)
+## 11. API REST (application Flutter)
 
 Schéma OpenAPI : [docs/api/openapi.yml](docs/api/openapi.yml), exploré en ligne sur `/api/v1/docs/`. Pour le régénérer :
 
@@ -318,6 +344,9 @@ python manage.py spectacular --file docs/api/openapi.yml
 | GET | `/api/v1/ateliers/` | ateliers du périmètre, avec leurs sessions |
 | GET | `/api/v1/ateliers/<id>/participants/` | liste à embarquer pour le terrain |
 | POST | `/api/v1/ateliers/<id>/emargements/` | dépôt d'un lot collecté hors ligne (idempotent) |
+| GET | `/api/v1/besoins/` | expressions de besoin du périmètre |
+| GET | `/api/v1/articles/?alerte=1` | magasin, articles à réapprovisionner |
+| POST | `/api/v1/articles/<id>/mouvement/` | entrée, sortie ou inventaire depuis le terrain |
 | GET/POST | `/api/v1/demandes/` | mes demandes, création |
 | POST | `/api/v1/demandes/{id}/soumettre/` | transmission au circuit |
 | POST | `/api/v1/demandes/{id}/decision/` | avis favorable ou rejet ; `code_signature` appose la signature |
@@ -337,7 +366,7 @@ flutter run          # adapter baseUrl dans lib/services/api.dart
 
 Elle couvre le parcours de terrain complet : dépôt d'un acte, bascule « mission hors du ressort de la DRENA » avec envoi des TDR et de la lettre d'invitation depuis le téléphone, suivi du circuit, décision du chef d'antenne ou du directeur régional avec saisie du code de signature à la dernière étape, et vérification d'un acte par son code.
 
-## 11. Tests et qualité
+## 12. Tests et qualité
 
 ```bash
 python manage.py test --settings=config.settings.test
@@ -351,9 +380,9 @@ pytest
 ruff check apps config
 ```
 
-217 tests couvrent les ateliers (jetons sans donnée personnelle, rejet des jetons altérés ou d'un autre atelier, idempotence de l'émargement, journalisation des doublons, émargement manuel motivé, état de paiement limité aux émargés, attestations, report sur le plan d'action), le courrier (numérotation par périmètre, cycle d'imputation, retards, confidentialité, droits liés à la désignation), les documents (versions, empreintes, extraction du texte, recherche, accès restreint), le parapheur (circuit, refus, corbeille), le pilotage (cycle du plan, avancement cumulé, retards, consolidation, chronogramme, indicateurs, cloisonnement), les périmètres de gestion (héritage par l'agent, cloisonnement de la visibilité, numérotation par périmètre), les circuits paramétrables (circuit central, autonomie de l'antenne et du CNRPN, mission hors ressort, acte du responsable, circuit propre à un périmètre, étape sans titulaire), le calcul des jours ouvrables, le dépôt par le secrétariat, le parcours complet d'une demande, le rejet, les droits d'accès, la signature électronique, l'import Excel/CSV, les pages publiques et l'API.
+267 tests couvrent les achats (numérotation par périmètre, circuit à seuils de montant, consultation d'au moins deux fournisseurs, compte contribuable exigé, réception partielle alimentant le magasin, report de la dépense sur le plan d'action) et les stocks (sortie bornée au stock, bénéficiaire obligatoire, inventaire fixant la quantité comptée, cohérence du journal), les ateliers (jetons sans donnée personnelle, rejet des jetons altérés ou d'un autre atelier, idempotence de l'émargement, journalisation des doublons, émargement manuel motivé, état de paiement limité aux émargés, attestations, report sur le plan d'action), le courrier (numérotation par périmètre, cycle d'imputation, retards, confidentialité, droits liés à la désignation), les documents (versions, empreintes, extraction du texte, recherche, accès restreint), le parapheur (circuit, refus, corbeille), le pilotage (cycle du plan, avancement cumulé, retards, consolidation, chronogramme, indicateurs, cloisonnement), les périmètres de gestion (héritage par l'agent, cloisonnement de la visibilité, numérotation par périmètre), les circuits paramétrables (circuit central, autonomie de l'antenne et du CNRPN, mission hors ressort, acte du responsable, circuit propre à un périmètre, étape sans titulaire), le calcul des jours ouvrables, le dépôt par le secrétariat, le parcours complet d'une demande, le rejet, les droits d'accès, la signature électronique, l'import Excel/CSV, les pages publiques et l'API.
 
-## 12. Déploiement
+## 13. Déploiement
 
 La pile est alignée sur celle d'e-PECU : PostgreSQL, Celery et Redis, stockage objet S3/MinIO, Nginx devant gunicorn ([ADR 0004](docs/adr/0004-pile-alignee-sur-e-pecu.md)).
 
@@ -406,11 +435,11 @@ celery -A config beat -l info
 
 Avec `config.settings.prod`, HTTPS, cookies sécurisés, HSTS, `X-Frame-Options` et le verrouillage après échecs de connexion (`django-axes`) sont actifs.
 
-## 13. Exploitation courante
+## 14. Exploitation courante
 
 - **Créer un agent** : espace agent → Comptes des agents → Créer un compte. Le mot de passe initial est le matricule et son changement est imposé à la première connexion.
 - **Affecter en région** : rattacher l'agent à une structure de type `ANTENNE` ; le circuit d'antenne s'applique alors automatiquement. Renseigner le champ `drenaet` de l'antenne dans l'administration pour que l'exception « mission hors périmètre » désigne le bon directeur régional.
-- **Créer des agents en masse** : Import Excel des agents (voir § 9).
+- **Créer des agents en masse** : Import Excel des agents (voir § 10).
 - **Activer la signature d'une autorité** : l'intéressé génère lui-même sa clé depuis « Ma signature électronique ».
 - **Publier une actualité, un projet, un événement ou une page** : Wagtail (`/cms/`) → Pages → Accueil → rubrique concernée → « Ajouter une page enfant ». Enregistrer en brouillon, prévisualiser, puis « Publier ». La case « Afficher dans les menus » (onglet Promotion) fait apparaître une page de premier niveau dans la barre de navigation.
 - **Ressources pédagogiques, catégories, messages de contact** : Wagtail → menu Contenus. Les fichiers sont pris dans la médiathèque Documents.
@@ -426,5 +455,9 @@ Avec `config.settings.prod`, HTTPS, cookies sécurisés, HSTS, `X-Frame-Options`
 - **Enregistrer et imputer du courrier** : `/intranet/courrier/`. Le secrétariat enregistre, le responsable du périmètre impute avec instructions et délai, l'imputataire rend compte.
 - **Modifier le circuit du parapheur** : `/admin/` → Circuits de validation, type d'acte `PARAPHEUR`.
 - **Organiser un atelier** : `/intranet/ateliers/nouveau/`. Les sessions sont générées automatiquement ; imprimez les badges, désignez les contrôleurs, puis ouvrez l'atelier pour permettre l'émargement.
+- **Exprimer un besoin d'achat** : `/intranet/achats/besoins/nouveau/`, puis ajouter les articles et transmettre. Le circuit s'adapte au montant.
+- **Modifier les seuils d'engagement** : `/admin/` → Circuits de validation, type d'acte `BESOIN`, champ « seuil de montant » de chaque étape.
+- **Tenir le magasin** : `/intranet/achats/magasin/`. Les entrées se font à la réception des commandes ; les sorties et les inventaires se saisissent sur la fiche de l'article.
+- **Gérer les fournisseurs** : `/admin/` → Fournisseurs. Le compte contribuable est exigé avant toute commande.
 - **Définir les barèmes de participation** : `/admin/` → Barèmes de participation. Ils déterminent les montants de l'état de paiement.
 - **Activer l'OCR des documents scannés** : installer `pymupdf4llm` et `rapidocr-onnxruntime`. Sans eux, les PDF natifs restent indexés et les scans sont archivés sans texte.

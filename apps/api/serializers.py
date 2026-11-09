@@ -3,6 +3,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from apps.accounts.models import Notification
+from apps.achats.models import Article, ExpressionBesoin, MouvementStock
 from apps.activites.models import Activite, Avancement, PlanAction
 from apps.ateliers.models import Atelier, Emargement, Participant, Session
 from apps.core.models import Structure
@@ -445,3 +446,49 @@ class ResultatLotSerializer(serializers.Serializer):
     doublons = serializers.IntegerField(read_only=True)
     invalides = serializers.IntegerField(read_only=True)
     details = serializers.ListField(read_only=True)
+
+
+# --- Achats et stocks --------------------------------------------------------
+class ArticleSerializer(serializers.ModelSerializer):
+    perimetre_code = serializers.CharField(source="perimetre.code", read_only=True)
+    sous_seuil = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Article
+        fields = ["id", "code", "designation", "unite", "stock", "seuil_alerte",
+                  "sous_seuil", "perimetre_code"]
+
+
+class MouvementSerializer(serializers.ModelSerializer):
+    article_code = serializers.CharField(source="article.code", read_only=True)
+    type_libelle = serializers.CharField(source="get_type_display", read_only=True)
+
+    class Meta:
+        model = MouvementStock
+        fields = ["id", "article", "article_code", "type", "type_libelle", "quantite",
+                  "stock_apres", "date", "motif", "beneficiaire"]
+        read_only_fields = ["stock_apres"]
+
+
+class SaisieMouvementSerializer(serializers.Serializer):
+    """Mouvement releve au magasin, depuis le telephone."""
+
+    type = serializers.ChoiceField(choices=MouvementStock.Type.choices)
+    quantite = serializers.IntegerField(min_value=1)
+    motif = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    beneficiaire = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    date = serializers.DateField(required=False)
+
+
+class BesoinSerializer(serializers.ModelSerializer):
+    statut_libelle = serializers.CharField(source="get_statut_display", read_only=True)
+    perimetre_code = serializers.CharField(source="perimetre.code", read_only=True)
+    demandeur_nom = serializers.CharField(source="demandeur.nom_complet", read_only=True)
+    montant_estime = serializers.DecimalField(max_digits=14, decimal_places=0, read_only=True)
+    progression = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = ExpressionBesoin
+        fields = ["id", "numero", "objet", "justification", "statut", "statut_libelle",
+                  "perimetre_code", "demandeur_nom", "montant_estime", "progression",
+                  "date_souhaitee", "soumis_le"]

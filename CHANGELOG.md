@@ -1,5 +1,21 @@
 # Journal des versions
 
+## 3.4.0 — Achats et stocks (phase 5)
+
+**Procédure d'achat.** Nouvelle application `achats`. Chaque périmètre exprime ses besoins, les fait valider, consulte les fournisseurs, commande, réceptionne puis solde. Séries annuelles propres au périmètre pour les besoins (`EB-0001/2026/APFC-GBK`) comme pour les bons de commande.
+
+**Le circuit de validation dépend du montant.** Le moteur de circuits accepte désormais un seuil de montant par étape : une fourniture de bureau s'arrête au supérieur hiérarchique, un engagement de plus de deux millions remonte au directeur. Le seuil est paramétré dans l'administration, pas codé. L'objet qui circule expose `montant_circuit` ; ceux qui n'en portent pas valent zéro, de sorte que le moteur reste ignorant de ce qu'il fait circuler.
+
+**Garde-fous de la commande.** Retenir une offre exige au moins deux consultations — un choix entre une seule option n'en est pas un. Commander à un fournisseur dont le compte contribuable manque est refusé. Une facture s'écartant de plus de 10 % du bon de commande demande une justification.
+
+**Le stock dérive du journal.** Toute quantité s'explique par une entrée, une sortie ou un inventaire ; chaque mouvement conserve le stock résultant. On ne corrige jamais un compteur : un écart au comptage se solde par un mouvement d'inventaire motivé, qui fixe la quantité comptée. Une sortie ne peut pas dépasser le stock et exige un bénéficiaire.
+
+**Liens avec le reste de la plateforme.** La réception fait entrer au magasin les articles qui y sont tenus, avec le bon de commande en référence ; la facture vient grossir le budget exécuté de l'activité rattachée au besoin.
+
+**Équipements.** Inventaire des biens durables : code, marque, numéro de série, affectation, valeur et état.
+
+**Application mobile.** `/api/v1/besoins/` et `/api/v1/articles/`, avec dépôt d'un mouvement depuis le terrain — le relevé d'inventaire se fait rayon par rayon.
+
 ## 3.3.0 — Ateliers et émargement par QR code (phase 4)
 
 **Ateliers.** Nouvelle application `ateliers`. Chaque périmètre organise ses ateliers, formations et séminaires : sessions à la journée ou à la demi-journée, inscription individuelle ou groupée par structure, désignation de contrôleurs d'émargement, compte rendu et décisions. Cycle planifié → en cours → clos, l'annulation exigeant un motif.

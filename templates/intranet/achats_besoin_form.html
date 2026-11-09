@@ -1,0 +1,17 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Besoin{% endblock %}
+{% block titre_page %}Exprimer un besoin{% endblock %}
+{% block sous_titre %}{{ perimetre.nom }} &middot; le numero est attribue automatiquement{% endblock %}
+
+{% block contenu %}
+<div class="bloc" style="max-width:760px">
+  <form method="post" class="formulaire">
+    {% csrf_token %}
+    {% include "intranet/_champs.html" %}
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Creer le besoin</button>
+      <a class="btn btn--secondaire" href="{% url 'achats:besoins' %}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

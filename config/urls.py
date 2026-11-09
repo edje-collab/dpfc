@@ -21,6 +21,7 @@ urlpatterns = [
     path("intranet/pilotage/", include("apps.activites.urls")),
     path("intranet/courrier/", include("apps.courrier.urls")),
     path("intranet/ateliers/", include("apps.ateliers.urls")),
+    path("intranet/achats/", include("apps.achats.urls")),
     # --- Signature electronique et verification publique ---
     path("", include("apps.signature.urls")),
     # --- API REST (application mobile Flutter) ---

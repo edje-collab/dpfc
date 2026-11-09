@@ -1,0 +1,40 @@
+{% extends "intranet/base_intranet.html" %}
+{% load humanize %}
+{% block titre %}Commandes{% endblock %}
+{% block titre_page %}Bons de commande{% endblock %}
+{% block sous_titre %}{{ total }} commande{{ total|pluralize }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <div class="puces-filtre">
+    <a href="{% url 'achats:commandes' %}" class="{% if not statut_actif %}active{% endif %}">Toutes</a>
+    {% for valeur, libelle in statuts %}
+      <a href="?statut={{ valeur }}" class="{% if statut_actif == valeur %}active{% endif %}">{{ libelle }}</a>
+    {% endfor %}
+  </div>
+  {% if page_obj %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Numero</th><th>Besoin</th><th>Fournisseur</th><th>Montant</th>
+                   <th>Emis le</th><th>Receptionne</th><th>Statut</th></tr></thead>
+        <tbody>
+          {% for c in page_obj %}
+            <tr>
+              <td><a href="{{ c.get_absolute_url }}">{{ c.numero }}</a></td>
+              <td>{{ c.besoin.objet|truncatechars:44 }}<br><small class="aide">{{ c.besoin.perimetre.code }}</small></td>
+              <td>{{ c.fournisseur }}</td>
+              <td>{{ c.montant|intcomma }}</td>
+              <td>{{ c.date_emission|date:"d/m/Y" }}</td>
+              <td>{{ c.date_reception|date:"d/m/Y"|default:"&mdash;" }}</td>
+              <td><span class="pastille pastille--{{ c.couleur_statut }}">{{ c.get_statut_display }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "public/_pagination.html" %}
+  {% else %}
+    <p class="aide">Aucun bon de commande.</p>
+  {% endif %}
+</div>
+{% endblock %}

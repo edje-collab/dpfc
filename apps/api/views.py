@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
@@ -10,6 +11,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.accounts.models import Notification
+from apps.achats.models import Article, ExpressionBesoin
+from apps.achats.services import ErreurAchat, enregistrer_mouvement
 from apps.activites.models import Activite, PlanAction
 from apps.activites.services import ErreurPlan, enregistrer_avancement, tableau_de_bord
 from apps.ateliers.models import Atelier, Session
@@ -530,3 +533,80 @@ class AtelierViewSet(viewsets.ReadOnlyModelViewSet):
         except ErreurAtelier as erreur:
             return Response({"detail": str(erreur)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(s.ResultatLotSerializer(resultat).data)
+
+
+# --- Achats et stocks --------------------------------------------------------
+class BesoinViewSet(viewsets.ReadOnlyModelViewSet):
+    """Expressions de besoin du perimetre de l'agent."""
+
+    serializer_class = s.BesoinSerializer
+    queryset = ExpressionBesoin.objects.none()
+
+    def get_queryset(self):
+        qs = ExpressionBesoin.objects.visibles_par(self.request.user).select_related(
+            "perimetre", "demandeur"
+        )
+        if statut := self.request.query_params.get("statut"):
+            qs = qs.filter(statut=statut)
+        if self.request.query_params.get("mes_besoins") in {"1", "true", "oui"}:
+            qs = qs.filter(demandeur=self.request.user)
+        return qs
+
+
+class ArticleViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Etat du magasin, consultable depuis le terrain.
+
+    Le mouvement de stock se depose par l'action dediee : un releve
+    d'inventaire se fait rayon par rayon, le telephone a la main.
+    """
+
+    serializer_class = s.ArticleSerializer
+    queryset = Article.objects.none()
+
+    def get_queryset(self):
+        agent = self.request.user
+        qs = Article.objects.filter(actif=True).select_related("perimetre")
+        if not (agent.est_rh or agent.est_direction or agent.peut_administrer):
+            perimetre = agent.perimetre
+            qs = qs.filter(perimetre=perimetre) if perimetre else qs.none()
+        if self.request.query_params.get("alerte") in {"1", "true", "oui"}:
+            qs = qs.filter(stock__lte=models.F("seuil_alerte"))
+        return qs.order_by("designation")
+
+    @extend_schema(responses=s.MouvementSerializer(many=True))
+    @action(detail=True, methods=["get"])
+    def mouvements(self, request, pk=None):
+        article = self.get_object()
+        return Response(
+            s.MouvementSerializer(article.mouvements.all()[:50], many=True).data
+        )
+
+    @extend_schema(request=s.SaisieMouvementSerializer, responses=s.ArticleSerializer)
+    @action(detail=True, methods=["post"], url_path="mouvement")
+    def mouvement(self, request, pk=None):
+        article = self.get_object()
+        if not (
+            request.user.est_secretariat
+            or request.user.dirige_son_perimetre
+            or request.user.est_direction
+            or request.user.peut_administrer
+        ):
+            return Response(
+                {"detail": "La tenue du magasin releve du secretariat."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serialiseur = s.SaisieMouvementSerializer(data=request.data)
+        serialiseur.is_valid(raise_exception=True)
+        donnees = serialiseur.validated_data
+        try:
+            enregistrer_mouvement(
+                article, donnees["type"], donnees["quantite"], request.user,
+                motif=donnees.get("motif", ""),
+                beneficiaire=donnees.get("beneficiaire", ""),
+                date=donnees.get("date"),
+            )
+        except ErreurAchat as erreur:
+            return Response({"detail": str(erreur)}, status=status.HTTP_400_BAD_REQUEST)
+        article.refresh_from_db()
+        return Response(s.ArticleSerializer(article).data)

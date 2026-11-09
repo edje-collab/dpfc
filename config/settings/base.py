@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.circuits",
     # Applications metier
+    "apps.achats",
     "apps.activites",
     "apps.ateliers",
     "apps.courrier",
@@ -250,6 +251,15 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": "/api/v1",
     "PREPROCESSING_HOOKS": ["apps.api.schema.limiter_a_l_api_publique"],
+    # Plusieurs modeles portent un champ « type » : on nomme explicitement les
+    # enumerations pour que le schema reste lisible par les clients.
+    "ENUM_NAME_OVERRIDES": {
+        "TypeActivite": "apps.activites.models.Activite.Type",
+        "TypeAtelier": "apps.ateliers.models.Atelier.Type",
+        "TypeCourrier": "apps.courrier.models.Courrier.Nature",
+        "TypeMouvementStock": "apps.achats.models.MouvementStock.Type",
+        "TypeDemande": "apps.rh.models.TypeDemande",
+    },
 }
 
 SIMPLE_JWT = {

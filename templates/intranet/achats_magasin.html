@@ -1,0 +1,56 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Magasin{% endblock %}
+{% block titre_page %}Magasin{% endblock %}
+{% block sous_titre %}{{ articles|length }} article{{ articles|length|pluralize }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="formulaire">
+    <div class="grille-tb">
+      <div class="champ">
+        <label for="q">Recherche</label>
+        <input type="search" id="q" name="q" value="{{ q }}" placeholder="Code ou designation">
+      </div>
+      <div class="champ">
+        <label for="alerte">Filtre</label>
+        <select name="alerte" id="alerte">
+          <option value="">Tous les articles</option>
+          <option value="1" {% if alerte %}selected{% endif %}>A reapprovisionner seulement</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Filtrer</button>
+      <a class="btn btn--secondaire" href="{% url 'achats:magasin' %}">Reinitialiser</a>
+      <a class="btn btn--secondaire" href="{% url 'achats:magasin_csv' %}">Exporter en CSV</a>
+      {% if peut_gerer %}<a class="btn btn--principal" href="{% url 'achats:article_creer' %}">Inscrire un article</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="bloc">
+  {% if articles %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Code</th><th>Designation</th><th>Perimetre</th><th>Stock</th>
+                   <th>Seuil d'alerte</th><th>Mouvements</th></tr></thead>
+        <tbody>
+          {% for a in articles %}
+            <tr>
+              <td>{{ a.code }}</td>
+              <td><a href="{{ a.get_absolute_url }}">{{ a.designation }}</a></td>
+              <td>{{ a.perimetre.code }}</td>
+              <td>{% if a.sous_seuil %}<span class="pastille pastille--ko">{{ a.stock }} {{ a.unite }}</span>
+                  {% else %}<span class="pastille pastille--ok">{{ a.stock }} {{ a.unite }}</span>{% endif %}</td>
+              <td>{{ a.seuil_alerte }}</td>
+              <td>{{ a.mouvements.count }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="aide">Aucun article au magasin.</p>
+  {% endif %}
+</div>
+{% endblock %}

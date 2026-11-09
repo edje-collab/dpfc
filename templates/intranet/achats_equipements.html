@@ -1,0 +1,59 @@
+{% extends "intranet/base_intranet.html" %}
+{% load humanize %}
+{% block titre %}Equipements{% endblock %}
+{% block titre_page %}Inventaire des equipements{% endblock %}
+{% block sous_titre %}{{ total }} equipement{{ total|pluralize }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="formulaire">
+    <div class="grille-tb">
+      <div class="champ">
+        <label for="q">Recherche</label>
+        <input type="search" id="q" name="q" value="{{ q }}" placeholder="Code, designation, marque">
+      </div>
+      <div class="champ">
+        <label for="etat">Etat</label>
+        <select name="etat" id="etat">
+          <option value="">Tous les etats</option>
+          {% for valeur, libelle in etats %}
+            <option value="{{ valeur }}" {% if etat_actif == valeur %}selected{% endif %}>{{ libelle }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Filtrer</button>
+      <a class="btn btn--secondaire" href="{% url 'achats:equipements' %}">Reinitialiser</a>
+      {% if peut_gerer %}<a class="btn btn--principal" href="{% url 'achats:equipement_creer' %}">Inscrire un equipement</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="bloc">
+  {% if page_obj %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Code</th><th>Designation</th><th>Affecte a</th><th>Structure</th>
+                   <th>Acquis le</th><th>Valeur</th><th>Etat</th></tr></thead>
+        <tbody>
+          {% for e in page_obj %}
+            <tr>
+              <td>{{ e.code_inventaire }}</td>
+              <td>{{ e.designation }}{% if e.marque %}<br><small class="aide">{{ e.marque }}</small>{% endif %}</td>
+              <td>{{ e.affecte_a.nom_complet|default:"-" }}</td>
+              <td>{{ e.structure|default:"-" }}</td>
+              <td>{{ e.date_acquisition|date:"d/m/Y"|default:"-" }}</td>
+              <td>{{ e.valeur|intcomma }}</td>
+              <td><span class="pastille pastille--{{ e.couleur_etat }}">{{ e.get_etat_display }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "public/_pagination.html" %}
+  {% else %}
+    <p class="aide">Aucun equipement inscrit a l'inventaire.</p>
+  {% endif %}
+</div>
+{% endblock %}

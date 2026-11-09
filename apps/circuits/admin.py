@@ -6,7 +6,8 @@ from .models import Circuit, Etape
 class EtapeInline(admin.TabularInline):
     model = Etape
     extra = 1
-    fields = ("ordre", "libelle", "designation", "role", "conditions", "facultative")
+    fields = ("ordre", "libelle", "designation", "role", "conditions",
+              "seuil_montant", "facultative")
 
 
 @admin.register(Circuit)

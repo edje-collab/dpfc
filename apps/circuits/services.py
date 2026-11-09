@@ -95,6 +95,16 @@ RESOLVEURS = {
 }
 
 
+def _montant(demande):
+    """
+    Montant porte par l'objet, ou zero.
+
+    Les actes administratifs n'en portent pas ; les expressions de besoin si.
+    Le moteur reste ainsi ignorant de ce qu'il fait circuler.
+    """
+    return getattr(demande, "montant_circuit", 0) or 0
+
+
 # --- Evaluation des conditions ----------------------------------------------
 def _condition_remplie(condition, demande):
     agent = demande.agent
@@ -135,6 +145,8 @@ def etapes_resolues(demande):
     agent = demande.agent
     vus, resultat = set(), []
     for etape in circuit.etapes.all():
+        if etape.seuil_montant and _montant(demande) < etape.seuil_montant:
+            continue
         if not all(_condition_remplie(c, demande) for c in etape.conditions or []):
             continue
         resolveur = RESOLVEURS.get(etape.designation)
