@@ -3,7 +3,9 @@ from .base import *  # noqa: F403
 from .base import BASE_DIR, env, env_bool, env_liste
 
 DEBUG = True
-ALLOWED_HOSTS = env_liste("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,testserver,web")
+# En developpement, l'hote varie : boucle locale, nom du conteneur, ou adresse
+# de la machine virtuelle WSL vue depuis Windows. On ne filtre donc pas.
+ALLOWED_HOSTS = env_liste("DJANGO_ALLOWED_HOSTS") or ["*"]
 
 # Hors conteneur, on retombe sur SQLite pour demarrer sans dependance.
 if not env("POSTGRES_HOST"):

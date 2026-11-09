@@ -45,6 +45,12 @@ python manage.py initialiser_dpfc --demo
 python manage.py runserver
 ```
 
+Sous WSL, pour ouvrir le site depuis un navigateur Windows, écoutez sur toutes les interfaces et ajoutez l'adresse de la machine WSL — que `hostname -I` donne et qui change à chaque redémarrage — à `DJANGO_ALLOWED_HOSTS` :
+
+```bash
+python manage.py runserver 0.0.0.0:8000
+```
+
 - Site public : http://127.0.0.1:8000/
 - Administration du site public (Wagtail) : http://127.0.0.1:8000/cms/ (`ADMIN01` / `dpfc2026!`)
 - Espace agent : http://127.0.0.1:8000/intranet/connexion/
