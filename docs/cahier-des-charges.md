@@ -5,7 +5,7 @@
 | **Maître d'ouvrage** | Direction de la Pédagogie et de la Formation Continue (DPFC) |
 | **Tutelle** | Direction Générale de la Pédagogie, des Curricula et du Suivi des Programmes (DGPCSP) |
 | **Ministère** | Éducation Nationale, de l'Alphabétisation et de l'Enseignement Technique |
-| **Version** | 3.4.3 |
+| **Version** | 3.4.4 |
 | **Référence réglementaire** | Décret n° 2026-509 du 05 août 2026 portant organisation du MENAET |
 
 > Ce document est tenu à jour avec le code. Chaque exigence porte un identifiant et renvoie aux tests automatisés qui la vérifient : la [matrice de traçabilité](#15-matrice-de-traçabilité) est contrôlée à chaque exécution de la suite de tests, de sorte qu'une exigence ne peut pas être invoquée sans preuve.
@@ -232,6 +232,7 @@ Ces seuils relèvent de la direction et se modifient dans l'administration sans 
 | **SEC-03** | Verrouillage après échecs répétés de connexion. |
 | **SEC-04** | Journal d'audit des actions sensibles, horodaté et porteur de l'adresse IP. |
 | **SEC-05** | Cloisonnement par périmètre appliqué en liste **et** à l'accès direct. |
+| **SEC-07** | Un agent des services extérieurs du ministère (DRENA, DDENA, DRETPI) ne relève d'aucun périmètre : il intervient dans les circuits de validation sans accéder aux dossiers de la direction. |
 | **SEC-06** | En production : HTTPS imposé, cookies sécurisés, HSTS, `X-Frame-Options`. |
 
 ### 14.2 Technique
@@ -362,6 +363,7 @@ Chaque exigence renvoie aux tests qui la vérifient. Cette matrice est contrôl�
 | PUB-05 | `apps/site_public/tests.py::test_bouton_espace_agent_pilotable` |
 | PUB-06 | `apps/signature/tests.py::test_page_publique_de_verification` |
 | SEC-01 | `apps/rh/tests.py::test_connexion_requise`<br>`apps/accounts/tests.py::test_parcours_complet_depuis_l_intranet` |
+| SEC-07 | `apps/circuits/tests.py::test_un_directeur_regional_n_a_pas_de_perimetre`<br>`apps/circuits/tests.py::test_il_ne_voit_ni_courrier_ni_documents_ni_achats`<br>`apps/circuits/tests.py::test_il_intervient_malgre_tout_dans_les_circuits`<br>`apps/circuits/tests.py::test_il_voit_les_agents_de_son_ressort` |
 | SEC-05 | `apps/api/tests.py::test_le_courrier_est_cloisonne_par_perimetre`<br>`apps/api/tests.py::test_le_magasin_est_cloisonne_par_perimetre`<br>`apps/courrier/tests.py::test_un_courrier_confidentiel_reste_invisible_aux_autres` |
 | TEC-04 | `apps/api/tests.py::test_le_terrain_ne_voit_que_les_activites_de_son_perimetre` |
 | TEC-05 | `apps/api/tests.py::test_connexion_retourne_le_profil`<br>`apps/api/tests.py::test_acces_refuse_sans_jeton` |
@@ -423,3 +425,4 @@ Points qui relèvent de la direction, et non de la réalisation technique.
 | 3.4.1 | Cahier des charges et matrice de traçabilité |
 | 3.4.2 | Décision sur les sous-directions antérieures au décret (ORG-09 à ORG-11) |
 | 3.4.3 | Répartition des agents selon les attributions reprises |
+| 3.4.4 | Cloisonnement des services extérieurs du ministère (SEC-07) |

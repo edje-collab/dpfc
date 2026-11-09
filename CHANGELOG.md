@@ -1,5 +1,13 @@
 # Journal des versions
 
+## 3.4.4 — Cloisonnement des services extérieurs
+
+**Correction de cloisonnement.** Un agent des services extérieurs du ministère — directeur régional DRENA, par exemple — héritait du périmètre central faute d'en avoir un propre, et voyait donc le courrier, les documents, les achats et les ateliers de la direction. Or il est extérieur à la DPFC : il intervient dans les circuits de validation sans relever de sa gestion.
+
+`Agent.perimetre` vaut désormais `None` lorsque la structure n'appartient à aucun périmètre, et les filtrages ne renvoient alors rien. Le directeur régional conserve ce qui lui revient : les agents de son ressort et son rôle dans l'établissement des ordres de mission hors ressort.
+
+Nouvelle exigence **SEC-07**, avec ses tests.
+
 ## 3.4.3 — Répartition des agents selon les attributions
 
 Les agents d'une structure retirée ne sont plus déposés à la direction : ils **suivent les attributions de leur structure**. Chaque structure retirée désigne la sous-direction du décret qui les reprend.

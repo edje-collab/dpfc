@@ -128,10 +128,19 @@ class Agent(AbstractUser):
     # --- Affectation ------------------------------------------------------
     @property
     def perimetre(self):
-        """Perimetre de gestion dont releve l'agent (deduit de sa structure)."""
+        """
+        Perimetre de gestion dont releve l'agent, deduit de sa structure.
+
+        Vaut None lorsque la structure n'appartient a aucun perimetre — les
+        services exterieurs du ministere (DRENA, DDENA, DRETPI) sont dans ce
+        cas. Un directeur regional intervient dans les circuits de validation
+        sans pour autant relever de la gestion de la direction : lui donner le
+        perimetre central par defaut lui ouvrirait le courrier, les documents
+        et les achats de la DPFC.
+        """
         if self.structure_id and self.structure.perimetre_id:
             return self.structure.perimetre
-        return Perimetre.centrale()
+        return None
 
     @property
     def affectation(self):

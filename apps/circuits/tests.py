@@ -9,6 +9,7 @@ from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 
 from apps.circuits.modeles import installer_circuits_modeles
 from apps.circuits.models import Circuit, Condition, Designation, Etape
@@ -389,3 +390,53 @@ class NettoyageOrganisationTest(BaseOrganisation):
         sortie = self._nettoyer(appliquer=True)
         self.assertIn("conforme au decret", sortie)
         self.assertIn("Deja retirees", sortie)
+
+
+class ServicesExterieursTest(BaseOrganisation):
+    """
+    Les services exterieurs du ministere ne relevent pas de la gestion de la
+    direction : ils interviennent dans les circuits sans en voir les dossiers.
+    """
+
+    def test_un_directeur_regional_n_a_pas_de_perimetre(self):
+        self.assertIsNone(self.dr.perimetre)
+        self.assertIsNone(self.drena.perimetre)
+
+    def test_il_ne_voit_ni_courrier_ni_documents_ni_achats(self):
+        from apps.achats.models import ExpressionBesoin
+        from apps.ateliers.models import Atelier
+        from apps.courrier.models import Courrier, Document
+
+        Courrier.objects.create(
+            perimetre=self.p_centrale, sens=Courrier.Sens.ARRIVEE,
+            correspondant="Cabinet", objet="Circulaire interne",
+        )
+        Document.objects.create(
+            perimetre=self.p_centrale, titre="Note interne",
+            annee=timezone.localdate().year,
+        )
+        ExpressionBesoin.objects.create(
+            perimetre=self.p_centrale, objet="Fournitures", demandeur=self.agent_central,
+        )
+        Atelier.objects.create(
+            perimetre=self.p_centrale, intitule="Atelier interne", lieu="Abidjan",
+            date_debut=timezone.localdate(), date_fin=timezone.localdate(),
+        )
+
+        self.assertEqual(Courrier.objects.visibles_par(self.dr).count(), 0)
+        self.assertEqual(Document.objects.visibles_par(self.dr).count(), 0)
+        self.assertEqual(ExpressionBesoin.objects.visibles_par(self.dr).count(), 0)
+        self.assertEqual(Atelier.objects.visibles_par(self.dr).count(), 0)
+
+    def test_il_intervient_malgre_tout_dans_les_circuits(self):
+        """Une mission hors ressort reste etablie par la direction regionale."""
+        demande = self._demande(
+            self.agent_antenne, TypeDemande.ORDRE_MISSION, hors_perimetre_drena=True
+        )
+        etapes = etapes_resolues(demande)
+        self.assertIn(self.dr.matricule, [v.matricule for _, v in etapes])
+
+    def test_il_voit_les_agents_de_son_ressort(self):
+        vus = set(self.dr.perimetre_agents().values_list("matricule", flat=True))
+        self.assertIn(self.chef_antenne.matricule, vus)
+        self.assertNotIn(self.agent_central.matricule, vus)
