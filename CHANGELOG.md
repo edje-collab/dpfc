@@ -1,5 +1,19 @@
 # Journal des versions
 
+## 3.2.0 — Courrier et gestion documentaire (phase 3)
+
+**Registre du courrier par périmètre.** Nouvelle application `courrier`. Chaque périmètre tient sa série annuelle par sens (`ARR-0001/2026/APFC-GBK`, `DEP-0001/2026/DPFC`). Un courrier arrivé est imputé à un ou plusieurs agents, avec instructions et délai ; son statut est déduit de l'état de ses imputations, jamais saisi. Imputation « pour information » close d'emblée, classement sans suite motivé, calcul du retard sur l'imputation la plus ancienne.
+
+**Confidentialité et droits.** Un courrier confidentiel reste visible de son seul enregistreur, de ses imputataires, du responsable du périmètre et de la direction — filtrage appliqué en liste comme à l'accès direct. Les droits d'enregistrement, d'imputation et de pilotage tiennent désormais à la **désignation effective** (`dirige_son_perimetre`) et non au rôle porté : porter le rôle de chef d'antenne sans diriger l'antenne ne donne plus la main sur son courrier ni sur son plan d'action.
+
+**Bibliothèque documentaire.** Documents versionnés avec empreinte SHA-256 et taille, versions antérieures conservées, partage entre périmètres et accès restreint par agent. Recherche plein texte portable : moteur français de PostgreSQL en production, recherche par sous-chaîne ailleurs. L'extraction du texte (fichiers texte, PDF natifs via pypdf, OCR facultatif pour les scans) ne bloque jamais le dépôt.
+
+**Parapheur.** Les visas internes réutilisent le moteur de circuits : `PieceParapheur` expose l'interface attendue par `circuits.services`, qui reste ignorant du courrier. Nouveau type d'acte `PARAPHEUR` dans les circuits livrés, remontant jusqu'au responsable du périmètre — une note d'antenne ne traverse pas la direction centrale.
+
+**Modèles de courrier** à l'en-tête de la direction, avec substitution de variables.
+
+**Application mobile.** `/api/v1/courriers/`, `/api/v1/imputations/` avec compte rendu depuis le terrain, et `/api/v1/documents/` avec recherche plein texte — tous cloisonnés par périmètre.
+
 ## 3.1.0 — Pilotage des activités (phase 2)
 
 **Plans d'action annuels.** Nouvelle application `activites` : chaque périmètre — direction centrale, antenne régionale, CNRPN — établit son plan annuel, le transmet à la direction, puis rend compte de son exécution. Cycle complet : préparation, soumission, validation ou renvoi motivé, clôture avec report automatique des activités restées ouvertes.

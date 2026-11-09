@@ -1,0 +1,17 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Enregistrer un courrier{% endblock %}
+{% block titre_page %}Enregistrer un courrier{% endblock %}
+{% block sous_titre %}{{ perimetre.nom }} &middot; le numero d'ordre est attribue automatiquement{% endblock %}
+
+{% block contenu %}
+<div class="bloc" style="max-width:860px">
+  <form method="post" class="formulaire">
+    {% csrf_token %}
+    {% include "intranet/_champs.html" %}
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Enregistrer</button>
+      <a class="btn btn--secondaire" href="{% url 'courrier:registre' %}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

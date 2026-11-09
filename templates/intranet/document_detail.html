@@ -1,0 +1,72 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}{{ document.titre }}{% endblock %}
+{% block titre_page %}{{ document.titre }}{% endblock %}
+{% block sous_titre %}{{ document.get_type_document_display }} &middot; {{ document.annee }} &middot; {{ document.perimetre.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="grille-2">
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete">
+        <h2>Fiche du document</h2>
+        {% if document.version_courante %}
+          <a class="btn btn--principal btn--petit" href="{{ document.version_courante.fichier.url }}">Telecharger</a>
+        {% endif %}
+      </div>
+      {% if document.description %}<p>{{ document.description|linebreaksbr }}</p>{% endif %}
+      <table class="table table--compacte">
+        <tr><th>Acces</th><td>{{ document.get_acces_display }}{% if document.partage %} &middot; partage avec tous les perimetres{% endif %}</td></tr>
+        <tr><th>Depose par</th><td>{{ document.deposant.nom_complet|default:"-" }}</td></tr>
+        {% if document.courrier %}<tr><th>Courrier d'origine</th>
+            <td><a href="{{ document.courrier.get_absolute_url }}">{{ document.courrier.numero }}</a></td></tr>{% endif %}
+        {% if document.activite %}<tr><th>Activite liee</th>
+            <td><a href="{{ document.activite.get_absolute_url }}">{{ document.activite.code }}</a></td></tr>{% endif %}
+        <tr><th>Indexation</th><td>{% if document.indexe_le %}Texte indexe le {{ document.indexe_le|date:"d/m/Y H:i" }}
+            {% else %}Non indexe{% endif %}</td></tr>
+      </table>
+    </div>
+
+    <div class="bloc">
+      <div class="bloc__tete"><h2>Versions</h2></div>
+      <div class="defilement">
+        <table class="table table--compacte">
+          <thead><tr><th>Version</th><th>Fichier</th><th>Taille</th><th>Commentaire</th><th>Deposee</th></tr></thead>
+          <tbody>
+            {% for v in versions %}
+              <tr>
+                <td><strong>v{{ v.numero }}</strong>{% if forloop.first %} <span class="pastille pastille--ok">courante</span>{% endif %}</td>
+                <td><a href="{{ v.fichier.url }}">Telecharger</a></td>
+                <td>{{ v.taille_lisible }}</td>
+                <td class="aide">{{ v.commentaire|default:"-" }}</td>
+                <td class="aide">{{ v.deposee_le|date:"d/m/Y" }}<br>{{ v.deposee_par.nom_complet|default:"" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    {% if peut_deposer %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Deposer une nouvelle version</h2></div>
+        <form method="post" enctype="multipart/form-data" action="{% url 'courrier:document_version' document.pk %}" class="formulaire">
+          {% csrf_token %}
+          {% for champ in form_version.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+          <div class="actions"><button class="btn btn--principal" type="submit">Deposer</button></div>
+        </form>
+        <p class="aide">Les versions anterieures restent consultables.</p>
+      </div>
+    {% endif %}
+
+    {% if document.version_courante.empreinte %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Integrite</h2></div>
+        <p class="aide">Empreinte SHA-256 de la version courante :</p>
+        <p style="word-break:break-all;font-family:monospace;font-size:.78rem">{{ document.version_courante.empreinte }}</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

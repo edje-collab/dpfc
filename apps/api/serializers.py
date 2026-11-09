@@ -5,6 +5,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from apps.accounts.models import Notification
 from apps.activites.models import Activite, Avancement, PlanAction
 from apps.core.models import Structure
+from apps.courrier.models import Courrier, Document, Imputation
 from apps.rh.models import Demande, RapportMission, SoldeConge, Validation
 from apps.site_public.models import PageActualite, PageEvenement, PageProjet, Ressource
 
@@ -308,3 +309,68 @@ class TableauPilotageSerializer(serializers.Serializer):
     budget_execute = serializers.DecimalField(max_digits=16, decimal_places=0, read_only=True)
     beneficiaires = serializers.IntegerField(read_only=True)
     nb_en_retard = serializers.IntegerField(read_only=True)
+
+
+# --- Courrier et documents ---------------------------------------------------
+class CourrierSerializer(serializers.ModelSerializer):
+    sens_libelle = serializers.CharField(source="get_sens_display", read_only=True)
+    statut_libelle = serializers.CharField(source="get_statut_display", read_only=True)
+    perimetre_code = serializers.CharField(source="perimetre.code", read_only=True)
+    est_en_retard = serializers.BooleanField(read_only=True)
+    nb_imputations = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Courrier
+        fields = ["id", "numero", "sens", "sens_libelle", "nature", "objet", "correspondant",
+                  "reference_expediteur", "date_courrier", "date_enregistrement", "resume",
+                  "statut", "statut_libelle", "perimetre_code", "confidentiel",
+                  "est_en_retard", "nb_imputations"]
+
+    def get_nb_imputations(self, courrier) -> int:
+        return courrier.imputations.count()
+
+
+class ImputationSerializer(serializers.ModelSerializer):
+    courrier_numero = serializers.CharField(source="courrier.numero", read_only=True)
+    courrier_objet = serializers.CharField(source="courrier.objet", read_only=True)
+    destinataire_nom = serializers.CharField(source="destinataire.nom_complet", read_only=True)
+    est_en_retard = serializers.BooleanField(read_only=True)
+    jours_restants = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Imputation
+        fields = ["id", "courrier", "courrier_numero", "courrier_objet", "destinataire_nom",
+                  "instructions", "delai", "pour_information", "compte_rendu", "traite_le",
+                  "est_en_retard", "jours_restants"]
+        read_only_fields = ["traite_le"]
+
+
+class CompteRenduSerializer(serializers.Serializer):
+    """Suite donnee a une imputation, depuis le terrain."""
+
+    compte_rendu = serializers.CharField()
+
+    def validate_compte_rendu(self, valeur):
+        if not valeur.strip():
+            raise serializers.ValidationError("Indiquez la suite donnee au courrier.")
+        return valeur
+
+
+class DocumentSerializer(serializers.ModelSerializer):
+    type_libelle = serializers.CharField(source="get_type_document_display", read_only=True)
+    perimetre_code = serializers.CharField(source="perimetre.code", read_only=True)
+    fichier = serializers.SerializerMethodField()
+    nb_versions = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Document
+        fields = ["id", "titre", "type_document", "type_libelle", "annee", "description",
+                  "perimetre_code", "acces", "partage", "nb_versions", "fichier"]
+
+    def get_fichier(self, document) -> str | None:
+        version = document.version_courante
+        if version is None or not version.fichier:
+            return None
+        requete = self.context.get("request")
+        url = version.fichier.url
+        return requete.build_absolute_uri(url) if requete else url

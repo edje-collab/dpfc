@@ -296,3 +296,113 @@ class ApiPilotageTest(TestCase):
 
     def test_acces_refuse_sans_jeton(self):
         self.assertEqual(self.client.get("/api/v1/activites/").status_code, 401)
+
+
+class ApiCourrierTest(TestCase):
+    """Le terrain consulte son courrier et rend compte de ses imputations."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.courrier.models import Courrier, Document
+        from apps.courrier.services import deposer_version, imputer
+
+        cls.p_centrale = Perimetre.objects.create(
+            code="DPFC", nom="Direction centrale", type=Perimetre.Type.CENTRALE
+        )
+        cls.p_antenne = Perimetre.objects.create(
+            code="APFC-GBK", nom="Antenne de Bouake", type=Perimetre.Type.ANTENNE
+        )
+        cls.direction = Structure.objects.create(
+            nom="Direction", sigle="DPFC", type=Structure.Type.DIRECTION,
+            perimetre=cls.p_centrale, perimetre_racine=True,
+        )
+        cls.antenne = Structure.objects.create(
+            nom="Antenne", sigle="APFC-GBK", type=Structure.Type.ANTENNE,
+            perimetre=cls.p_antenne, perimetre_racine=True,
+        )
+        cls.directeur = Agent.objects.create_user(
+            "D0001", password="motdepasse123", last_name="KOUAME", first_name="S",
+            role=Agent.Role.DIRECTEUR, structure=cls.direction,
+        )
+        cls.chef = Agent.objects.create_user(
+            "C0001", password="motdepasse123", last_name="KONE", first_name="A",
+            role=Agent.Role.CHEF_ANTENNE, structure=cls.antenne,
+        )
+        cls.agent = Agent.objects.create_user(
+            "A0001", password="motdepasse123", last_name="OUATTARA", first_name="F",
+            role=Agent.Role.AGENT, structure=cls.antenne, superieur=cls.chef,
+        )
+        cls.direction.responsable = cls.directeur
+        cls.direction.save(update_fields=["responsable"])
+        cls.antenne.responsable = cls.chef
+        cls.antenne.save(update_fields=["responsable"])
+
+        cls.courrier = Courrier.objects.create(
+            perimetre=cls.p_antenne, sens=Courrier.Sens.ARRIVEE,
+            correspondant="IEPP", objet="Demande d'appui", enregistre_par=cls.chef,
+        )
+        Courrier.objects.create(
+            perimetre=cls.p_centrale, sens=Courrier.Sens.ARRIVEE,
+            correspondant="Cabinet", objet="Circulaire", enregistre_par=cls.directeur,
+        )
+        [cls.imputation] = imputer(cls.courrier, cls.chef, [
+            {"destinataire": cls.agent, "instructions": "Traiter.",
+             "delai": timezone.localdate() + timedelta(days=5)},
+        ])
+        cls.document = Document.objects.create(
+            perimetre=cls.p_antenne, titre="Note regionale", annee=timezone.localdate().year,
+            deposant=cls.chef,
+        )
+        deposer_version(
+            cls.document,
+            SimpleUploadedFile("note.txt", b"Note sur l'encadrement des enseignants."),
+            cls.chef,
+        )
+
+    def _entetes(self, matricule="A0001"):
+        reponse = self.client.post(
+            reverse("api:connexion"), {"matricule": matricule, "password": "motdepasse123"},
+            content_type="application/json",
+        )
+        return {"HTTP_AUTHORIZATION": f"Bearer {reponse.json()['access']}"}
+
+    def test_le_courrier_est_cloisonne_par_perimetre(self):
+        reponse = self.client.get("/api/v1/courriers/", **self._entetes())
+        self.assertEqual(reponse.status_code, 200)
+        numeros = [c["perimetre_code"] for c in reponse.json()["results"]]
+        self.assertEqual(numeros, ["APFC-GBK"])
+        self.assertEqual(
+            self.client.get("/api/v1/courriers/", **self._entetes("D0001")).json()["count"], 2
+        )
+
+    def test_mes_imputations_en_attente(self):
+        reponse = self.client.get("/api/v1/imputations/?en_attente=1", **self._entetes())
+        donnees = reponse.json()["results"]
+        self.assertEqual(len(donnees), 1)
+        self.assertEqual(donnees[0]["courrier_objet"], "Demande d'appui")
+
+    def test_compte_rendu_depuis_le_telephone(self):
+        reponse = self.client.post(
+            f"/api/v1/imputations/{self.imputation.pk}/traiter/",
+            {"compte_rendu": "Tournee programmee."}, **self._entetes(),
+        )
+        self.assertEqual(reponse.status_code, 200)
+        self.assertIsNotNone(reponse.json()["traite_le"])
+        self.courrier.refresh_from_db()
+        self.assertEqual(self.courrier.statut, "TRAITE")
+
+    def test_compte_rendu_vide_refuse(self):
+        reponse = self.client.post(
+            f"/api/v1/imputations/{self.imputation.pk}/traiter/",
+            {"compte_rendu": "   "}, **self._entetes(),
+        )
+        self.assertEqual(reponse.status_code, 400)
+
+    def test_recherche_documentaire(self):
+        reponse = self.client.get("/api/v1/documents/?q=encadrement", **self._entetes())
+        titres = [d["titre"] for d in reponse.json()["results"]]
+        self.assertEqual(titres, ["Note regionale"])
+        self.assertIsNotNone(reponse.json()["results"][0]["fichier"])
+
+    def test_acces_refuse_sans_jeton(self):
+        self.assertEqual(self.client.get("/api/v1/courriers/").status_code, 401)

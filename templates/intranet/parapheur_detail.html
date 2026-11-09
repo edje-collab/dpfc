@@ -1,0 +1,75 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}{{ piece.objet }}{% endblock %}
+{% block titre_page %}{{ piece.objet }}{% endblock %}
+{% block sous_titre %}{{ piece.perimetre.nom }} &middot; {{ piece.demandeur.nom_complet }}{% endblock %}
+
+{% block contenu %}
+<div class="grille-2">
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete">
+        <h2>Piece <span class="pastille pastille--{{ piece.couleur_statut }}">{{ piece.get_statut_display }}</span></h2>
+        <a class="btn btn--secondaire btn--petit" href="{{ piece.document.get_absolute_url }}">Voir le document</a>
+      </div>
+      {% if piece.note %}<p>{{ piece.note|linebreaksbr }}</p>{% endif %}
+      {% if piece.motif_rejet %}
+        <p class="aide"><strong>Motif du refus :</strong> {{ piece.motif_rejet }}</p>
+      {% endif %}
+      <table class="table table--compacte">
+        <tr><th>Document</th><td>{{ piece.document.titre }}</td></tr>
+        {% if piece.courrier %}<tr><th>Courrier associe</th>
+            <td><a href="{{ piece.courrier.get_absolute_url }}">{{ piece.courrier.numero }}</a></td></tr>{% endif %}
+        <tr><th>Avancement</th><td>{{ piece.progression }} %
+            <div class="jauge"><i style="width:{{ piece.progression }}%"></i></div></td></tr>
+      </table>
+
+      {% if peut_soumettre %}
+        <form method="post" action="{% url 'courrier:parapheur_soumettre' piece.pk %}" style="margin-top:1rem">
+          {% csrf_token %}
+          <button class="btn btn--principal" type="submit">Transmettre au parapheur</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="bloc">
+      <div class="bloc__tete"><h2>Circuit des visas</h2></div>
+      {% if visas %}
+        <ul class="circuit">
+          {% for v in visas %}
+            <li>
+              <strong>{{ v.ordre }}. {{ v.libelle }}</strong>
+              {% if v.decision == 'VISE' %}<span class="pastille pastille--ok">Vise</span>
+              {% elif v.decision == 'REFUSE' %}<span class="pastille pastille--ko">Refuse</span>
+              {% elif v.decision == 'IGNORE' %}<span class="pastille pastille--neutre">Sans objet</span>
+              {% else %}<span class="pastille pastille--attente">En attente</span>{% endif %}
+              <p class="aide">{{ v.viseur.nom_complet }}
+                 {% if v.decide_le %}&middot; {{ v.decide_le|date:"d/m/Y H:i" }}{% endif %}</p>
+              {% if v.observation %}<p>{{ v.observation|linebreaksbr }}</p>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="aide">La piece n'est pas encore au parapheur.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    {% if mon_etape %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Votre visa</h2></div>
+        <p class="aide">{{ mon_etape.libelle }}</p>
+        <form method="post" action="{% url 'courrier:parapheur_viser' mon_etape.pk 'viser' %}" class="formulaire">
+          {% csrf_token %}
+          {% for champ in form_visa.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+          <div class="actions">
+            <button class="btn btn--principal" type="submit">Viser</button>
+            <button class="btn btn--danger" type="submit"
+                    formaction="{% url 'courrier:parapheur_viser' mon_etape.pk 'refuser' %}">Refuser</button>
+          </div>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

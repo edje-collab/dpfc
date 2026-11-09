@@ -1,0 +1,52 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Parapheur{% endblock %}
+{% block titre_page %}Parapheur{% endblock %}
+{% block sous_titre %}Visas internes avant signature{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <div class="bloc__tete">
+    <h2>Pieces a viser {% if a_viser %}<span class="pastille pastille--attente">{{ a_viser|length }}</span>{% endif %}</h2>
+    <a class="btn btn--principal btn--petit" href="{% url 'courrier:parapheur_creer' %}">Soumettre une piece</a>
+  </div>
+  {% if a_viser %}
+    <table class="table">
+      <thead><tr><th>Objet</th><th>Etape</th><th>Demandeur</th><th>Document</th></tr></thead>
+      <tbody>
+        {% for visa in a_viser %}
+          <tr>
+            <td><a href="{{ visa.piece.get_absolute_url }}">{{ visa.piece.objet }}</a></td>
+            <td class="aide">{{ visa.libelle }}</td>
+            <td>{{ visa.piece.demandeur.nom_complet }}</td>
+            <td>{{ visa.piece.document.titre }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="aide">Aucune piece n'attend votre visa.</p>
+  {% endif %}
+</div>
+
+<div class="bloc">
+  <div class="bloc__tete"><h2>Mes pieces</h2></div>
+  {% if mes_pieces %}
+    <table class="table">
+      <thead><tr><th>Objet</th><th>Document</th><th>Statut</th><th>Avancement</th><th>Soumise le</th></tr></thead>
+      <tbody>
+        {% for p in mes_pieces %}
+          <tr>
+            <td><a href="{{ p.get_absolute_url }}">{{ p.objet }}</a></td>
+            <td>{{ p.document.titre }}</td>
+            <td><span class="pastille pastille--{{ p.couleur_statut }}">{{ p.get_statut_display }}</span></td>
+            <td>{{ p.progression }} %<div class="jauge"><i style="width:{{ p.progression }}%"></i></div></td>
+            <td>{{ p.soumise_le|date:"d/m/Y"|default:"-" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="aide">Vous n'avez soumis aucune piece.</p>
+  {% endif %}
+</div>
+{% endblock %}

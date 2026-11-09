@@ -1,0 +1,17 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Imputer{% endblock %}
+{% block titre_page %}Imputer le courrier {{ courrier.numero }}{% endblock %}
+{% block sous_titre %}{{ courrier.objet }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc" style="max-width:760px">
+  <form method="post" class="formulaire">
+    {% csrf_token %}
+    {% include "intranet/_champs.html" %}
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Imputer</button>
+      <a class="btn btn--secondaire" href="{{ courrier.get_absolute_url }}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Courrier{% endblock %}
+{% block titre_page %}Courrier et documents{% endblock %}
+{% block sous_titre %}{{ perimetre_courant.nom|default:"Tous perimetres" }}{% endblock %}
+
+{% block contenu %}
+<div class="grille-tb">
+  <div class="indicateur"><strong>{{ nb_arrivees }}</strong><span>courriers arrives</span></div>
+  <div class="indicateur"><strong>{{ nb_departs }}</strong><span>courriers departs</span></div>
+  <div class="indicateur"><strong>{{ nb_a_imputer }}</strong><span>en attente d'imputation</span></div>
+  <div class="indicateur"><strong>{{ nb_en_retard }}</strong><span>dont le delai est depasse</span></div>
+</div>
+
+{% if mes_imputations %}
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete"><h2>Mes imputations a traiter <span class="pastille pastille--attente">{{ nb_mes_imputations }}</span></h2></div>
+  <div class="defilement">
+    <table class="table table--compacte">
+      <thead><tr><th>Numero</th><th>Objet</th><th>Instructions</th><th>Delai</th></tr></thead>
+      <tbody>
+        {% for i in mes_imputations %}
+          <tr>
+            <td><a href="{{ i.courrier.get_absolute_url }}">{{ i.courrier.numero }}</a></td>
+            <td>{{ i.courrier.objet }}</td>
+            <td class="aide">{{ i.instructions|truncatechars:80 }}</td>
+            <td>{% if i.est_en_retard %}<span class="pastille pastille--ko">{{ i.delai|date:"d/m/Y" }}</span>
+                {% else %}{{ i.delai|date:"d/m/Y" }}{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if a_viser %}
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete">
+    <h2>Pieces a viser <span class="pastille pastille--attente">{{ a_viser|length }}</span></h2>
+    <a class="btn btn--secondaire btn--petit" href="{% url 'courrier:parapheur' %}">Le parapheur</a>
+  </div>
+  <table class="table table--compacte">
+    {% for visa in a_viser %}
+      <tr>
+        <td><a href="{{ visa.piece.get_absolute_url }}">{{ visa.piece.objet }}</a></td>
+        <td class="aide">{{ visa.libelle }}</td>
+        <td class="aide">{{ visa.piece.demandeur.nom_complet }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete">
+    <h2>Courrier recent</h2>
+    <div class="actions">
+      {% if peut_enregistrer %}<a class="btn btn--principal btn--petit" href="{% url 'courrier:creer' %}">Enregistrer un courrier</a>{% endif %}
+      <a class="btn btn--secondaire btn--petit" href="{% url 'courrier:registre' %}">Le registre</a>
+    </div>
+  </div>
+  {% if recents %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Numero</th><th>Sens</th><th>Objet</th><th>Correspondant</th><th>Date</th><th>Statut</th></tr></thead>
+        <tbody>
+          {% for c in recents %}
+            <tr>
+              <td><a href="{{ c.get_absolute_url }}">{{ c.numero }}</a></td>
+              <td><span class="puce-type">{{ c.get_sens_display }}</span></td>
+              <td>{{ c.objet }}{% if c.confidentiel %} <span class="pastille pastille--ko">confidentiel</span>{% endif %}</td>
+              <td>{{ c.correspondant }}</td>
+              <td>{{ c.date_enregistrement|date:"d/m/Y" }}</td>
+              <td><span class="pastille pastille--{{ c.couleur_statut }}">
+                {% if c.est_en_retard %}En retard{% else %}{{ c.get_statut_display }}{% endif %}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="aide">Aucun courrier enregistre.</p>
+  {% endif %}
+</div>
+{% endblock %}

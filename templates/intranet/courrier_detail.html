@@ -1,0 +1,116 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}{{ courrier.numero }}{% endblock %}
+{% block titre_page %}{{ courrier.numero }}{% endblock %}
+{% block sous_titre %}{{ courrier.get_sens_display }} &middot; {{ courrier.perimetre.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="grille-2">
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete">
+        <h2>{{ courrier.objet }}
+          <span class="pastille pastille--{{ courrier.couleur_statut }}">
+            {% if courrier.est_en_retard %}En retard de {{ courrier.jours_de_retard }} j{% else %}{{ courrier.get_statut_display }}{% endif %}
+          </span>
+          {% if courrier.confidentiel %}<span class="pastille pastille--ko">Confidentiel</span>{% endif %}
+        </h2>
+        {% if peut_imputer %}
+          <a class="btn btn--principal btn--petit" href="{% url 'courrier:imputer' courrier.pk %}">Imputer</a>
+        {% endif %}
+      </div>
+
+      <table class="table table--compacte">
+        <tr><th>Correspondant</th><td>{{ courrier.correspondant }}
+            {% if courrier.structure_correspondante %}<br><small class="aide">{{ courrier.structure_correspondante }}</small>{% endif %}</td></tr>
+        <tr><th>Nature</th><td>{{ courrier.get_nature_display }}</td></tr>
+        <tr><th>Date du courrier</th><td>{{ courrier.date_courrier|date:"d/m/Y" }}</td></tr>
+        <tr><th>Enregistre le</th><td>{{ courrier.date_enregistrement|date:"d/m/Y" }}
+            {% if courrier.enregistre_par %} par {{ courrier.enregistre_par.nom_complet }}{% endif %}</td></tr>
+        {% if courrier.reference_expediteur %}<tr><th>Reference expediteur</th><td>{{ courrier.reference_expediteur }}</td></tr>{% endif %}
+        {% if courrier.courrier_lie %}<tr><th>Repond au courrier</th>
+            <td><a href="{{ courrier.courrier_lie.get_absolute_url }}">{{ courrier.courrier_lie.numero }}</a></td></tr>{% endif %}
+        {% if courrier.activite %}<tr><th>Activite liee</th>
+            <td><a href="{{ courrier.activite.get_absolute_url }}">{{ courrier.activite.code }} {{ courrier.activite.intitule }}</a></td></tr>{% endif %}
+      </table>
+
+      {% if courrier.resume %}<p style="margin-top:1rem">{{ courrier.resume|linebreaksbr }}</p>{% endif %}
+      {% if courrier.motif_classement %}
+        <p class="aide"><strong>Classe sans suite :</strong> {{ courrier.motif_classement }}</p>
+      {% endif %}
+    </div>
+
+    <div class="bloc">
+      <div class="bloc__tete"><h2>Imputations</h2></div>
+      {% if imputations %}
+        <ul class="circuit">
+          {% for i in imputations %}
+            <li>
+              <strong>{{ i.destinataire.nom_complet }}</strong>
+              {% if i.pour_information %}<span class="pastille pastille--neutre">Pour information</span>
+              {% elif i.est_traitee %}<span class="pastille pastille--ok">Traitee</span>
+              {% elif i.est_en_retard %}<span class="pastille pastille--ko">Delai depasse</span>
+              {% else %}<span class="pastille pastille--attente">En cours</span>{% endif %}
+              <p style="margin:.2rem 0">{{ i.instructions|linebreaksbr }}</p>
+              <p class="aide">Delai : {{ i.delai|date:"d/m/Y" }}
+                 {% if i.impute_par %}&middot; impute par {{ i.impute_par.nom_complet }}{% endif %}</p>
+              {% if i.compte_rendu %}
+                <p><strong>Suite donnee :</strong> {{ i.compte_rendu|linebreaksbr }}
+                   <br><small class="aide">{{ i.traite_le|date:"d/m/Y H:i" }}</small></p>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="aide">Ce courrier n'est pas encore impute.</p>
+      {% endif %}
+    </div>
+
+    {% if mon_imputation %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Rendre compte de mon imputation</h2></div>
+        <form method="post" action="{% url 'courrier:imputation_traiter' mon_imputation.pk %}" class="formulaire">
+          {% csrf_token %}
+          {% include "intranet/_champs.html" with form=form_compte_rendu %}
+          <div class="actions"><button class="btn btn--principal" type="submit">Enregistrer la suite donnee</button></div>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if documents %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Documents lies</h2></div>
+        <ul class="liste-nue">
+          {% for d in documents %}
+            <li><a href="{{ d.get_absolute_url }}">{{ d.titre }}</a>
+                <br><small class="aide">{{ d.get_type_document_display }} &middot; v{{ d.nb_versions }}</small></li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if reponses %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Reponses</h2></div>
+        <ul class="liste-nue">
+          {% for r in reponses %}
+            <li><a href="{{ r.get_absolute_url }}">{{ r.numero }}</a> &mdash; {{ r.objet }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if peut_imputer %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Classer sans suite</h2></div>
+        <form method="post" action="{% url 'courrier:classer' courrier.pk %}" class="formulaire">
+          {% csrf_token %}
+          {% for champ in form_classement.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+          <div class="actions"><button class="btn btn--danger" type="submit">Classer</button></div>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

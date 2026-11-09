@@ -13,6 +13,8 @@ from apps.accounts.models import Notification
 from apps.activites.models import Activite, PlanAction
 from apps.activites.services import ErreurPlan, enregistrer_avancement, tableau_de_bord
 from apps.core.models import Structure
+from apps.courrier.models import Courrier, Document, Imputation
+from apps.courrier.services import ErreurCourrier, rechercher_documents, traiter_imputation
 from apps.rh.models import Demande, RapportMission, SoldeConge
 from apps.rh.services import annuler, decider, demandes_a_traiter, soumettre
 from apps.signature.models import SignatureElectronique
@@ -382,4 +384,73 @@ class TableauPilotageView(APIView):
                 "beneficiaires": donnees["beneficiaires"],
                 "nb_en_retard": donnees["en_retard"].count(),
             }
+        )
+
+
+# --- Courrier et documents ---------------------------------------------------
+class CourrierViewSet(viewsets.ReadOnlyModelViewSet):
+    """Registre du courrier, limite au perimetre de l'agent."""
+
+    serializer_class = s.CourrierSerializer
+    queryset = Courrier.objects.none()
+
+    def get_queryset(self):
+        qs = Courrier.objects.visibles_par(self.request.user).select_related("perimetre")
+        if sens := self.request.query_params.get("sens"):
+            qs = qs.filter(sens=sens)
+        if statut := self.request.query_params.get("statut"):
+            qs = qs.filter(statut=statut)
+        if self.request.query_params.get("retard") in {"1", "true", "oui"}:
+            qs = qs.en_retard()
+        return qs
+
+
+class ImputationViewSet(viewsets.ReadOnlyModelViewSet):
+    """Imputations de l'agent connecte, et compte rendu depuis le terrain."""
+
+    serializer_class = s.ImputationSerializer
+    queryset = Imputation.objects.none()
+
+    def get_queryset(self):
+        qs = Imputation.objects.filter(destinataire=self.request.user).select_related(
+            "courrier", "destinataire"
+        )
+        if self.request.query_params.get("en_attente") in {"1", "true", "oui"}:
+            qs = qs.filter(traite_le__isnull=True)
+        return qs
+
+    @extend_schema(request=s.CompteRenduSerializer, responses=s.ImputationSerializer)
+    @action(detail=True, methods=["post"], url_path="traiter")
+    def traiter(self, request, pk=None):
+        imputation = self.get_object()
+        serialiseur = s.CompteRenduSerializer(data=request.data)
+        serialiseur.is_valid(raise_exception=True)
+        try:
+            traiter_imputation(
+                imputation, request.user, serialiseur.validated_data["compte_rendu"]
+            )
+        except ErreurCourrier as erreur:
+            return Response({"detail": str(erreur)}, status=status.HTTP_400_BAD_REQUEST)
+        imputation.refresh_from_db()
+        return Response(s.ImputationSerializer(imputation, context={"request": request}).data)
+
+
+class DocumentViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Bibliotheque documentaire consultable depuis le telephone.
+
+    Le parametre `q` declenche la recherche plein texte.
+    """
+
+    serializer_class = s.DocumentSerializer
+    queryset = Document.objects.none()
+
+    def get_queryset(self):
+        parametres = self.request.query_params
+        return rechercher_documents(
+            self.request.user,
+            parametres.get("q", ""),
+            type_document=parametres.get("type"),
+            annee=parametres.get("annee"),
+            perimetre=parametres.get("perimetre"),
         )

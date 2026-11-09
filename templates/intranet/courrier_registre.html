@@ -1,0 +1,49 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Registre du courrier{% endblock %}
+{% block titre_page %}Registre du courrier{% endblock %}
+{% block sous_titre %}{{ total }} courrier{{ total|pluralize }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="formulaire">
+    <div class="grille-tb">
+      {% for champ in form.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+    </div>
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Filtrer</button>
+      <a class="btn btn--secondaire" href="{% url 'courrier:registre' %}">Reinitialiser</a>
+      <a class="btn btn--secondaire" href="{% url 'courrier:export_registre' %}">Exporter en CSV</a>
+      {% if peut_enregistrer %}<a class="btn btn--principal" href="{% url 'courrier:creer' %}">Enregistrer un courrier</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="bloc">
+  {% if page_obj %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Numero</th><th>Sens</th><th>Objet</th><th>Correspondant</th>
+                   <th>Perimetre</th><th>Enregistre le</th><th>Statut</th><th>Imputations</th></tr></thead>
+        <tbody>
+          {% for c in page_obj %}
+            <tr>
+              <td><a href="{{ c.get_absolute_url }}">{{ c.numero }}</a></td>
+              <td><span class="puce-type">{{ c.get_sens_display }}</span></td>
+              <td>{{ c.objet }}{% if c.confidentiel %} <span class="pastille pastille--ko">confidentiel</span>{% endif %}</td>
+              <td>{{ c.correspondant }}</td>
+              <td>{{ c.perimetre.code }}</td>
+              <td>{{ c.date_enregistrement|date:"d/m/Y" }}</td>
+              <td><span class="pastille pastille--{{ c.couleur_statut }}">
+                {% if c.est_en_retard %}{{ c.jours_de_retard }} j de retard{% else %}{{ c.get_statut_display }}{% endif %}</span></td>
+              <td>{{ c.imputations.count }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "public/_pagination.html" %}
+  {% else %}
+    <p class="aide">Aucun courrier ne correspond a ces criteres.</p>
+  {% endif %}
+</div>
+{% endblock %}

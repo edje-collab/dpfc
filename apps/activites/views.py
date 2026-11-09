@@ -38,10 +38,15 @@ from .services import (
 
 # --- Droits ------------------------------------------------------------------
 def _peut_piloter(agent, perimetre):
-    """Qui etablit et modifie le plan d'un perimetre."""
+    """
+    Qui etablit et modifie le plan d'un perimetre.
+
+    La designation effective fait foi : porter le role de chef d'antenne sans
+    diriger l'antenne ne donne pas la main sur son plan d'action.
+    """
     if agent.peut_administrer or agent.est_direction:
         return True
-    return agent.est_responsable_perimetre and agent.perimetre == perimetre
+    return agent.dirige_son_perimetre and agent.perimetre == perimetre
 
 
 def _peut_valider(agent):
@@ -55,7 +60,7 @@ def _peut_rendre_compte(agent, activite):
         return True
     if activite.responsable_id == agent.pk:
         return True
-    return agent.est_responsable_perimetre and agent.perimetre == activite.perimetre
+    return agent.dirige_son_perimetre and agent.perimetre == activite.perimetre
 
 
 def _plan_visible(agent, pk):

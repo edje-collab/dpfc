@@ -1,0 +1,18 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Soumettre une piece{% endblock %}
+{% block titre_page %}Soumettre une piece au parapheur{% endblock %}
+{% block sous_titre %}{{ perimetre.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc" style="max-width:760px">
+  <p class="aide">La piece doit d'abord etre versee a la bibliotheque documentaire.</p>
+  <form method="post" class="formulaire">
+    {% csrf_token %}
+    {% include "intranet/_champs.html" %}
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Creer la piece</button>
+      <a class="btn btn--secondaire" href="{% url 'courrier:parapheur' %}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

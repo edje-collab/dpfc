@@ -5,7 +5,7 @@ Plateforme de gestion de la direction, **monolithe Django modulaire** réunissan
 | Brique | Description |
 |---|---|
 | **Site public** | Géré par **Wagtail** (CMS, administration sur `/cms/`), accessible sans compte : actualités, ressources pédagogiques, FOAD, projets, agenda, antennes régionales, contact. Contenu par blocs, médiathèque, brouillons/publication, prévisualisation. |
-| **Plateforme de gestion** | Espace authentifié : **plans d'action annuels, activités, chronogramme et tableaux de bord par périmètre**, actes administratifs (congé, permission, ordre de mission, absence, formation), circuits de validation **paramétrables par périmètre**, planning, registre, annuaire. |
+| **Plateforme de gestion** | Espace authentifié : plans d'action annuels, activités, chronogramme et tableaux de bord par périmètre, **courrier arrivée/départ, imputations, bibliothèque documentaire et parapheur**, actes administratifs (congé, permission, ordre de mission, absence, formation), circuits de validation **paramétrables par périmètre**, planning, registre, annuaire. |
 | **API REST** | `/api/v1/` avec jetons JWT, consommée par l'application mobile **Flutter** livrée dans `mobile/`. |
 | **Signature électronique** | Bi-clés RSA 2048 par signataire, scellement SHA-256 des actes, page publique de vérification et QR code sur le document. |
 
@@ -17,7 +17,7 @@ Chaque agent relève d'un **périmètre de gestion** qui détermine son circuit 
 
 ## 1. Démarrage rapide
 
-Avec Docker, voir [§ 10](#10-déploiement). En local, sans conteneur :
+Avec Docker, voir [§ 11](#11-déploiement). En local, sans conteneur :
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
@@ -82,6 +82,8 @@ dpfc/
 │   ├── circuits/        circuits de validation paramétrables par périmètre et type d'acte
 │   ├── activites/       plans d'action annuels, activités, avancement, indicateurs,
 │   │                    chronogramme et tableaux de bord
+│   ├── courrier/        registre arrivée/départ, imputations, documents versionnés,
+│   │                    recherche plein texte, parapheur, modèles de courrier
 │   ├── site_public/     site public Wagtail : pages (accueil, éditoriales, actualités, projets,
 │   │                    événements, antennes, contact), snippets (ressources, catégories, messages)
 │   ├── rh/              actes administratifs, circuit de validation, soldes de congé,
@@ -205,7 +207,31 @@ En préparation ──soumission──▶ Soumis ──validation──▶ Valid
 | Chronogramme | `/intranet/pilotage/plans/<id>/chronogramme/` |
 | Registre des activités (export CSV) | `/intranet/pilotage/activites/` |
 
-## 6. Signature électronique
+## 6. Courrier et gestion documentaire
+
+Chaque périmètre tient son registre du courrier, avec sa série annuelle par sens : `ARR-0001/2026/APFC-GBK`, `DEP-0001/2026/DPFC`. Détail dans [docs/courrier.md](docs/courrier.md).
+
+```
+Enregistré ──imputation──▶ Imputé ──toutes les suites données──▶ Traité
+     │
+     └──────── classement sans suite (motif obligatoire) ──────▶ Classé
+```
+
+- **Le statut est déduit**, jamais saisi : le courrier passe à « traité » quand toutes ses imputations le sont. Une imputation « pour information » est close dès sa création.
+- **Les droits tiennent à la désignation**, pas au rôle : porter le rôle de chef d'antenne ne suffit pas à imputer le courrier d'une antenne, il faut en être le responsable désigné.
+- **Confidentialité** : un courrier confidentiel n'est visible que de son enregistreur, de ses imputataires, du responsable du périmètre et de la direction.
+- **Documents versionnés** avec empreinte SHA-256 ; recherche plein texte sur le titre, la description et le texte extrait des fichiers. Un fichier illisible n'empêche jamais le dépôt.
+- **Parapheur** : les visas réutilisent le moteur de circuits (type d'acte `PARAPHEUR`) et remontent jusqu'au responsable du périmètre.
+
+| Écran | Adresse |
+|---|---|
+| Tableau du courrier | `/intranet/courrier/` |
+| Registre (export CSV) | `/intranet/courrier/registre/` |
+| Bibliothèque documentaire | `/intranet/courrier/documents/` |
+| Parapheur | `/intranet/courrier/parapheur/` |
+| Modèles de courrier | `/intranet/courrier/modeles/` |
+
+## 7. Signature électronique
 
 - **Clé personnelle** : espace agent → « Ma signature électronique ». Le portail génère une bi-clé RSA 2048 ; la clé privée est stockée chiffrée (PKCS#8) par un **code de signature** connu du seul agent, jamais conservé par le serveur.
 - **Apposition** : au moment de la décision, le valideur saisit son code. La signature RSASSA-PSS/SHA-256 porte sur l'empreinte SHA-256 du condensé canonique de l'acte (numéro, agent, structure, type, dates, durée, destination, périmètre, motif). À la dernière étape du circuit, le code est exigé si l'agent dispose d'une clé valide.
@@ -215,7 +241,7 @@ En préparation ──soumission──▶ Soumis ──validation──▶ Valid
 
 Cette implémentation est autoportante (aucune autorité externe). Elle est compatible avec une montée vers un certificat qualifié : il suffit de remplacer la clé auto-générée par une clé adossée à un certificat X.509 délivré par un PSCE agréé, la chaîne de vérification restant identique.
 
-## 7. Import Excel des agents
+## 8. Import Excel des agents
 
 Espace agent → « Import Excel des agents » (réservé au service du personnel et à l'administrateur).
 
@@ -233,7 +259,7 @@ python manage.py importer_agents agents.xlsx            # analyse seule
 python manage.py importer_agents agents.xlsx --appliquer
 ```
 
-## 8. API REST (application Flutter)
+## 9. API REST (application Flutter)
 
 Schéma OpenAPI : [docs/api/openapi.yml](docs/api/openapi.yml), exploré en ligne sur `/api/v1/docs/`. Pour le régénérer :
 
@@ -251,6 +277,10 @@ python manage.py spectacular --file docs/api/openapi.yml
 | GET | `/api/v1/plans/` | plans d'action visibles |
 | GET | `/api/v1/activites/` | activités du périmètre (`annee`, `statut`, `retard`, `mes_activites`) |
 | POST | `/api/v1/activites/<id>/avancement/` | compte rendu d'exécution depuis le terrain |
+| GET | `/api/v1/courriers/` | registre du périmètre (`sens`, `statut`, `retard`) |
+| GET | `/api/v1/imputations/?en_attente=1` | mes imputations à traiter |
+| POST | `/api/v1/imputations/<id>/traiter/` | suite donnée à une imputation |
+| GET | `/api/v1/documents/?q=...` | recherche plein texte dans la bibliothèque |
 | GET/POST | `/api/v1/demandes/` | mes demandes, création |
 | POST | `/api/v1/demandes/{id}/soumettre/` | transmission au circuit |
 | POST | `/api/v1/demandes/{id}/decision/` | avis favorable ou rejet ; `code_signature` appose la signature |
@@ -270,7 +300,7 @@ flutter run          # adapter baseUrl dans lib/services/api.dart
 
 Elle couvre le parcours de terrain complet : dépôt d'un acte, bascule « mission hors du ressort de la DRENA » avec envoi des TDR et de la lettre d'invitation depuis le téléphone, suivi du circuit, décision du chef d'antenne ou du directeur régional avec saisie du code de signature à la dernière étape, et vérification d'un acte par son code.
 
-## 9. Tests et qualité
+## 10. Tests et qualité
 
 ```bash
 python manage.py test --settings=config.settings.test
@@ -284,9 +314,9 @@ pytest
 ruff check apps config
 ```
 
-111 tests couvrent le pilotage (cycle du plan, avancement cumulé, retards, consolidation, chronogramme, indicateurs, cloisonnement), les périmètres de gestion (héritage par l'agent, cloisonnement de la visibilité, numérotation par périmètre), les circuits paramétrables (circuit central, autonomie de l'antenne et du CNRPN, mission hors ressort, acte du responsable, circuit propre à un périmètre, étape sans titulaire), le calcul des jours ouvrables, le dépôt par le secrétariat, le parcours complet d'une demande, le rejet, les droits d'accès, la signature électronique, l'import Excel/CSV, les pages publiques et l'API.
+160 tests couvrent le courrier (numérotation par périmètre, cycle d'imputation, retards, confidentialité, droits liés à la désignation), les documents (versions, empreintes, extraction du texte, recherche, accès restreint), le parapheur (circuit, refus, corbeille), le pilotage (cycle du plan, avancement cumulé, retards, consolidation, chronogramme, indicateurs, cloisonnement), les périmètres de gestion (héritage par l'agent, cloisonnement de la visibilité, numérotation par périmètre), les circuits paramétrables (circuit central, autonomie de l'antenne et du CNRPN, mission hors ressort, acte du responsable, circuit propre à un périmètre, étape sans titulaire), le calcul des jours ouvrables, le dépôt par le secrétariat, le parcours complet d'une demande, le rejet, les droits d'accès, la signature électronique, l'import Excel/CSV, les pages publiques et l'API.
 
-## 10. Déploiement
+## 11. Déploiement
 
 La pile est alignée sur celle d'e-PECU : PostgreSQL, Celery et Redis, stockage objet S3/MinIO, Nginx devant gunicorn ([ADR 0004](docs/adr/0004-pile-alignee-sur-e-pecu.md)).
 
@@ -339,11 +369,11 @@ celery -A config beat -l info
 
 Avec `config.settings.prod`, HTTPS, cookies sécurisés, HSTS, `X-Frame-Options` et le verrouillage après échecs de connexion (`django-axes`) sont actifs.
 
-## 11. Exploitation courante
+## 12. Exploitation courante
 
 - **Créer un agent** : espace agent → Comptes des agents → Créer un compte. Le mot de passe initial est le matricule et son changement est imposé à la première connexion.
 - **Affecter en région** : rattacher l'agent à une structure de type `ANTENNE` ; le circuit d'antenne s'applique alors automatiquement. Renseigner le champ `drenaet` de l'antenne dans l'administration pour que l'exception « mission hors périmètre » désigne le bon directeur régional.
-- **Créer des agents en masse** : Import Excel des agents (voir § 7).
+- **Créer des agents en masse** : Import Excel des agents (voir § 8).
 - **Activer la signature d'une autorité** : l'intéressé génère lui-même sa clé depuis « Ma signature électronique ».
 - **Publier une actualité, un projet, un événement ou une page** : Wagtail (`/cms/`) → Pages → Accueil → rubrique concernée → « Ajouter une page enfant ». Enregistrer en brouillon, prévisualiser, puis « Publier ». La case « Afficher dans les menus » (onglet Promotion) fait apparaître une page de premier niveau dans la barre de navigation.
 - **Ressources pédagogiques, catégories, messages de contact** : Wagtail → menu Contenus. Les fichiers sont pris dans la médiathèque Documents.
@@ -356,3 +386,6 @@ Avec `config.settings.prod`, HTTPS, cookies sécurisés, HSTS, `X-Frame-Options`
 - **Ouvrir un exercice** : chaque responsable de périmètre établit son plan d'action (`/intranet/pilotage/plans/`), y inscrit ses activités, puis le transmet à la direction.
 - **Définir les axes stratégiques** : `/admin/` → Axes stratégiques. Ils sont communs à tous les périmètres et conditionnent la consolidation.
 - **Suivre l'exécution** : `/intranet/pilotage/` pour la synthèse, le chronogramme pour le calendrier, le registre pour la recherche et l'export CSV.
+- **Enregistrer et imputer du courrier** : `/intranet/courrier/`. Le secrétariat enregistre, le responsable du périmètre impute avec instructions et délai, l'imputataire rend compte.
+- **Modifier le circuit du parapheur** : `/admin/` → Circuits de validation, type d'acte `PARAPHEUR`.
+- **Activer l'OCR des documents scannés** : installer `pymupdf4llm` et `rapidocr-onnxruntime`. Sans eux, les PDF natifs restent indexés et les scans sont archivés sans texte.

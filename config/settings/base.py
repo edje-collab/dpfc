@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "apps.circuits",
     # Applications metier
     "apps.activites",
+    "apps.courrier",
     "apps.rh",
     "apps.signature",
     "apps.site_public",

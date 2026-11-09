@@ -15,10 +15,10 @@
       <img src="{% static 'img/blason.svg' %}" alt="">
       <strong>{{ config_site.sigle }}<span>Espace agent</span></strong>
     </a>
-    {% with url_nom=request.resolver_match.url_name %}
+    {% with url_nom=request.resolver_match.url_name espace=request.resolver_match.namespace %}
     <nav aria-label="Navigation de l'espace agent">
       <h4>Mon activite</h4>
-      <a href="{% url 'rh:tableau_bord' %}" class="{% if url_nom == 'tableau_bord' %}actif{% endif %}">Tableau de bord</a>
+      <a href="{% url 'rh:tableau_bord' %}" class="{% if espace == 'rh' and url_nom == 'tableau_bord' %}actif{% endif %}">Tableau de bord</a>
       <a href="{% url 'rh:mes_demandes' %}" class="{% if url_nom in 'mes_demandes demande_detail demande_creer' %}actif{% endif %}">Mes demandes</a>
       <a href="{% url 'rh:mes_soldes' %}" class="{% if url_nom == 'mes_soldes' %}actif{% endif %}">Mes conges</a>
       <a href="{% url 'accounts:notifications' %}" class="{% if url_nom == 'notifications' %}actif{% endif %}">
@@ -26,10 +26,25 @@
       </a>
 
       <h4>Pilotage</h4>
-      <a href="{% url 'activites:pilotage' %}" class="{% if url_nom == 'pilotage' %}actif{% endif %}">Tableau de bord</a>
+      <a href="{% url 'activites:pilotage' %}" class="{% if espace == 'activites' and url_nom == 'pilotage' %}actif{% endif %}">Tableau de bord</a>
       <a href="{% url 'activites:plans' %}" class="{% if url_nom in 'plans plan_detail plan_creer plan_chronogramme' %}actif{% endif %}">Plans d'action</a>
       <a href="{% url 'activites:activites' %}" class="{% if url_nom in 'activites activite_detail activite_form activite_creer activite_modifier' %}actif{% endif %}">Activites</a>
       <a href="{% url 'activites:axes' %}" class="{% if url_nom == 'axes' %}actif{% endif %}">Axes et perimetres</a>
+
+      <h4>Courrier</h4>
+      {% if espace == 'courrier' %}{% with actif='actif' %}
+        <a href="{% url 'courrier:tableau' %}" class="{% if url_nom == 'tableau' %}{{ actif }}{% endif %}">Tableau du courrier</a>
+        <a href="{% url 'courrier:registre' %}" class="{% if url_nom in 'registre detail creer imputer imputation_traiter classer' %}{{ actif }}{% endif %}">Registre</a>
+        <a href="{% url 'courrier:documents' %}" class="{% if url_nom in 'documents document_detail document_creer document_version' %}{{ actif }}{% endif %}">Documents</a>
+        <a href="{% url 'courrier:parapheur' %}" class="{% if url_nom in 'parapheur parapheur_detail parapheur_creer parapheur_soumettre parapheur_viser' %}{{ actif }}{% endif %}">Parapheur</a>
+        <a href="{% url 'courrier:modeles' %}" class="{% if url_nom == 'modeles' %}{{ actif }}{% endif %}">Modeles</a>
+      {% endwith %}{% else %}
+        <a href="{% url 'courrier:tableau' %}">Tableau du courrier</a>
+        <a href="{% url 'courrier:registre' %}">Registre</a>
+        <a href="{% url 'courrier:documents' %}">Documents</a>
+        <a href="{% url 'courrier:parapheur' %}">Parapheur</a>
+        <a href="{% url 'courrier:modeles' %}">Modeles</a>
+      {% endif %}
 
       <h4>Encadrement</h4>
       <a href="{% url 'rh:a_valider' %}" class="{% if url_nom == 'a_valider' %}actif{% endif %}">
@@ -37,7 +52,7 @@
       </a>
       <a href="{% url 'rh:planning' %}" class="{% if url_nom == 'planning' %}actif{% endif %}">Planning des absences</a>
       {% if user.est_valideur or user.est_rh or user.est_direction or user.peut_administrer %}
-        <a href="{% url 'rh:registre' %}" class="{% if url_nom == 'registre' %}actif{% endif %}">Registre des actes</a>
+        <a href="{% url 'rh:registre' %}" class="{% if espace == 'rh' and url_nom == 'registre' %}actif{% endif %}">Registre des actes</a>
       {% endif %}
 
       <h4>Direction</h4>

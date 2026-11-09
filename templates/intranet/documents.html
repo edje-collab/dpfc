@@ -1,0 +1,49 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Documents{% endblock %}
+{% block titre_page %}Bibliotheque documentaire{% endblock %}
+{% block sous_titre %}{{ total }} document{{ total|pluralize }}{% if requete %} pour « {{ requete }} »{% endif %}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="formulaire">
+    <div class="grille-tb">
+      {% for champ in form.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+    </div>
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Rechercher</button>
+      <a class="btn btn--secondaire" href="{% url 'courrier:documents' %}">Reinitialiser</a>
+      <a class="btn btn--principal" href="{% url 'courrier:document_creer' %}">Verser un document</a>
+    </div>
+  </form>
+  <p class="aide">La recherche porte sur le titre, la description et le texte extrait des fichiers.</p>
+</div>
+
+<div class="bloc">
+  {% if page_obj %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Titre</th><th>Type</th><th>Annee</th><th>Perimetre</th>
+                   <th>Versions</th><th>Depose par</th><th>Acces</th></tr></thead>
+        <tbody>
+          {% for d in page_obj %}
+            <tr>
+              <td><a href="{{ d.get_absolute_url }}">{{ d.titre }}</a>
+                  {% if d.description %}<br><small class="aide">{{ d.description|truncatechars:90 }}</small>{% endif %}</td>
+              <td>{{ d.get_type_document_display }}</td>
+              <td>{{ d.annee }}</td>
+              <td>{{ d.perimetre.code }}{% if d.partage %} <span class="pastille pastille--ok">partage</span>{% endif %}</td>
+              <td>v{{ d.nb_versions }}</td>
+              <td>{{ d.deposant.nom_complet|default:"-" }}</td>
+              <td>{% if d.acces == 'RESTREINT' %}<span class="pastille pastille--ko">Restreint</span>
+                  {% else %}<span class="pastille pastille--neutre">Interne</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "public/_pagination.html" %}
+  {% else %}
+    <p class="aide">Aucun document ne correspond a cette recherche.</p>
+  {% endif %}
+</div>
+{% endblock %}

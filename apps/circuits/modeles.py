@@ -13,7 +13,8 @@ from apps.core.models import Perimetre
 
 from .models import Circuit, Condition, Designation, Etape
 
-# Types d'actes couverts (codes de apps.rh.models.TypeDemande).
+# Types d'actes couverts : actes administratifs (apps.rh.models.TypeDemande)
+# et pieces soumises au parapheur (apps.courrier.models).
 TYPES_ACTES = [
     "CONGE_ANNUEL",
     "CONGE_EXCEPTIONNEL",
@@ -22,6 +23,7 @@ TYPES_ACTES = [
     "ABSENCE",
     "FORMATION",
 ]
+TYPE_PARAPHEUR = "PARAPHEUR"
 
 ROLE_RH = "RH"
 ROLE_DIRECTEUR = "DIRECTEUR"
@@ -134,6 +136,42 @@ MODELES = {
 }
 
 
+# --- Parapheur ---------------------------------------------------------------
+# Une piece remonte la voie hierarchique jusqu'au responsable du perimetre,
+# qui donne le dernier visa. La direction centrale intercale son sous-directeur.
+def _etapes_parapheur(avec_sous_direction):
+    etapes = [
+        {
+            "libelle": "Visa du superieur hierarchique",
+            "designation": Designation.SUPERIEUR,
+            "conditions": [],
+        },
+    ]
+    if avec_sous_direction:
+        etapes.append(
+            {
+                "libelle": "Visa du sous-directeur",
+                "designation": Designation.RESPONSABLE_SOUS_DIRECTION,
+                "conditions": [],
+            }
+        )
+    etapes.append(
+        {
+            "libelle": "Visa du responsable du perimetre",
+            "designation": Designation.RESPONSABLE_PERIMETRE,
+            "conditions": [],
+        }
+    )
+    return etapes
+
+
+MODELES_PARAPHEUR = {
+    Perimetre.Type.CENTRALE: _etapes_parapheur(avec_sous_direction=True),
+    Perimetre.Type.ANTENNE: _etapes_parapheur(avec_sous_direction=False),
+    Perimetre.Type.CENTRE: _etapes_parapheur(avec_sous_direction=False),
+}
+
+
 def installer_circuits_modeles(remplacer=False):
     """
     Cree les circuits modeles manquants.
@@ -142,26 +180,34 @@ def installer_circuits_modeles(remplacer=False):
     est demande, auquel cas ses etapes sont reecrites.
     """
     crees, inchanges = 0, 0
-    for type_perimetre, etapes in MODELES.items():
-        for type_acte in TYPES_ACTES:
-            circuit, nouveau = Circuit.objects.get_or_create(
-                perimetre=None,
-                type_perimetre=type_perimetre,
-                type_acte=type_acte,
-                defaults={"libelle": f"Circuit modele {type_perimetre} - {type_acte}"},
+    definitions = [
+        (type_perimetre, type_acte, etapes)
+        for type_perimetre, etapes in MODELES.items()
+        for type_acte in TYPES_ACTES
+    ] + [
+        (type_perimetre, TYPE_PARAPHEUR, etapes)
+        for type_perimetre, etapes in MODELES_PARAPHEUR.items()
+    ]
+
+    for type_perimetre, type_acte, etapes in definitions:
+        circuit, nouveau_circuit = Circuit.objects.get_or_create(
+            perimetre=None,
+            type_perimetre=type_perimetre,
+            type_acte=type_acte,
+            defaults={"libelle": f"Circuit modele {type_perimetre} - {type_acte}"},
+        )
+        if not nouveau_circuit and not remplacer:
+            inchanges += 1
+            continue
+        circuit.etapes.all().delete()
+        for ordre, etape in enumerate(etapes, start=1):
+            Etape.objects.create(
+                circuit=circuit,
+                ordre=ordre,
+                libelle=etape["libelle"],
+                designation=etape["designation"],
+                role=etape.get("role", ""),
+                conditions=list(etape["conditions"]),
             )
-            if not nouveau and not remplacer:
-                inchanges += 1
-                continue
-            circuit.etapes.all().delete()
-            for ordre, etape in enumerate(etapes, start=1):
-                Etape.objects.create(
-                    circuit=circuit,
-                    ordre=ordre,
-                    libelle=etape["libelle"],
-                    designation=etape["designation"],
-                    role=etape.get("role", ""),
-                    conditions=list(etape["conditions"]),
-                )
-            crees += 1
+        crees += 1
     return crees, inchanges

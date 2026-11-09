@@ -214,6 +214,52 @@ paths:
       responses:
         '200':
           description: No response body
+  /api/v1/courriers/:
+    get:
+      operationId: courriers_list
+      description: Registre du courrier, limite au perimetre de l'agent.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - courriers
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCourrierList'
+          description: ''
+  /api/v1/courriers/{id}/:
+    get:
+      operationId: courriers_retrieve
+      description: Registre du courrier, limite au perimetre de l'agent.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this courrier.
+        required: true
+      tags:
+      - courriers
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Courrier'
+          description: ''
   /api/v1/demandes/:
     get:
       operationId: demandes_list
@@ -528,6 +574,139 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Demande'
+          description: ''
+  /api/v1/documents/:
+    get:
+      operationId: documents_list
+      description: |-
+        Bibliotheque documentaire consultable depuis le telephone.
+
+        Le parametre `q` declenche la recherche plein texte.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - documents
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDocumentList'
+          description: ''
+  /api/v1/documents/{id}/:
+    get:
+      operationId: documents_retrieve
+      description: |-
+        Bibliotheque documentaire consultable depuis le telephone.
+
+        Le parametre `q` declenche la recherche plein texte.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document.
+        required: true
+      tags:
+      - documents
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+  /api/v1/imputations/:
+    get:
+      operationId: imputations_list
+      description: Imputations de l'agent connecte, et compte rendu depuis le terrain.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - imputations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedImputationList'
+          description: ''
+  /api/v1/imputations/{id}/:
+    get:
+      operationId: imputations_retrieve
+      description: Imputations de l'agent connecte, et compte rendu depuis le terrain.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this imputation.
+        required: true
+      tags:
+      - imputations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Imputation'
+          description: ''
+  /api/v1/imputations/{id}/traiter/:
+    post:
+      operationId: imputations_traiter_create
+      description: Imputations de l'agent connecte, et compte rendu depuis le terrain.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this imputation.
+        required: true
+      tags:
+      - imputations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompteRenduRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompteRenduRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompteRenduRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Imputation'
           description: ''
   /api/v1/moi/:
     get:
@@ -1176,6 +1355,14 @@ paths:
           description: ''
 components:
   schemas:
+    AccesEnum:
+      enum:
+      - INTERNE
+      - RESTREINT
+      type: string
+      description: |-
+        * `INTERNE` - Tous les agents du perimetre
+        * `RESTREINT` - Acces restreint
     Activite:
       type: object
       properties:
@@ -1500,6 +1687,15 @@ components:
       description: |-
         * `M` - Monsieur
         * `MME` - Madame
+    CompteRenduRequest:
+      type: object
+      description: Suite donnee a une imputation, depuis le terrain.
+      properties:
+        compte_rendu:
+          type: string
+          minLength: 1
+      required:
+      - compte_rendu
     ConnexionRequest:
       type: object
       description: Ajoute le profil de l'agent a la reponse de connexion.
@@ -1515,6 +1711,87 @@ components:
       required:
       - matricule
       - password
+    Courrier:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        numero:
+          type: string
+          title: Numero d'ordre
+          maxLength: 40
+        sens:
+          $ref: '#/components/schemas/SensEnum'
+        sens_libelle:
+          type: string
+          readOnly: true
+        nature:
+          $ref: '#/components/schemas/NatureEnum'
+        objet:
+          type: string
+          maxLength: 255
+        correspondant:
+          type: string
+          title: Expediteur ou destinataire
+          description: Structure ou personne a l'origine du courrier, ou a qui il
+            est adresse.
+          maxLength: 200
+        reference_expediteur:
+          type: string
+          title: Reference de l'expediteur
+          description: Numero porte par le courrier d'origine, le cas echeant.
+          maxLength: 80
+        date_courrier:
+          type: string
+          format: date
+          title: Date du courrier
+        date_enregistrement:
+          type: string
+          format: date
+          title: Date d'enregistrement
+        resume:
+          type: string
+        statut:
+          $ref: '#/components/schemas/CourrierStatutEnum'
+        statut_libelle:
+          type: string
+          readOnly: true
+        perimetre_code:
+          type: string
+          readOnly: true
+        confidentiel:
+          type: boolean
+          description: Limite l'acces a l'enregistreur, aux imputataires et au responsable
+            du perimetre.
+        est_en_retard:
+          type: boolean
+          readOnly: true
+        nb_imputations:
+          type: integer
+          readOnly: true
+      required:
+      - correspondant
+      - est_en_retard
+      - id
+      - nb_imputations
+      - objet
+      - perimetre_code
+      - sens
+      - sens_libelle
+      - statut_libelle
+    CourrierStatutEnum:
+      enum:
+      - ENREGISTRE
+      - IMPUTE
+      - TRAITE
+      - CLASSE
+      type: string
+      description: |-
+        * `ENREGISTRE` - Enregistre
+        * `IMPUTE` - Impute
+        * `TRAITE` - Traite
+        * `CLASSE` - Classe sans suite
     DecisionEnum:
       enum:
       - ATTENTE
@@ -1810,6 +2087,52 @@ components:
         * `ORDRE_MISSION` - Ordre de mission
         * `ABSENCE` - Declaration d'absence
         * `FORMATION` - Demande de formation
+    Document:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        titre:
+          type: string
+          maxLength: 255
+        type_document:
+          allOf:
+          - $ref: '#/components/schemas/TypeDocumentEnum'
+          title: Type
+        type_libelle:
+          type: string
+          readOnly: true
+        annee:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        description:
+          type: string
+        perimetre_code:
+          type: string
+          readOnly: true
+        acces:
+          $ref: '#/components/schemas/AccesEnum'
+        partage:
+          type: boolean
+          title: Partage avec tous les perimetres
+          description: Rend le document consultable par les antennes et le CNRPN.
+        nb_versions:
+          type: integer
+          readOnly: true
+        fichier:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - fichier
+      - id
+      - nb_versions
+      - perimetre_code
+      - titre
+      - type_libelle
     EtatEnum:
       enum:
       - PREPARATION
@@ -1887,6 +2210,59 @@ components:
         * `SEMINAIRE` - Seminaire
         * `REUNION` - Reunion
         * `AUTRE` - Autre
+    Imputation:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        courrier:
+          type: integer
+        courrier_numero:
+          type: string
+          readOnly: true
+        courrier_objet:
+          type: string
+          readOnly: true
+        destinataire_nom:
+          type: string
+          readOnly: true
+        instructions:
+          type: string
+          description: Suite a donner au courrier.
+        delai:
+          type: string
+          format: date
+          title: Delai de traitement
+        pour_information:
+          type: boolean
+          description: 'L''imputation n''appelle pas de suite : elle est close des
+            sa lecture.'
+        compte_rendu:
+          type: string
+          title: Suite donnee
+        traite_le:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        est_en_retard:
+          type: boolean
+          readOnly: true
+        jours_restants:
+          type: integer
+          readOnly: true
+      required:
+      - courrier
+      - courrier_numero
+      - courrier_objet
+      - delai
+      - destinataire_nom
+      - est_en_retard
+      - id
+      - instructions
+      - jours_restants
+      - traite_le
     Message:
       type: object
       properties:
@@ -1895,6 +2271,24 @@ components:
           readOnly: true
       required:
       - detail
+    NatureEnum:
+      enum:
+      - LETTRE
+      - NOTE
+      - CIRCULAIRE
+      - RAPPORT
+      - INVITATION
+      - DEMANDE
+      - AUTRE
+      type: string
+      description: |-
+        * `LETTRE` - Lettre
+        * `NOTE` - Note de service
+        * `CIRCULAIRE` - Circulaire
+        * `RAPPORT` - Rapport
+        * `INVITATION` - Invitation
+        * `DEMANDE` - Demande
+        * `AUTRE` - Autre
     Notification:
       type: object
       properties:
@@ -2018,6 +2412,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Agent'
+    PaginatedCourrierList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Courrier'
     PaginatedDemandeList:
       type: object
       required:
@@ -2041,6 +2458,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Demande'
+    PaginatedDocumentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
     PaginatedEvenementList:
       type: object
       required:
@@ -2064,6 +2504,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Evenement'
+    PaginatedImputationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Imputation'
     PaginatedNotificationList:
       type: object
       required:
@@ -2667,6 +3130,14 @@ components:
       required:
       - realisations
       - taux
+    SensEnum:
+      enum:
+      - ARRIVEE
+      - DEPART
+      type: string
+      description: |-
+        * `ARRIVEE` - Courrier arrive
+        * `DEPART` - Courrier depart
     SituationEnum:
       enum:
       - EN_POSTE
@@ -2887,6 +3358,30 @@ components:
           minLength: 1
       required:
       - token
+    TypeDocumentEnum:
+      enum:
+      - PROGRAMME
+      - GUIDE
+      - RAPPORT
+      - COMPTE_RENDU
+      - TDR
+      - NOTE
+      - ACTE
+      - COURRIER
+      - SUPPORT
+      - AUTRE
+      type: string
+      description: |-
+        * `PROGRAMME` - Programme educatif
+        * `GUIDE` - Guide d'execution
+        * `RAPPORT` - Rapport
+        * `COMPTE_RENDU` - Compte rendu
+        * `TDR` - Termes de reference
+        * `NOTE` - Note
+        * `ACTE` - Acte administratif
+        * `COURRIER` - Courrier
+        * `SUPPORT` - Support de formation
+        * `AUTRE` - Autre
     Validation:
       type: object
       properties:
