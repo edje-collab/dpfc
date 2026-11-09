@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from wagtail import urls as wagtail_urls
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.documents import urls as wagtaildocs_urls
@@ -21,6 +22,12 @@ urlpatterns = [
     path("", include("apps.signature.urls")),
     # --- API REST (application mobile Flutter) ---
     path("api/v1/", include("apps.api.urls")),
+    path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/v1/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="documentation-api",
+    ),
     # --- Site public : recherche (vue Django) puis pages Wagtail ---
     path("", include("apps.site_public.urls")),
 ]

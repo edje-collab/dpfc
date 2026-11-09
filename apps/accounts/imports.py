@@ -251,7 +251,8 @@ def generer_modele():
         "+225 07 00 00 00 00", "SDPRPN", "Chef de service", "Inspecteur", "CHEF_SERVICE",
         "100003S", "01/10/2019", "Abidjan", 30,
     ])
-    for colonne, largeur in zip("ABCDEFGHIJKLMN", [14, 10, 18, 22, 32, 20, 16, 28, 18, 20, 16, 18, 16, 12]):
+    largeurs = [14, 10, 18, 22, 32, 20, 16, 28, 18, 20, 16, 18, 16, 12]
+    for colonne, largeur in zip("ABCDEFGHIJKLMN", largeurs, strict=True):
         feuille.column_dimensions[colonne].width = largeur
 
     aide = classeur.create_sheet("Aide")

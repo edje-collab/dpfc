@@ -3,7 +3,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.core.models import Structure
+from apps.core.models import Perimetre, Structure
 
 from .managers import AgentManager
 
@@ -12,20 +12,26 @@ class Agent(AbstractUser):
     """
     Compte d'un agent de la DPFC.
 
-    Un agent est affecte soit a la direction centrale (nationale),
-    soit a une antenne regionale de la pedagogie et de la formation continue.
+    Un agent releve d'un perimetre de gestion : la direction centrale, une
+    antenne regionale de la pedagogie et de la formation continue, ou le Centre
+    National de Ressources Pedagogiques Numeriques.
     """
 
     class Role(models.TextChoices):
         AGENT = "AGENT", "Agent"
         CHEF_SERVICE = "CHEF_SERVICE", "Chef de service"
         SOUS_DIRECTEUR = "SOUS_DIRECTEUR", "Sous-directeur"
-        SECRETARIAT = "SECRETARIAT", "Secretariat d'antenne"
+        SECRETARIAT = "SECRETARIAT", "Secretariat"
         CHEF_ANTENNE = "CHEF_ANTENNE", "Chef d'antenne (APFC)"
-        DIRECTEUR_REGIONAL = "DIRECTEUR_REGIONAL", "Directeur regional (DRENAET)"
+        CHEF_CENTRE = "CHEF_CENTRE", "Chef de centre (CNRPN)"
+        DIRECTEUR_REGIONAL = "DIRECTEUR_REGIONAL", "Directeur regional (DRENA)"
         RH = "RH", "Gestionnaire du personnel"
         DIRECTEUR = "DIRECTEUR", "Directeur"
+        DIRECTEUR_GENERAL = "DIRECTEUR_GENERAL", "Directeur general (DGPCSP)"
         ADMIN = "ADMIN", "Administrateur du portail"
+
+    # Roles qui dirigent un perimetre de gestion autonome.
+    ROLES_RESPONSABLE_PERIMETRE = {"CHEF_ANTENNE", "CHEF_CENTRE", "DIRECTEUR"}
 
     class Civilite(models.TextChoices):
         M = "M", "Monsieur"
@@ -121,6 +127,13 @@ class Agent(AbstractUser):
 
     # --- Affectation ------------------------------------------------------
     @property
+    def perimetre(self):
+        """Perimetre de gestion dont releve l'agent (deduit de sa structure)."""
+        if self.structure_id and self.structure.perimetre_id:
+            return self.structure.perimetre
+        return Perimetre.centrale()
+
+    @property
     def affectation(self):
         """CENTRALE ou REGION."""
         if self.structure_id:
@@ -130,6 +143,21 @@ class Agent(AbstractUser):
     @property
     def est_en_region(self):
         return self.affectation == Structure.Rattachement.REGION
+
+    @property
+    def est_en_perimetre_autonome(self):
+        """Agent d'une antenne ou du CNRPN : le responsable local decide seul."""
+        perimetre = self.perimetre
+        return perimetre is not None and perimetre.est_autonome
+
+    @property
+    def dirige_son_perimetre(self):
+        """L'agent est le responsable de son propre perimetre de gestion."""
+        perimetre = self.perimetre
+        if perimetre is None:
+            return False
+        responsable = perimetre.responsable
+        return responsable is not None and responsable.pk == self.pk
 
     @property
     def libelle_affectation(self):
@@ -146,9 +174,15 @@ class Agent(AbstractUser):
             self.Role.CHEF_SERVICE,
             self.Role.SOUS_DIRECTEUR,
             self.Role.CHEF_ANTENNE,
+            self.Role.CHEF_CENTRE,
             self.Role.DIRECTEUR_REGIONAL,
             self.Role.DIRECTEUR,
+            self.Role.DIRECTEUR_GENERAL,
         }
+
+    @property
+    def est_responsable_perimetre(self):
+        return self.role in {self.Role.CHEF_ANTENNE, self.Role.CHEF_CENTRE, self.Role.DIRECTEUR}
 
     @property
     def est_rh(self):
@@ -167,37 +201,38 @@ class Agent(AbstractUser):
         return self.role == self.Role.SECRETARIAT
 
     @property
-    def perimetre_drenaet(self):
-        return self.structure.perimetre_drenaet if self.structure_id else None
+    def perimetre_drena(self):
+        return self.structure.perimetre_drena if self.structure_id else None
 
-    def agents_de_mon_antenne(self):
-        """Agents de la meme antenne : perimetre de depot du secretariat."""
-        if not self.structure_id:
+    def agents_de_mon_perimetre(self):
+        """Agents du meme perimetre : champ de depot du secretariat."""
+        perimetre = self.perimetre
+        if perimetre is None:
             return Agent.objects.none()
-        racine = self.structure
-        if racine.type == Structure.Type.BUREAU and racine.parent_id:
-            racine = racine.parent
-        return Agent.objects.filter(
-            models.Q(structure=racine) | models.Q(structure__parent=racine), is_active=True
-        ).distinct()
+        return perimetre.agents()
 
     def equipe(self):
         """Agents dont l'agent courant est le superieur direct."""
         return Agent.objects.filter(superieur=self, is_active=True)
 
     def perimetre_agents(self):
-        """Agents visibles par cet agent selon son role."""
+        """
+        Agents visibles par cet agent.
+
+        La direction centrale et l'administration voient tout le monde ; un
+        responsable de perimetre autonome ne voit que son propre perimetre.
+        """
         base = Agent.objects.filter(is_active=True)
         if self.est_rh or self.est_direction or self.peut_administrer:
             return base
         if self.role == self.Role.DIRECTEUR_REGIONAL and self.structure_id:
-            perimetre = self.perimetre_drenaet
-            if perimetre is not None:
+            ressort = self.perimetre_drena
+            if ressort is not None:
                 return base.filter(
-                    models.Q(structure__drenaet=perimetre) | models.Q(structure=perimetre)
+                    models.Q(structure__drena=ressort) | models.Q(structure=ressort)
                 ).distinct()
-        if self.role in {self.Role.CHEF_ANTENNE, self.Role.SECRETARIAT} and self.structure_id:
-            return base.filter(structure__region_id=self.structure.region_id)
+        if self.role in {self.Role.CHEF_ANTENNE, self.Role.CHEF_CENTRE, self.Role.SECRETARIAT}:
+            return self.agents_de_mon_perimetre()
         if self.est_valideur and self.structure_id:
             return base.filter(
                 models.Q(structure=self.structure) | models.Q(superieur=self)

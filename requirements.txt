@@ -1,14 +1,25 @@
+# Socle
 Django==5.2.*
 wagtail==7.4.*
 djangorestframework==3.15.*
 djangorestframework-simplejwt==5.3.*
+drf-spectacular>=0.27,<1
+django-filter>=24.3,<27
 django-widget-tweaks==1.5.*
+psycopg[binary]>=3.2,<4
+# Securite
+argon2-cffi>=23.1
+django-axes>=7,<10
+cryptography>=42.0
+# Taches de fond
+celery>=5.4,<6
+redis>=5,<9
+# Stockage et documents
+django-storages[s3]>=1.14,<2
 Pillow>=10.0
 openpyxl==3.1.*
-cryptography>=42.0
 qrcode==7.4.*
+# Exploitation
 python-dotenv==1.0.*
-# Production
 gunicorn==22.*
-psycopg[binary]==3.2.*
 whitenoise==6.*

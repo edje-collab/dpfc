@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.core.models import JournalAction, Structure
+from apps.signature.services import ErreurSignature, signer_demande
 
 from .forms import (
     AIDE_PAR_TYPE,
@@ -21,9 +22,7 @@ from .forms import (
     RapportMissionForm,
     SoldeForm,
 )
-from apps.signature.services import ErreurSignature, signer_demande
-
-from .models import Demande, JourFerie, RapportMission, SoldeConge, TypeDemande, Validation
+from .models import Demande, JourFerie, SoldeConge, TypeDemande, Validation
 from .services import annuler, decider, demandes_a_traiter, soumettre
 
 Agent = get_user_model()

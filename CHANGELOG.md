@@ -1,5 +1,21 @@
 # Journal des versions
 
+## 3.0.0 — Plateforme de gestion de la direction (phase 1 : socle)
+
+Mise en conformité avec le **décret n° 2026-509 du 05 août 2026** et passage à une plateforme de gestion, sur la pile technique d'e-PECU.
+
+**Organisation.** La DPFC est rattachée à la Direction Générale de la Pédagogie, des Curricula et du Suivi des Programmes et comprend les trois sous-directions du décret (SDPPBS, SDIP, SDFPC). Les services extérieurs suivent l'article 41 : DRENA, DDENA, DRETPI — l'ancien type `DRENAET` est renommé `DRENA`.
+
+**Périmètres de gestion autonome.** Nouveau modèle `core.Perimetre` : la direction centrale, chaque antenne régionale (APFC) et le **CNRPN** — service rattaché dirigé par un chef de centre — forment chacun une unité de gestion. Un agent hérite du périmètre de sa structure ; les actes y sont instruits et numérotés par série annuelle propre (`PA-0001/2026/APFC-GBK`) ; un chef d'antenne ou de centre ne voit que ses agents.
+
+**Circuits paramétrables.** Nouvelle application `circuits` : le trajet des actes n'est plus codé mais décrit en données, par type de périmètre et type d'acte, modifiable dans l'administration. Les étapes désignent une fonction (supérieur, sous-directeur, responsable du périmètre, directeur régional, rôle) résolue à la soumission, sous conditions combinables. Un périmètre peut définir son propre circuit. Un agent désactivé ne porte plus aucune étape.
+
+**Pile technique.** Réglages découpés (`base`/`dev`/`recette`/`prod`/`test`), PostgreSQL, Docker Compose (application, worker et ordonnanceur Celery, PostgreSQL, Redis, MinIO, mailpit), stockage objet S3, Argon2 et `django-axes`, schéma OpenAPI (`/api/v1/docs/`), pytest et ruff.
+
+**Nouveaux rôles.** `CHEF_CENTRE` (CNRPN) et `DIRECTEUR_GENERAL` (DGPCSP).
+
+**Reprise des données.** La migration `core.0006` convertit une base existante sans perte : renommage des DRENAET, création des périmètres et rattachement des structures. Les sous-directions antérieures absentes du décret sont conservées : leur sort relève de la direction (voir `docs/organisation.md`).
+
 ## 2.0.0
 - **Site public géré par Wagtail** (administration sur `/cms/`) : l'app `contenus` est remplacée par `site_public`. Accueil, pages éditoriales, actualités, projets et événements sont des pages Wagtail (contenu par blocs, images de la médiathèque, prévisualisation, brouillons/publication, historique des révisions). Ressources pédagogiques, catégories et messages de contact sont des snippets Wagtail. Le menu est déduit de l'arborescence (« Afficher dans les menus »).
 - L'espace agent (intranet Django, administration `/admin/`, API et application Flutter) est inchangé ; l'API publique conserve ses routes (`/api/v1/public/...`) et ses champs, plus `url`.

@@ -4,7 +4,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.core.models import Region, Structure
+from apps.circuits.modeles import installer_circuits_modeles
+from apps.core.models import Perimetre, Region, Structure
 from apps.rh.models import Demande, JourFerie, SoldeConge, TypeDemande, jours_ouvrables
 from apps.rh.services import circuit_theorique, decider, demandes_a_traiter, soumettre
 
@@ -14,35 +15,44 @@ Agent = get_user_model()
 class BaseRH(TestCase):
     @classmethod
     def setUpTestData(cls):
+        installer_circuits_modeles()
         cls.region = Region.objects.create(nom="Gbeke", code="GBK", chef_lieu="Bouake")
+        cls.perimetre_central = Perimetre.objects.create(
+            code="DPFC", nom="Direction centrale", type=Perimetre.Type.CENTRALE
+        )
+        cls.perimetre_antenne = Perimetre.objects.create(
+            code="APFC-GBK", nom="Antenne de Bouake", type=Perimetre.Type.ANTENNE, region=cls.region
+        )
         cls.direction = Structure.objects.create(
-            nom="Direction de la Pedagogie", sigle="DPFC", type=Structure.Type.DIRECTION
+            nom="Direction de la Pedagogie", sigle="DPFC", type=Structure.Type.DIRECTION,
+            perimetre=cls.perimetre_central, perimetre_racine=True,
         )
         cls.service_rh = Structure.objects.create(
             nom="Service du personnel", sigle="SPAA", type=Structure.Type.SERVICE, parent=cls.direction
         )
         cls.sous_direction = Structure.objects.create(
-            nom="Sous-direction de la formation continue", sigle="SDFC",
+            nom="Sous-direction de la formation pedagogique continue", sigle="SDFPC",
             type=Structure.Type.SOUS_DIRECTION, parent=cls.direction,
         )
         cls.service_central = Structure.objects.create(
-            nom="Service des ressources numeriques", sigle="SDPRPN",
+            nom="Service des ressources numeriques", sigle="SRN",
             type=Structure.Type.SERVICE, parent=cls.sous_direction,
         )
-        cls.drenaet = Structure.objects.create(
-            nom="DRENAET de Bouake", sigle="DRENAET-GBK", type=Structure.Type.DRENAET, region=cls.region
+        cls.drena = Structure.objects.create(
+            nom="DRENA de Bouake", sigle="DRENA-GBK", type=Structure.Type.DRENA, region=cls.region
         )
         cls.antenne = Structure.objects.create(
             nom="Antenne de Bouake", sigle="APFC-GBK", type=Structure.Type.ANTENNE,
-            parent=cls.direction, region=cls.region, drenaet=cls.drenaet,
+            parent=cls.direction, region=cls.region, drena=cls.drena,
+            perimetre=cls.perimetre_antenne, perimetre_racine=True,
         )
         cls.directeur = cls._agent("D0001", "KOUAME", Agent.Role.DIRECTEUR, cls.direction)
         cls.rh = cls._agent("R0001", "TRAORE", Agent.Role.RH, cls.service_rh)
         cls.directeur_regional = cls._agent(
-            "G0001", "ADJOUMANI", Agent.Role.DIRECTEUR_REGIONAL, cls.drenaet
+            "G0001", "ADJOUMANI", Agent.Role.DIRECTEUR_REGIONAL, cls.drena
         )
-        cls.drenaet.responsable = cls.directeur_regional
-        cls.drenaet.save()
+        cls.drena.responsable = cls.directeur_regional
+        cls.drena.save()
         cls.chef_antenne = cls._agent("C0001", "KONE", Agent.Role.CHEF_ANTENNE, cls.antenne,
                                       cls.directeur_regional)
         cls.antenne.responsable = cls.chef_antenne
@@ -114,25 +124,25 @@ class CircuitTest(BaseRH):
         circuit = circuit_theorique(self._demande(TypeDemande.ORDRE_MISSION))
         self.assertEqual([v.matricule for _, v in circuit], ["C0001"])
 
-    def test_mission_hors_perimetre_etablie_par_le_drenaet(self):
-        demande = self._demande(TypeDemande.ORDRE_MISSION, hors_perimetre_drenaet=True,
+    def test_mission_hors_ressort_etablie_par_la_drena(self):
+        demande = self._demande(TypeDemande.ORDRE_MISSION, hors_perimetre_drena=True,
                                 destination="Abidjan")
         circuit = circuit_theorique(demande)
         self.assertEqual([v.matricule for _, v in circuit], ["C0001", "G0001"])
-        self.assertIn("DRENAET", circuit[-1][0])
-        self.assertEqual(demande.autorite_signataire, "DRENAET")
+        self.assertIn("DRENA", circuit[-1][0])
+        self.assertEqual(demande.autorite_signataire, "Directeur regional (DRENA)")
 
     def test_mission_hors_perimetre_exige_tdr_et_invitation(self):
         from django.core.exceptions import ValidationError
 
-        demande = self._demande(TypeDemande.ORDRE_MISSION, hors_perimetre_drenaet=True)
+        demande = self._demande(TypeDemande.ORDRE_MISSION, hors_perimetre_drena=True)
         demande.statut = Demande.Statut.SOUMISE
         with self.assertRaises(ValidationError) as erreur:
             demande.full_clean(exclude=["numero", "structure", "nb_jours"])
         self.assertIn("termes_de_reference", erreur.exception.message_dict)
         self.assertIn("lettre_invitation", erreur.exception.message_dict)
 
-    def test_acte_du_chef_antenne_remonte_au_drenaet(self):
+    def test_acte_du_chef_antenne_remonte_a_la_drena(self):
         circuit = circuit_theorique(self._demande(agent=self.chef_antenne))
         self.assertEqual([v.matricule for _, v in circuit], ["G0001", "D0001"])
 
@@ -177,7 +187,7 @@ class CircuitTest(BaseRH):
         self.assertIsNone(demande.etape_courante())
 
     def test_file_de_validation_respecte_l_ordre(self):
-        demande = self._demande(TypeDemande.ORDRE_MISSION, hors_perimetre_drenaet=True)
+        demande = self._demande(TypeDemande.ORDRE_MISSION, hors_perimetre_drena=True)
         soumettre(demande)
         self.assertEqual(list(demandes_a_traiter(self.chef_antenne)), [demande])
         self.assertEqual(list(demandes_a_traiter(self.directeur_regional)), [])

@@ -12,10 +12,11 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from apps.core.models import ConfigurationSite, Region, Structure
-from apps.site_public import arborescence
-from apps.site_public.models import PageEvenement, PageProjet, Ressource
+from apps.circuits.modeles import installer_circuits_modeles
+from apps.core.models import ConfigurationSite, Perimetre, Region, Structure
 from apps.rh.models import JourFerie, SoldeConge, TypeDemande
+from apps.site_public import arborescence
+from apps.site_public.models import PageEvenement, Ressource
 
 Agent = get_user_model()
 
@@ -30,11 +31,16 @@ REGIONS = [
     ("Indenie-Djuablin", "IDJ", "Abengourou", "DRENA Abengourou"),
 ]
 
-SERVICES_CENTRAUX = [
-    ("Sous-direction des programmes et manuels scolaires", "SDPMS", Structure.Type.SOUS_DIRECTION),
-    ("Sous-direction de la formation continue", "SDFC", Structure.Type.SOUS_DIRECTION),
-    ("Service developpement et production de ressources pedagogiques numeriques", "SDPRPN", Structure.Type.SERVICE),
-    ("Service du personnel et des affaires administratives", "SPAA", Structure.Type.SERVICE),
+# Sous-directions de la DPFC, article 28 du decret n° 2026-509 du 05 aout 2026.
+SOUS_DIRECTIONS = [
+    ("Sous-direction des Programmes Pedagogiques et des Bibliotheques Scolaires", "SDPPBS"),
+    ("Sous-direction des Innovations Pedagogiques", "SDIP"),
+    ("Sous-direction de la Formation Pedagogique Continue", "SDFPC"),
+]
+
+# Services d'appui de la direction, crees par arrete d'organisation.
+SERVICES_APPUI = [
+    ("Service du personnel et des affaires administratives", "SPAA"),
 ]
 
 
@@ -56,70 +62,167 @@ class Command(BaseCommand):
             )
             regions[code] = region
 
+        # --- Perimetres de gestion -----------------------------------------
+        # La direction centrale, chaque antenne et le CNRPN instruisent et
+        # numerotent leurs propres actes.
+        perimetre_central, _ = Perimetre.objects.get_or_create(
+            code="DPFC",
+            defaults={
+                "nom": "Direction de la Pedagogie et de la Formation Continue",
+                "type": Perimetre.Type.CENTRALE,
+            },
+        )
+
+        # --- Direction generale de rattachement (article 27) ---------------
+        direction_generale, _ = Structure.objects.get_or_create(
+            sigle="DGPCSP",
+            defaults={
+                "nom": "Direction Generale de la Pedagogie, des Curricula et du Suivi des Programmes",
+                "type": Structure.Type.DIRECTION_GENERALE,
+                "rattachement": Structure.Rattachement.CENTRALE,
+                "perimetre": perimetre_central,
+                "ordre": 1,
+                "email": "dgpcsp@education.ci",
+                "presentation": (
+                    "Direction generale chargee de la politique nationale en matiere de pedagogie, "
+                    "de curricula et de suivi des programmes d'enseignement."
+                ),
+            },
+        )
+
         direction, _ = Structure.objects.get_or_create(
             sigle="DPFC",
             defaults={
                 "nom": "Direction de la Pedagogie et de la Formation Continue",
                 "type": Structure.Type.DIRECTION,
                 "rattachement": Structure.Rattachement.CENTRALE,
+                "parent": direction_generale,
+                "perimetre": perimetre_central,
+                "perimetre_racine": True,
+                "ordre": 1,
                 "adresse": "Cocody II Plateaux, Abidjan",
                 "telephone": "+225 27 22 41 00 00",
                 "email": "contact@dpfc.education.ci",
-                "presentation": "Structure centrale chargee des programmes educatifs et de la formation continue.",
+                "presentation": (
+                    "Direction centrale chargee des activites pedagogiques du prescolaire, du primaire "
+                    "et du secondaire general, et de la formation continue des personnels enseignants "
+                    "et d'encadrement pedagogique."
+                ),
             },
         )
 
         centrales = {}
-        for nom, sigle, type_ in SERVICES_CENTRAUX:
+        for ordre, (nom, sigle) in enumerate(SOUS_DIRECTIONS, start=1):
             structure, _ = Structure.objects.get_or_create(
                 sigle=sigle,
                 defaults={
                     "nom": nom,
-                    "type": type_,
+                    "type": Structure.Type.SOUS_DIRECTION,
                     "rattachement": Structure.Rattachement.CENTRALE,
                     "parent": direction,
+                    "perimetre": perimetre_central,
+                    "ordre": ordre,
                     "email": f"{sigle.lower()}@dpfc.education.ci",
                 },
             )
             centrales[sigle] = structure
 
-        drenaets = {}
-        for code, region in regions.items():
-            drenaet, _ = Structure.objects.get_or_create(
-                sigle=f"DRENAET-{code}",
+        for ordre, (nom, sigle) in enumerate(SERVICES_APPUI, start=10):
+            structure, _ = Structure.objects.get_or_create(
+                sigle=sigle,
                 defaults={
-                    "nom": f"Direction Regionale de l'Education Nationale, de l'Alphabetisation "
-                           f"et de l'Enseignement Technique de {region.chef_lieu}",
-                    "type": Structure.Type.DRENAET,
+                    "nom": nom,
+                    "type": Structure.Type.SERVICE,
+                    "rattachement": Structure.Rattachement.CENTRALE,
+                    "parent": direction,
+                    "perimetre": perimetre_central,
+                    "ordre": ordre,
+                    "email": f"{sigle.lower()}@dpfc.education.ci",
+                },
+            )
+            centrales[sigle] = structure
+
+        # --- CNRPN : service rattache, gestion autonome --------------------
+        perimetre_cnrpn, _ = Perimetre.objects.get_or_create(
+            code="CNRPN",
+            defaults={
+                "nom": "Centre National de Ressources Pedagogiques Numeriques",
+                "type": Perimetre.Type.CENTRE,
+            },
+        )
+        cnrpn, _ = Structure.objects.get_or_create(
+            sigle="CNRPN",
+            defaults={
+                "nom": "Centre National de Ressources Pedagogiques Numeriques",
+                "type": Structure.Type.CENTRE,
+                "rattachement": Structure.Rattachement.CENTRALE,
+                "parent": direction,
+                "perimetre": perimetre_cnrpn,
+                "perimetre_racine": True,
+                "ordre": 20,
+                "adresse": "Abidjan",
+                "email": "cnrpn@dpfc.education.ci",
+                "presentation": (
+                    "Service rattache a la direction, charge de la production et de la diffusion des "
+                    "ressources pedagogiques numeriques. Sa gestion est assuree par un chef de centre."
+                ),
+            },
+        )
+        centrales["CNRPN"] = cnrpn
+
+        # --- Services exterieurs du ministere (article 41) -----------------
+        drenas = {}
+        for code, region in regions.items():
+            drena, _ = Structure.objects.get_or_create(
+                sigle=f"DRENA-{code}",
+                defaults={
+                    "nom": f"Direction Regionale de l'Education Nationale et de l'Alphabetisation "
+                           f"de {region.chef_lieu}",
+                    "type": Structure.Type.DRENA,
                     "rattachement": Structure.Rattachement.REGION,
                     "region": region,
                     "adresse": f"{region.chef_lieu}, {region.nom}",
-                    "email": f"drenaet.{code.lower()}@education.ci",
+                    "email": f"drena.{code.lower()}@education.ci",
                 },
             )
-            drenaets[code] = drenaet
+            drenas[code] = drena
 
+        # --- Antennes regionales : un perimetre autonome chacune -----------
         antennes = {}
         for code, region in regions.items():
+            perimetre_antenne, _ = Perimetre.objects.get_or_create(
+                code=f"APFC-{code}",
+                defaults={
+                    "nom": f"Antenne de la Pedagogie et de la Formation Continue de {region.chef_lieu}",
+                    "type": Perimetre.Type.ANTENNE,
+                    "region": region,
+                },
+            )
             antenne, _ = Structure.objects.get_or_create(
                 sigle=f"APFC-{code}",
                 defaults={
-                    "drenaet": drenaets[code],
+                    "drena": drenas[code],
                     "nom": f"Antenne de la Pedagogie et de la Formation Continue de {region.chef_lieu}",
                     "type": Structure.Type.ANTENNE,
                     "rattachement": Structure.Rattachement.REGION,
                     "parent": direction,
+                    "perimetre": perimetre_antenne,
+                    "perimetre_racine": True,
                     "region": region,
                     "adresse": f"{region.chef_lieu}, {region.nom}",
                     "telephone": "+225 27 00 00 00 00",
                     "email": f"apfc.{code.lower()}@dpfc.education.ci",
                     "presentation": (
                         f"L'antenne de {region.chef_lieu} encadre les enseignants de la region "
-                        f"{region.nom} et relaie les orientations de la direction centrale."
+                        f"{region.nom} et relaie les orientations de la direction centrale. "
+                        f"Sa gestion est autonome, sous l'autorite d'un chef d'antenne."
                     ),
                 },
             )
             antennes[code] = antenne
+
+        # --- Circuits de validation ----------------------------------------
+        installer_circuits_modeles()
 
         # --- Comptes -------------------------------------------------------
         def creer(matricule, nom, prenoms, role, structure, fonction, superieur=None, grade="Inspecteur"):
@@ -149,19 +252,31 @@ class Command(BaseCommand):
                           "Directrice de la pedagogie et de la formation continue", grade="Inspecteur general")
         rh = creer("100002R", "TRAORE", "Ibrahim", Agent.Role.RH, centrales["SPAA"],
                    "Chef du service du personnel", directeur, grade="Administrateur")
-        sous_directeur = creer("100003S", "BAMBA", "Aminata", Agent.Role.SOUS_DIRECTEUR, centrales["SDFC"],
-                               "Sous-directrice de la formation continue", directeur)
-        chef_service = creer("100004C", "N'GORAN", "Koffi Evariste", Agent.Role.CHEF_SERVICE, centrales["SDPRPN"],
+        sous_directeur = creer("100003S", "BAMBA", "Aminata", Agent.Role.SOUS_DIRECTEUR, centrales["SDFPC"],
+                               "Sous-directrice de la formation pedagogique continue", directeur)
+        sd_innovations = creer("100007S", "KOUADIO", "Eric", Agent.Role.SOUS_DIRECTEUR, centrales["SDIP"],
+                               "Sous-directeur des innovations pedagogiques", directeur)
+        sd_programmes = creer("100008S", "GNAMIEN", "Affoue", Agent.Role.SOUS_DIRECTEUR, centrales["SDPPBS"],
+                              "Sous-directrice des programmes pedagogiques et des bibliotheques scolaires",
+                              directeur)
+        chef_service = creer("100004C", "N'GORAN", "Koffi Evariste", Agent.Role.CHEF_SERVICE, centrales["SDFPC"],
                              "Chef de service", sous_directeur)
-        creer("100005A", "DIALLO", "Mariam", Agent.Role.AGENT, centrales["SDPRPN"],
-              "Chargee d'etudes - ressources numeriques", chef_service, grade="Professeur")
-        creer("100006A", "YAO", "Serge", Agent.Role.AGENT, centrales["SDPMS"],
-              "Charge d'etudes - programmes", sous_directeur, grade="Professeur")
+        creer("100005A", "DIALLO", "Mariam", Agent.Role.AGENT, centrales["SDIP"],
+              "Chargee d'etudes - innovations pedagogiques", sd_innovations, grade="Professeur")
+        creer("100006A", "YAO", "Serge", Agent.Role.AGENT, centrales["SDPPBS"],
+              "Charge d'etudes - programmes", sd_programmes, grade="Professeur")
+
+        # CNRPN : perimetre autonome dirige par un chef de centre.
+        chef_centre = creer("400001N", "ZADI", "Gnagne Hubert", Agent.Role.CHEF_CENTRE, cnrpn,
+                            "Chef du centre national de ressources pedagogiques numeriques",
+                            directeur, grade="Inspecteur")
+        creer("400002N", "AKA", "Esther", Agent.Role.AGENT, cnrpn,
+              "Chargee de production de ressources numeriques", chef_centre, grade="Professeur")
 
         dr_bouake = creer("300001B", "ADJOUMANI", "Kouadio", Agent.Role.DIRECTEUR_REGIONAL,
-                          drenaets["GBK"], "Directeur regional (DRENAET)", grade="Inspecteur general")
+                          drenas["GBK"], "Directeur regional (DRENA)", grade="Inspecteur general")
         dr_korhogo = creer("300003K", "TOURE", "Lassina", Agent.Role.DIRECTEUR_REGIONAL,
-                           drenaets["PORO"], "Directeur regional (DRENAET)", grade="Inspecteur general")
+                           drenas["PORO"], "Directeur regional (DRENA)", grade="Inspecteur general")
         chef_bouake = creer("200001B", "KONE", "Adama", Agent.Role.CHEF_ANTENNE, antennes["GBK"],
                             "Chef d'antenne", dr_bouake)
         creer("200005B", "KOUASSI", "Akissi", Agent.Role.SECRETARIAT, antennes["GBK"],
@@ -175,25 +290,28 @@ class Command(BaseCommand):
 
         direction.responsable = directeur
         direction.save()
-        centrales["SDFC"].responsable = sous_directeur
-        centrales["SDFC"].save()
-        centrales["SDPRPN"].responsable = chef_service
-        centrales["SDPRPN"].parent = centrales["SDFC"]
-        centrales["SDPRPN"].save()
+        centrales["SDFPC"].responsable = sous_directeur
+        centrales["SDFPC"].save()
+        centrales["SDIP"].responsable = sd_innovations
+        centrales["SDIP"].save()
+        centrales["SDPPBS"].responsable = sd_programmes
+        centrales["SDPPBS"].save()
         centrales["SPAA"].responsable = rh
         centrales["SPAA"].save()
+        cnrpn.responsable = chef_centre
+        cnrpn.save()
         antennes["GBK"].responsable = chef_bouake
         antennes["GBK"].save()
         antennes["PORO"].responsable = chef_korhogo
         antennes["PORO"].save()
-        drenaets["GBK"].responsable = dr_bouake
-        drenaets["GBK"].save()
-        drenaets["PORO"].responsable = dr_korhogo
-        drenaets["PORO"].save()
+        drenas["GBK"].responsable = dr_bouake
+        drenas["GBK"].save()
+        drenas["PORO"].responsable = dr_korhogo
+        drenas["PORO"].save()
         for code, antenne in antennes.items():
-            if antenne.drenaet_id is None:
-                antenne.drenaet = drenaets[code]
-                antenne.save(update_fields=["drenaet"])
+            if antenne.drena_id is None:
+                antenne.drena = drenas[code]
+                antenne.save(update_fields=["drena"])
 
         if not Agent.objects.filter(is_superuser=True).exists():
             admin = Agent.objects.create_superuser("ADMIN01", "admin@dpfc.education.ci", "dpfc2026!")
@@ -296,9 +414,10 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Initialisation terminee."))
         self.stdout.write("  Comptes de demonstration : le mot de passe initial est le matricule.")
         self.stdout.write(
-            "  100001D directrice | 100002R personnel | 100004C chef de service\n"
+            "  100001D directrice | 100002R personnel | 100003S sous-directrice | 100004C chef de service\n"
             "  200001B chef d'antenne Bouake | 200005B secretariat d'antenne | 200002B agent d'antenne\n"
-            "  300001B directeur regional DRENAET Bouake"
+            "  400001N chef de centre CNRPN | 400002N agent CNRPN\n"
+            "  300001B directeur regional DRENA Bouake"
         )
 
     def _cles_de_signature(self, signataires):
@@ -334,7 +453,7 @@ class Command(BaseCommand):
             motif="Participation a un atelier national de conception de ressources.",
             date_debut=aujourdhui + timedelta(days=12), date_fin=aujourdhui + timedelta(days=15),
             destination="Abidjan", moyen_transport="Transport en commun",
-            hors_perimetre_drenaet=True,
+            hors_perimetre_drena=True,
             structures_visitees="Direction de la Pedagogie et de la Formation Continue",
         )
         mission_hors.termes_de_reference.save(

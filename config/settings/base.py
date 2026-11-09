@@ -1,18 +1,20 @@
 """
-Configuration du portail de la Direction de la Pedagogie
-et de la Formation Continue (DPFC) - MENAET, Cote d'Ivoire.
+Socle de configuration du portail DPFC.
 
-Projet monolithique :
+Projet monolithique modulaire (voir docs/adr/0001-monolithe-modulaire.md) :
   - site public gere par Wagtail (administration sur /cms/) ;
-  - espace agent Django (intranet sur /intranet/, administration sur /admin/) ;
+  - plateforme de gestion de la direction (intranet sur /intranet/) ;
   - API REST pour l'application mobile Flutter (/api/v1/).
+
+Les reglages propres a un environnement sont dans dev.py, recette.py,
+prod.py et test.py.
 """
-from pathlib import Path
 import os
+from datetime import timedelta
+from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# --- Chargement du fichier .env (facultatif) --------------------------------
 try:
     from dotenv import load_dotenv
 
@@ -32,12 +34,14 @@ def env_bool(cle, defaut=False):
     return val.strip().lower() in {"1", "true", "yes", "oui", "on"}
 
 
+def env_liste(cle, defaut=""):
+    return [v.strip() for v in env(cle, defaut).split(",") if v.strip()]
+
+
 SECRET_KEY = env("DJANGO_SECRET_KEY", "dev-secret-key-a-remplacer-en-production")
-DEBUG = env_bool("DJANGO_DEBUG", True)
-ALLOWED_HOSTS = [h.strip() for h in env("DJANGO_ALLOWED_HOSTS", "*").split(",") if h.strip()]
-CSRF_TRUSTED_ORIGINS = [
-    o.strip() for o in env("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
-]
+DEBUG = False
+ALLOWED_HOSTS = env_liste("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = env_liste("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 # --- Applications -----------------------------------------------------------
 INSTALLED_APPS = [
@@ -51,7 +55,10 @@ INSTALLED_APPS = [
     # Tierces
     "rest_framework",
     "rest_framework_simplejwt",
+    "drf_spectacular",
+    "django_filters",
     "widget_tweaks",
+    "axes",
     # Wagtail (site public)
     "wagtail.contrib.settings",
     "wagtail.contrib.redirects",
@@ -67,12 +74,14 @@ INSTALLED_APPS = [
     "wagtail",
     "modelcluster",
     "taggit",
-    # Locales
+    # Socle metier (ne depend d'aucune application metier)
     "apps.core",
     "apps.accounts",
-    "apps.site_public",
+    "apps.circuits",
+    # Applications metier
     "apps.rh",
     "apps.signature",
+    "apps.site_public",
     "apps.api",
 ]
 
@@ -88,13 +97,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.accounts.middleware.DerniereActiviteMiddleware",
     "wagtail.contrib.redirects.middleware.RedirectMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
-
-# WhiteNoise est optionnel en developpement
-try:
-    import whitenoise  # noqa: F401
-except ImportError:
-    MIDDLEWARE.remove("whitenoise.middleware.WhiteNoiseMiddleware")
 
 ROOT_URLCONF = "config.urls"
 
@@ -110,6 +114,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.configuration_site",
+                "apps.core.context_processors.perimetre_courant",
                 "apps.site_public.context_processors.navigation_publique",
                 "apps.rh.context_processors.compteurs_intranet",
             ],
@@ -121,35 +126,28 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 # --- Base de donnees --------------------------------------------------------
-DATABASE_URL = env("DATABASE_URL", "")
-if DATABASE_URL:
-    # postgres://user:mdp@hote:5432/base
-    from urllib.parse import urlparse
-
-    u = urlparse(DATABASE_URL)
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": u.path.lstrip("/"),
-            "USER": u.username,
-            "PASSWORD": u.password,
-            "HOST": u.hostname,
-            "PORT": u.port or 5432,
-            "CONN_MAX_AGE": 60,
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("POSTGRES_DB", "dpfc"),
+        "USER": env("POSTGRES_USER", "dpfc"),
+        "PASSWORD": env("POSTGRES_PASSWORD", "dpfc"),
+        "HOST": env("POSTGRES_HOST", "db"),
+        "PORT": env("POSTGRES_PORT", "5432"),
+        "CONN_MAX_AGE": 60,
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
 
 AUTH_USER_MODEL = "accounts.Agent"
 AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
     "apps.accounts.backends.MatriculeOuEmailBackend",
     "django.contrib.auth.backends.ModelBackend",
+]
+
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -163,6 +161,13 @@ AUTH_PASSWORD_VALIDATORS = [
 LOGIN_URL = "accounts:connexion"
 LOGIN_REDIRECT_URL = "rh:tableau_bord"
 LOGOUT_REDIRECT_URL = "/"
+
+# Verrouillage apres echecs repetes de connexion
+AXES_FAILURE_LIMIT = int(env("AXES_FAILURE_LIMIT", "8"))
+AXES_COOLOFF_TIME = timedelta(minutes=int(env("AXES_COOLOFF_MINUTES", "15")))
+AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_TEMPLATE = "intranet/verrouillage.html"
 
 # --- Internationalisation ---------------------------------------------------
 LANGUAGE_CODE = "fr-fr"
@@ -179,20 +184,29 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
-        if not DEBUG
-        else "django.contrib.staticfiles.storage.StaticFilesStorage"
-    },
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
-try:
-    import whitenoise  # noqa: F401
-except ImportError:
-    STORAGES["staticfiles"]["BACKEND"] = (
-        "django.contrib.staticfiles.storage.StaticFilesStorage"
-    )
+
+# Stockage objet (MinIO en developpement, S3 compatible en production)
+if env("S3_ENDPOINT_URL"):
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "endpoint_url": env("S3_ENDPOINT_URL"),
+            "access_key": env("S3_ACCESS_KEY"),
+            "secret_key": env("S3_SECRET_KEY"),
+            "bucket_name": env("S3_BUCKET", "dpfc"),
+            "region_name": env("S3_REGION", "us-east-1"),
+            "file_overwrite": False,
+            "default_acl": None,
+            "querystring_auth": True,
+            "signature_version": "s3v4",
+        },
+    }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 
 # --- Wagtail (site public) --------------------------------------------------
 WAGTAIL_SITE_NAME = "Portail DPFC"
@@ -219,11 +233,21 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "PAGE_SIZE": 20,
     "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S%z",
 }
 
-from datetime import timedelta  # noqa: E402
+SPECTACULAR_SETTINGS = {
+    "TITLE": "API du portail DPFC",
+    "DESCRIPTION": "Plateforme de gestion de la Direction de la Pedagogie et de la Formation Continue.",
+    "VERSION": "3.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": "/api/v1",
+    "PREPROCESSING_HOOKS": ["apps.api.schema.limiter_a_l_api_publique"],
+}
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=12),
@@ -231,6 +255,27 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
+}
+
+# --- Taches de fond ---------------------------------------------------------
+REDIS_URL = env("REDIS_URL", "redis://redis:6379/0")
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", REDIS_URL)
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", REDIS_URL)
+CELERY_TASK_ALWAYS_EAGER = False
+CELERY_TASK_TIME_LIMIT = 600
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    "rappels-quotidiens": {
+        "task": "apps.rh.tasks.rappels_quotidiens",
+        "schedule": 24 * 3600,
+    },
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+    }
 }
 
 # --- Courriel ---------------------------------------------------------------
@@ -255,15 +300,13 @@ RH = {
     "ANNEE_REFERENCE_DEBUT_MOIS": 1,
 }
 
-# --- Securite en production -------------------------------------------------
-if not DEBUG:
-    SECURE_SSL_REDIRECT = env_bool("DJANGO_SSL_REDIRECT", True)
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    X_FRAME_OPTIONS = "DENY"
+# --- Securite ---------------------------------------------------------------
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
 LOGGING = {
     "version": 1,

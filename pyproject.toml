@@ -1,0 +1,14 @@
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+exclude = ["*/migrations/*", ".venv", "staticfiles", "media"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "DJ"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["tests.py", "test_*.py"]
+testpaths = ["apps", "tests"]
+addopts = "--strict-markers"

@@ -1,181 +1,31 @@
 """
-Circuit de validation des actes administratifs.
+Instruction des actes administratifs : soumission, decisions, cloture.
 
-Deux regimes coexistent, conformement a l'organisation de la direction.
-
-1. Antennes (APFC) : chaque antenne est autonome dans la gestion de son
-   personnel. L'agent adresse sa demande directement au chef d'antenne, le
-   depot etant assure par le secretariat de l'antenne. Une seule etape.
-
-   Exception : une mission hors du perimetre de la DRENAET. L'agent joint les
-   termes de reference et la lettre d'invitation ou d'information ; le chef
-   d'antenne donne son avis, puis l'ordre de mission est etabli et signe par
-   le DRENAET.
-
-   Les actes du chef d'antenne lui-meme remontent au DRENAET puis, si le type
-   d'acte l'exige, a la direction centrale.
-
-2. Direction centrale : chef de service -> sous-directeur -> service du
-   personnel -> directeur, les deux dernieres etapes n'etant ajoutees que si le
-   type d'acte l'exige (voir REGLES_TYPE dans models.py).
+Le trace du circuit n'est plus code ici : il est parametre dans l'application
+`circuits`, par perimetre de gestion et par type d'acte (voir
+apps/circuits/modeles.py pour les circuits livres par defaut). Ce module se
+limite aux actions du workflow et a leurs effets de bord : numerotation,
+notifications, soldes de conge, journal d'audit.
 """
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
-from django.conf import settings
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import Notification
-from apps.core.models import JournalAction, Structure
+from apps.circuits.services import etapes_resolues
+from apps.core.models import JournalAction
 
 from .models import Demande, SoldeConge, TypeDemande, Validation
 
 Agent = get_user_model()
 
 
-# --- Recherche des valideurs -------------------------------------------------
-def _responsable_structure(structure):
-    return structure.responsable if structure and structure.responsable_id else None
-
-
-def _remonter_jusqu_a(structure, types):
-    """Remonte la chaine des structures jusqu'a trouver un type donne."""
-    noeud, garde = structure, 0
-    while noeud is not None and garde < 10:
-        if noeud.type in types:
-            return noeud
-        noeud = noeud.parent
-        garde += 1
-    return None
-
-
-def _premier_role(role, region=None):
-    qs = Agent.objects.filter(role=role, is_active=True)
-    if region is not None:
-        regional = qs.filter(structure__region=region).first()
-        if regional:
-            return regional
-    return qs.order_by("last_name").first()
-
-
-def _chef_antenne_de(structure):
-    """Chef de l'antenne dont depend la structure."""
-    antenne = _remonter_jusqu_a(structure, {Structure.Type.ANTENNE})
-    if antenne is not None and antenne.responsable_id:
-        return antenne.responsable
-    region = getattr(structure, "region", None)
-    return _premier_role(Agent.Role.CHEF_ANTENNE, region)
-
-
-def _directeur_regional_de(structure):
-    """Directeur de la DRENAET dans le perimetre de laquelle l'antenne exerce."""
-    if structure is None:
-        return None
-    perimetre = structure.perimetre_drenaet
-    if perimetre is not None and perimetre.responsable_id:
-        return perimetre.responsable
-    return _premier_role(Agent.Role.DIRECTEUR_REGIONAL, getattr(structure, "region", None))
-
-
-def _circuit_antenne(demande):
-    """Circuit applicable a un agent affecte en antenne regionale."""
-    agent = demande.agent
-    structure = agent.structure
-    chef = _chef_antenne_de(structure)
-    drenaet = _directeur_regional_de(structure)
-    etapes = []
-
-    # Mission hors perimetre DRENAET : avis du chef d'antenne puis etablissement
-    # de l'ordre de mission par la direction regionale.
-    if demande.est_mission_hors_perimetre:
-        if chef:
-            etapes.append(("Avis du chef d'antenne (APFC)", chef))
-        if drenaet:
-            etapes.append(("Etablissement de l'ordre de mission par le DRENAET", drenaet))
-        elif not etapes:
-            etapes.append(("Signature du directeur", _premier_role(Agent.Role.DIRECTEUR)))
-        return etapes
-
-    # Cas courant : l'antenne est autonome, le chef d'antenne decide seul.
-    if chef and chef.pk != agent.pk:
-        return [("Decision du chef d'antenne (APFC)", chef)]
-
-    # L'agent est lui-meme chef d'antenne : son acte remonte au DRENAET,
-    # puis a la direction centrale lorsque le type d'acte l'exige.
-    if drenaet:
-        etapes.append(("Avis du directeur regional (DRENAET)", drenaet))
-    if demande.regles.get("signature_directeur"):
-        directeur = _premier_role(Agent.Role.DIRECTEUR)
-        if directeur:
-            etapes.append(("Signature du directeur de la pedagogie", directeur))
-    elif demande.regles.get("visa_rh"):
-        rh = _premier_role(Agent.Role.RH)
-        if rh:
-            etapes.append(("Visa du service du personnel", rh))
-    return etapes
-
-
-def _circuit_central(demande):
-    """Circuit applicable a un agent de la direction centrale."""
-    agent = demande.agent
-    structure = agent.structure
-    regles = demande.regles
-    etapes = []
-
-    superieur = agent.superieur or _responsable_structure(structure)
-    if superieur and superieur.pk != agent.pk:
-        libelle = (
-            "Avis du chef de service"
-            if superieur.role == Agent.Role.CHEF_SERVICE
-            else f"Avis du superieur hierarchique ({superieur.get_role_display().lower()})"
-        )
-        etapes.append((libelle, superieur))
-
-    if structure is not None:
-        sous_direction = _remonter_jusqu_a(
-            structure.parent if structure.parent_id else None, {Structure.Type.SOUS_DIRECTION}
-        )
-        responsable = _responsable_structure(sous_direction)
-        if responsable:
-            etapes.append(("Avis du sous-directeur", responsable))
-
-    if regles.get("visa_rh"):
-        rh = _premier_role(Agent.Role.RH)
-        if rh:
-            etapes.append(("Visa du service du personnel", rh))
-
-    if regles.get("signature_directeur"):
-        directeur = _premier_role(Agent.Role.DIRECTEUR)
-        if directeur:
-            etapes.append(("Signature du directeur", directeur))
-    return etapes
-
-
 def circuit_theorique(demande):
-    """Retourne la liste ordonnee [(libelle, valideur)] sans l'enregistrer."""
-    agent = demande.agent
-    en_region = agent.structure_id and agent.structure.rattachement == Structure.Rattachement.REGION
-    etapes = _circuit_antenne(demande) if en_region else _circuit_central(demande)
-
-    # Deduplication : un meme agent ne valide qu'une fois, et jamais sa propre demande
-    vus, finales = set(), []
-    for libelle, valideur in etapes:
-        if valideur is None or valideur.pk == agent.pk or valideur.pk in vus:
-            continue
-        vus.add(valideur.pk)
-        finales.append((libelle, valideur))
-
-    if not finales:
-        secours = (
-            _directeur_regional_de(agent.structure) if en_region else None
-        ) or _premier_role(Agent.Role.RH) or _premier_role(Agent.Role.DIRECTEUR)
-        if secours and secours.pk != agent.pk:
-            libelle = (
-                "Etablissement par le DRENAET" if en_region else "Visa du service du personnel"
-            )
-            finales = [(libelle, secours)]
-    return finales
+    """Liste ordonnee [(libelle, valideur)] sans l'enregistrer."""
+    return etapes_resolues(demande)
 
 
 # --- Actions du workflow -----------------------------------------------------
@@ -188,7 +38,7 @@ def soumettre(demande, requete=None):
     etapes = circuit_theorique(demande)
     if not etapes:
         raise ValueError(
-            "Aucun valideur n'est configure pour votre structure. "
+            "Aucun valideur n'est configure pour votre perimetre. "
             "Contactez le service du personnel de la DPFC."
         )
 

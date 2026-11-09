@@ -5,7 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.core.models import Region, Structure
+from apps.core.models import Perimetre, Region, Structure
 from apps.rh.models import Demande, TypeDemande
 from apps.rh.services import soumettre
 from apps.signature.services import creer_cle
@@ -17,8 +17,12 @@ CODE_SIGNATURE = "signature2026"
 class ApiTest(TestCase):
     @classmethod
     def setUpTestData(cls):
+        cls.perimetre = Perimetre.objects.create(
+            code="DPFC", nom="Direction centrale", type=Perimetre.Type.CENTRALE
+        )
         cls.direction = Structure.objects.create(
-            nom="Direction de la Pedagogie", sigle="DPFC", type=Structure.Type.DIRECTION
+            nom="Direction de la Pedagogie", sigle="DPFC", type=Structure.Type.DIRECTION,
+            perimetre=cls.perimetre, perimetre_racine=True,
         )
         cls.rh = Agent.objects.create_user("R0001", password="motdepasse123", last_name="TRAORE",
                                            first_name="Ibrahim", role=Agent.Role.RH, structure=cls.direction)
@@ -70,19 +74,23 @@ class ApiAntenneTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         region = Region.objects.create(nom="Gbeke", code="GBK", chef_lieu="Bouake")
-        cls.drenaet = Structure.objects.create(
-            nom="DRENAET de Bouake", sigle="DRENAET-GBK", type=Structure.Type.DRENAET, region=region
+        cls.drena = Structure.objects.create(
+            nom="DRENA de Bouake", sigle="DRENA-GBK", type=Structure.Type.DRENA, region=region
+        )
+        perimetre_antenne = Perimetre.objects.create(
+            code="APFC-GBK", nom="Antenne de Bouake", type=Perimetre.Type.ANTENNE, region=region
         )
         cls.antenne = Structure.objects.create(
             nom="Antenne de Bouake", sigle="APFC-GBK", type=Structure.Type.ANTENNE,
-            region=region, drenaet=cls.drenaet,
+            region=region, drena=cls.drena,
+            perimetre=perimetre_antenne, perimetre_racine=True,
         )
         cls.dr = Agent.objects.create_user(
             "G0001", password="motdepasse123", last_name="ADJOUMANI", first_name="Kouadio",
-            role=Agent.Role.DIRECTEUR_REGIONAL, structure=cls.drenaet,
+            role=Agent.Role.DIRECTEUR_REGIONAL, structure=cls.drena,
         )
-        cls.drenaet.responsable = cls.dr
-        cls.drenaet.save()
+        cls.drena.responsable = cls.dr
+        cls.drena.save()
         cls.chef = Agent.objects.create_user(
             "C0001", password="motdepasse123", last_name="KONE", first_name="Adama",
             role=Agent.Role.CHEF_ANTENNE, structure=cls.antenne,
@@ -107,13 +115,13 @@ class ApiAntenneTest(TestCase):
         creation = self.client.post(
             "/api/v1/demandes/",
             {"type": "ORDRE_MISSION", "motif": "Atelier national", "destination": "Abidjan",
-             "hors_perimetre_drenaet": True, "date_debut": str(debut),
+             "hors_perimetre_drena": True, "date_debut": str(debut),
              "date_fin": str(debut + timedelta(days=2))},
             content_type="application/json", **entetes,
         )
         self.assertEqual(creation.status_code, 201, creation.content)
         identifiant = creation.json()["id"]
-        self.assertEqual(creation.json()["autorite_signataire"], "DRENAET")
+        self.assertEqual(creation.json()["autorite_signataire"], "Directeur regional (DRENA)")
 
         depot = self.client.post(
             f"/api/v1/demandes/{identifiant}/pieces/",
@@ -131,7 +139,7 @@ class ApiAntenneTest(TestCase):
         self.assertEqual(soumission.status_code, 200)
         validations = soumission.json()["validations"]
         self.assertEqual(len(validations), 2)
-        self.assertIn("DRENAET", validations[-1]["libelle"])
+        self.assertIn("DRENA", validations[-1]["libelle"])
 
     def test_signature_mobile_a_la_derniere_etape(self):
         creer_cle(self.chef, CODE_SIGNATURE)

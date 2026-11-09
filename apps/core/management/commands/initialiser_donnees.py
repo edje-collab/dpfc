@@ -13,10 +13,10 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.models import ConfigurationSite, Region, Structure
-from apps.site_public import arborescence
-from apps.site_public.models import PageActualite, PageEvenement, PageProjet, Ressource
 from apps.rh.models import Demande, JourFerie, SoldeConge, TypeDemande
 from apps.rh.services import decider, soumettre
+from apps.site_public import arborescence
+from apps.site_public.models import PageActualite, PageEvenement, PageProjet, Ressource
 
 Agent = get_user_model()
 
@@ -362,12 +362,11 @@ class Command(BaseCommand):
         soumettre(mission)
 
         # 3. Permission en attente de decision du chef de service
-        Demande.objects.create(
+        permission = Demande.objects.create(
             agent=agents["agent_central"], type=TypeDemande.PERMISSION,
             motif="Demarches administratives personnelles.",
             date_debut=aujourdhui + timedelta(days=3), date_fin=aujourdhui + timedelta(days=3),
             heure_debut="08:00", heure_fin="12:00",
-        ).pk
-        permission = Demande.objects.filter(type=TypeDemande.PERMISSION).first()
+        )
         soumettre(permission)
         self.stdout.write("Demandes de demonstration creees.")

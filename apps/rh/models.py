@@ -6,7 +6,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.core.models import Horodate, Region, Structure
+from apps.core.models import Horodate, Perimetre, Region, Structure
 
 
 class JourFerie(models.Model):
@@ -142,6 +142,15 @@ class Demande(Horodate):
     structure = models.ForeignKey(
         Structure, on_delete=models.PROTECT, null=True, blank=True, related_name="demandes"
     )
+    perimetre = models.ForeignKey(
+        Perimetre,
+        verbose_name="perimetre de gestion",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="demandes",
+        help_text="Perimetre dans lequel l'acte est instruit et numerote.",
+    )
     type = models.CharField("type d'acte", max_length=25, choices=TypeDemande.choices)
     motif = models.TextField("motif / objet", help_text="Expliquez brievement la demande.")
     date_debut = models.DateField("du")
@@ -169,11 +178,11 @@ class Demande(Horodate):
     moyen_transport = models.CharField("moyen de transport", max_length=120, blank=True)
     structures_visitees = models.CharField("structures a visiter", max_length=250, blank=True)
     accompagnants = models.CharField("accompagnants", max_length=250, blank=True)
-    hors_perimetre_drenaet = models.BooleanField(
-        "mission hors du perimetre de la DRENAET",
+    hors_perimetre_drena = models.BooleanField(
+        "mission hors du ressort de la DRENA",
         default=False,
-        help_text="Cochez si le deplacement sort du perimetre de la direction regionale : "
-                  "l'ordre de mission est alors etabli par le DRENAET, sur presentation des "
+        help_text="Cochez si le deplacement sort du ressort de la direction regionale : "
+                  "l'ordre de mission est alors etabli par la DRENA, sur presentation des "
                   "termes de reference et de la lettre d'invitation ou d'information.",
     )
     termes_de_reference = models.FileField(
@@ -222,15 +231,16 @@ class Demande(Horodate):
 
     @property
     def est_mission_hors_perimetre(self):
-        return self.type == TypeDemande.ORDRE_MISSION and self.hors_perimetre_drenaet
+        return self.type == TypeDemande.ORDRE_MISSION and self.hors_perimetre_drena
 
     @property
     def autorite_signataire(self):
         """Autorite competente pour etablir l'acte."""
         if self.est_mission_hors_perimetre:
-            return "DRENAET"
-        if self.agent_id and self.agent.est_en_region:
-            return "Chef d'antenne (APFC)"
+            return "Directeur regional (DRENA)"
+        perimetre = self.perimetre or (self.agent.perimetre if self.agent_id else None)
+        if perimetre is not None and perimetre.est_autonome:
+            return perimetre.libelle_responsable
         return "Directeur de la pedagogie et de la formation continue"
 
     @property
@@ -269,7 +279,7 @@ class Demande(Horodate):
             manquants = {}
             if not self.termes_de_reference:
                 manquants["termes_de_reference"] = (
-                    "Les termes de reference sont exiges pour une mission hors perimetre DRENAET."
+                    "Les termes de reference sont exiges pour une mission hors du ressort de la DRENA."
                 )
             if not self.lettre_invitation:
                 manquants["lettre_invitation"] = (
@@ -294,6 +304,8 @@ class Demande(Horodate):
             self.nb_jours = jours_ouvrables(self.date_debut, self.date_fin)
         if not self.structure_id and self.agent_id:
             self.structure = self.agent.structure
+        if not self.perimetre_id and self.agent_id:
+            self.perimetre = self.agent.perimetre
         super().save(*args, **kwargs)
 
     def attribuer_numero(self):
@@ -309,14 +321,17 @@ class Demande(Horodate):
         }
         annee = timezone.localdate().year
         prefixe = prefixes.get(self.type, "DM")
+        perimetre = self.perimetre or (self.agent.perimetre if self.agent_id else None)
+        code = perimetre.code if perimetre is not None else "DPFC"
+        # Chaque perimetre tient sa propre serie annuelle.
         existants = set(
-            Demande.objects.filter(numero__startswith=f"{prefixe}-", numero__contains=f"/{annee}/")
+            Demande.objects.filter(numero__endswith=f"/{annee}/{code}")
             .values_list("numero", flat=True)
         )
-        rang = len(existants) + 1
-        while f"{prefixe}-{rang:04d}/{annee}/DPFC" in existants:
+        rang = sum(1 for n in existants if n.startswith(f"{prefixe}-")) + 1
+        while f"{prefixe}-{rang:04d}/{annee}/{code}" in existants:
             rang += 1
-        self.numero = f"{prefixe}-{rang:04d}/{annee}/DPFC"
+        self.numero = f"{prefixe}-{rang:04d}/{annee}/{code}"
         return self.numero
 
     def get_absolute_url(self):
@@ -334,7 +349,7 @@ class Demande(Horodate):
             self.date_fin.isoformat() if self.date_fin else "",
             str(self.nb_jours),
             self.destination or "",
-            "HORS_PERIMETRE" if self.est_mission_hors_perimetre else "PERIMETRE",
+            "HORS_RESSORT" if self.est_mission_hors_perimetre else "DANS_RESSORT",
             (self.motif or "").strip(),
         ]
         return "|".join(elements)

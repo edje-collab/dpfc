@@ -1,34 +1,55 @@
 # Portail de la Direction de la Pédagogie et de la Formation Continue (DPFC)
 
-Projet **monolithique Django** réunissant dans un seul dépôt :
+Plateforme de gestion de la direction, **monolithe Django modulaire** réunissant dans un seul dépôt :
 
 | Brique | Description |
 |---|---|
 | **Site public** | Géré par **Wagtail** (CMS, administration sur `/cms/`), accessible sans compte : actualités, ressources pédagogiques, FOAD, projets, agenda, antennes régionales, contact. Contenu par blocs, médiathèque, brouillons/publication, prévisualisation. |
-| **Intranet agents** | Espace authentifié : consignation des actes administratifs (congé, permission, ordre de mission, absence, formation), circuit de validation hiérarchique, planning, registre, annuaire. |
+| **Plateforme de gestion** | Espace authentifié : actes administratifs (congé, permission, ordre de mission, absence, formation), circuits de validation **paramétrables par périmètre**, planning, registre, annuaire. |
 | **API REST** | `/api/v1/` avec jetons JWT, consommée par l'application mobile **Flutter** livrée dans `mobile/`. |
 | **Signature électronique** | Bi-clés RSA 2048 par signataire, scellement SHA-256 des actes, page publique de vérification et QR code sur le document. |
 
-L'organisation reflète la réalité de la direction : une **direction centrale (nationale)** avec ses sous-directions et services, et des **antennes de la pédagogie et de la formation continue** en région. Chaque agent est rattaché à l'une ou l'autre, ce qui détermine automatiquement son circuit de validation.
+L'organisation suit le **décret n° 2026-509 du 05 août 2026** : la DPFC relève de la Direction Générale de la Pédagogie, des Curricula et du Suivi des Programmes et comprend trois sous-directions. S'y ajoutent, par arrêté, des structures à **gestion autonome** — les antennes régionales (APFC), dirigées par un chef d'antenne, et le **CNRPN**, dirigé par un chef de centre.
+
+Chaque agent relève d'un **périmètre de gestion** qui détermine son circuit de validation, la numérotation de ses actes et ce que son responsable peut voir. Voir [docs/organisation.md](docs/organisation.md).
 
 ---
 
 ## 1. Démarrage rapide
 
+Avec Docker, voir [§ 9](#9-déploiement). En local, sans conteneur :
+
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env                 # ajuster la clé secrète
+```
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+```bash
+cp .env.example .env
+```
+
+Laissez `POSTGRES_HOST` vide dans `.env` pour démarrer sur SQLite, puis :
+
+```bash
 python manage.py migrate
+```
+
+```bash
 python manage.py initialiser_dpfc --demo
+```
+
+```bash
 python manage.py runserver
 ```
 
 - Site public : http://127.0.0.1:8000/
 - Administration du site public (Wagtail) : http://127.0.0.1:8000/cms/ (`ADMIN01` / `dpfc2026!`)
 - Espace agent : http://127.0.0.1:8000/intranet/connexion/
-- Administration de l'espace agent (Django) : http://127.0.0.1:8000/admin/ (`ADMIN01` / `dpfc2026!`)
-- API : http://127.0.0.1:8000/api/v1/
+- Administration de la plateforme (Django) : http://127.0.0.1:8000/admin/ (`ADMIN01` / `dpfc2026!`)
+- API : http://127.0.0.1:8000/api/v1/ — documentation : http://127.0.0.1:8000/api/v1/docs/
 
 **Comptes de démonstration** (le mot de passe initial est le matricule) :
 
@@ -42,7 +63,8 @@ python manage.py runserver
 | `200001B` | Chef d'antenne APFC (Bouaké) | décide seul des actes de son antenne |
 | `200005B` | Secrétariat d'antenne (Bouaké) | dépose les demandes des agents de l'antenne |
 | `200002B` | Agent (antenne de Bouaké) | dépôt de demandes |
-| `300001B` | Directeur régional DRENAET (Bouaké) | établit les ODM hors périmètre |
+| `300001B` | Directeur régional DRENA (Bouaké) | établit les ODM hors ressort |
+| `400001N` | Chef de centre (CNRPN) | décide pour les agents du centre |
 
 Les autorités signataires du jeu de démonstration disposent d'une clé de signature dont le code est `signature2026`.
 
@@ -52,10 +74,12 @@ Les autorités signataires du jeu de démonstration disposent d'une clé de sign
 dpfc/
 ├── config/              paramètres, URLs, WSGI/ASGI
 ├── apps/
-│   ├── core/            régions, structures (direction, sous-directions, services, antennes),
+│   ├── core/            régions, périmètres de gestion, structures (direction générale,
+│   │                    direction, sous-directions, antennes, CNRPN, services extérieurs),
 │   │                    configuration éditoriale, journal d'audit
 │   ├── accounts/        modèle Agent (connexion par matricule), rôles, notifications,
 │   │                    annuaire, organigramme, gestion des comptes
+│   ├── circuits/        circuits de validation paramétrables par périmètre et type d'acte
 │   ├── site_public/     site public Wagtail : pages (accueil, éditoriales, actualités, projets,
 │   │                    événements, antennes, contact), snippets (ressources, catégories, messages)
 │   ├── rh/              actes administratifs, circuit de validation, soldes de congé,
@@ -66,20 +90,41 @@ dpfc/
 ├── templates/intranet/  gabarits de l'espace agent
 ├── static/              CSS, JS, images
 ├── mobile/              application Flutter (client de l'API)
-└── deploiement/         systemd, Nginx, Docker
+├── infra/               Dockerfile, Docker Compose, Nginx
+├── docs/                organisation, décisions d'architecture, schéma OpenAPI
+└── deploiement/         systemd, Nginx (déploiement sans conteneur)
 ```
 
 ## 3. Modèle d'organisation
 
+Conforme au décret n° 2026-509 du 05 août 2026 — détail dans [docs/organisation.md](docs/organisation.md).
+
 - `Region` : région administrative et chef-lieu.
-- `Structure` : `DIRECTION`, `SOUS_DIRECTION`, `SERVICE`, `DRENAET`, `ANTENNE`, `BUREAU`, avec un `parent` et un `rattachement` (`CENTRALE` ou `REGION`). Chaque antenne (APFC) porte une région et un champ `drenaet` : la direction régionale dans le périmètre de laquelle elle exerce.
-- `Agent` : compte de connexion (matricule ou courriel), affectation à une structure, supérieur hiérarchique, rôle (`AGENT`, `SECRETARIAT`, `CHEF_SERVICE`, `SOUS_DIRECTEUR`, `CHEF_ANTENNE`, `DIRECTEUR_REGIONAL`, `RH`, `DIRECTEUR`, `ADMIN`) et situation administrative (en poste, en congé, en mission…).
+- `Perimetre` : **unité de gestion autonome**, de type `CENTRALE` (la DPFC), `ANTENNE` (une par APFC) ou `CENTRE` (le CNRPN). C'est dans le périmètre que les actes sont instruits, numérotés et pilotés. Sa structure de tête (`perimetre_racine`) désigne le responsable : directeur, chef d'antenne ou chef de centre.
+- `Structure` : `DIRECTION_GENERALE`, `DIRECTION`, `SOUS_DIRECTION`, `SERVICE`, `CENTRE`, `ANTENNE`, `BUREAU`, `DRENA`, `DDENA`, `DRETPI`, avec un `parent`, un `rattachement` (`CENTRALE` ou `REGION`) et un `perimetre`. Chaque antenne porte une région et un champ `drena` : la direction régionale dans le ressort de laquelle elle exerce.
+- `Agent` : compte de connexion (matricule ou courriel), affectation à une structure — dont il hérite son périmètre —, supérieur hiérarchique, rôle (`AGENT`, `SECRETARIAT`, `CHEF_SERVICE`, `SOUS_DIRECTEUR`, `CHEF_ANTENNE`, `CHEF_CENTRE`, `DIRECTEUR_REGIONAL`, `RH`, `DIRECTEUR`, `DIRECTEUR_GENERAL`, `ADMIN`) et situation administrative.
+
+Organigramme livré par `initialiser_dpfc` :
+
+```
+DGPCSP  Direction Générale de la Pédagogie, des Curricula et du Suivi des Programmes
+└── DPFC  Direction de la Pédagogie et de la Formation Continue      ← périmètre DPFC
+    ├── SDPPBS  Sous-direction des Programmes Pédagogiques et des Bibliothèques Scolaires
+    ├── SDIP    Sous-direction des Innovations Pédagogiques
+    ├── SDFPC   Sous-direction de la Formation Pédagogique Continue
+    ├── SPAA    Service du personnel et des affaires administratives
+    ├── CNRPN   Centre National de Ressources Pédagogiques Numériques  ← périmètre CNRPN
+    └── APFC-*  Antennes régionales de la pédagogie et de la formation continue
+                                                                       ← un périmètre chacune
+```
 
 ## 4. Actes administratifs et circuit de validation
 
 Types gérés : congé annuel, congé exceptionnel, permission d'absence, ordre de mission, déclaration d'absence, demande de formation.
 
-### 4.1 Antennes (APFC) — autonomie de gestion
+Les circuits ne sont plus codés : ils sont **paramétrés par périmètre et par type d'acte** dans l'administration (`/admin/` → Circuits de validation). Ce qui suit décrit les circuits livrés par défaut. Voir [ADR 0003](docs/adr/0003-circuits-parametrables.md).
+
+### 4.1 Antennes (APFC) et CNRPN — autonomie de gestion
 
 Chaque antenne gère son personnel sans remontée au niveau central :
 
@@ -90,19 +135,23 @@ Agent d'antenne → chef d'antenne (APFC)        [une seule étape, décision d�
 
 Le secrétariat (rôle `SECRETARIAT`) dépose la demande pour le compte de l'agent : tableau de bord → « Dépôt au secrétariat pour un agent ». La demande reste celle de l'agent ; le déposant est tracé dans le champ `depose_par`.
 
-**Exception — mission hors du périmètre de la DRENAET :**
+**Exception — mission hors du ressort de la DRENA :**
 
 ```
-Agent d'antenne → chef d'antenne (avis) → DRENAET (établissement et signature de l'ODM)
+Agent d'antenne → chef d'antenne (avis) → DRENA (établissement et signature de l'ODM)
 ```
 
-L'agent coche « mission hors du périmètre de la DRENAET » et joint obligatoirement :
+L'agent coche « mission hors du ressort de la DRENA » et joint obligatoirement :
 - les **termes de référence** (TDR) ;
 - la **lettre d'invitation ou d'information** de la structure d'accueil.
 
-Sans ces deux pièces, la transmission est bloquée (validation côté formulaire et côté modèle). Le document produit porte alors la mention « établi par le DRENAET » comme autorité signataire.
+Sans ces deux pièces, la transmission est bloquée (validation côté formulaire et côté modèle). Le document produit porte alors « Directeur régional (DRENA) » comme autorité signataire.
 
-Les actes du chef d'antenne lui-même remontent au DRENAET, puis à la direction centrale lorsque le type d'acte l'exige.
+Les actes du chef d'antenne lui-même remontent à la DRENA, puis à la direction centrale lorsque le type d'acte l'exige.
+
+**Le CNRPN** suit le même principe : le chef de centre décide seul pour ses agents. N'ayant pas de ressort régional, ses propres actes remontent directement au service du personnel ou au directeur.
+
+Les actes sont numérotés par périmètre, chacun tenant sa série annuelle : `PA-0001/2026/DPFC`, `PA-0001/2026/APFC-GBK`, `PA-0001/2026/CNRPN`.
 
 ### 4.2 Direction centrale
 
@@ -162,6 +211,12 @@ python manage.py importer_agents agents.xlsx --appliquer
 
 ## 7. API REST (application Flutter)
 
+Schéma OpenAPI : [docs/api/openapi.yml](docs/api/openapi.yml), exploré en ligne sur `/api/v1/docs/`. Pour le régénérer :
+
+```bash
+python manage.py spectacular --file docs/api/openapi.yml
+```
+
 | Méthode | Chemin | Rôle |
 |---|---|---|
 | POST | `/api/v1/auth/connexion/` | jeton JWT + profil de l'agent |
@@ -185,31 +240,76 @@ flutter pub get
 flutter run          # adapter baseUrl dans lib/services/api.dart
 ```
 
-Elle couvre le parcours de terrain complet : dépôt d'un acte, bascule « mission hors périmètre DRENAET » avec envoi des TDR et de la lettre d'invitation depuis le téléphone, suivi du circuit, décision du chef d'antenne ou du DRENAET avec saisie du code de signature à la dernière étape, et vérification d'un acte par son code.
+Elle couvre le parcours de terrain complet : dépôt d'un acte, bascule « mission hors du ressort de la DRENA » avec envoi des TDR et de la lettre d'invitation depuis le téléphone, suivi du circuit, décision du chef d'antenne ou du directeur régional avec saisie du code de signature à la dernière étape, et vérification d'un acte par son code.
 
-## 8. Tests
+## 8. Tests et qualité
 
 ```bash
-python manage.py test
+python manage.py test --settings=config.settings.test
 ```
 
-56 tests couvrent le calcul des jours ouvrables, les deux régimes de validation (autonomie des antennes, exception DRENAET, circuit central), le dépôt par le secrétariat, le parcours complet d'une demande, le rejet, les droits d'accès, la signature électronique (création de clé, signature, détection de modification, révocation, vérification publique), l'import Excel/CSV, les pages publiques et l'API (dépôt de pièces, signature mobile, vérification).
-
-## 9. Mise en production
+```bash
+pytest
+```
 
 ```bash
-export DJANGO_DEBUG=False
+ruff check apps config
+```
+
+76 tests couvrent les périmètres de gestion (héritage par l'agent, cloisonnement de la visibilité, numérotation par périmètre), les circuits paramétrables (circuit central, autonomie de l'antenne et du CNRPN, mission hors ressort, acte du responsable, circuit propre à un périmètre, étape sans titulaire), le calcul des jours ouvrables, le dépôt par le secrétariat, le parcours complet d'une demande, le rejet, les droits d'accès, la signature électronique, l'import Excel/CSV, les pages publiques et l'API.
+
+## 9. Déploiement
+
+La pile est alignée sur celle d'e-PECU : PostgreSQL, Celery et Redis, stockage objet S3/MinIO, Nginx devant gunicorn ([ADR 0004](docs/adr/0004-pile-alignee-sur-e-pecu.md)).
+
+### En conteneurs
+
+```bash
+cp .env.example .env
+```
+
+```bash
+docker compose -f infra/compose/docker-compose.dev.yml up -d --build
+```
+
+```bash
+docker compose -f infra/compose/docker-compose.dev.yml exec web python manage.py migrate
+```
+
+```bash
+docker compose -f infra/compose/docker-compose.dev.yml exec web python manage.py initialiser_dpfc --demo
+```
+
+| Service | Adresse |
+|---|---|
+| Application | http://localhost:8000 |
+| Documentation de l'API | http://localhost:8000/api/v1/docs/ |
+| Courriels capturés (mailpit) | http://localhost:8026 |
+| Console MinIO | http://localhost:9001 |
+
+### Sans conteneur
+
+```bash
+export DJANGO_SETTINGS_MODULE=config.settings.prod
 export DJANGO_SECRET_KEY="..."
 export DJANGO_ALLOWED_HOSTS="dpfc.education.ci"
-export DATABASE_URL="postgres://utilisateur:motdepasse@hote:5432/dpfc"
+export POSTGRES_HOST=... POSTGRES_DB=dpfc POSTGRES_USER=dpfc POSTGRES_PASSWORD=...
 python manage.py migrate
 python manage.py collectstatic --noinput
 gunicorn config.wsgi:application --workers 3 --bind unix:/run/dpfc.sock
 ```
 
-Modèles fournis dans `deploiement/` : service systemd, configuration Nginx (TLS, `/static/`, `/media/`), `Dockerfile` et `docker-compose.yml` avec PostgreSQL.
+Les tâches de fond (relances sur les actes en attente, rappels de rapport de mission) tournent dans un worker Celery et son ordonnanceur :
 
-En production, HTTPS obligatoire, cookies sécurisés, HSTS et `X-Frame-Options` sont activés automatiquement dès que `DJANGO_DEBUG=False`.
+```bash
+celery -A config worker -l info
+```
+
+```bash
+celery -A config beat -l info
+```
+
+Avec `config.settings.prod`, HTTPS, cookies sécurisés, HSTS, `X-Frame-Options` et le verrouillage après échecs de connexion (`django-axes`) sont actifs.
 
 ## 10. Exploitation courante
 
@@ -223,3 +323,5 @@ En production, HTTPS obligatoire, cookies sécurisés, HSTS et `X-Frame-Options`
 - **Identité, coordonnées, pied de page, bouton « Espace agent »** : Wagtail → Paramètres → Configuration du site.
 - **Comptes des rédacteurs du site** : ce sont des agents (même modèle) ; leur donner l'accès à Wagtail via Paramètres → Groupes (groupes « Editors » / « Moderators » créés par Wagtail).
 - **Jours fériés** : espace agent → Jours fériés (réservé au service du personnel).
+- **Modifier un circuit de validation** : `/admin/` → Circuits de validation. Choisir le type d'acte et le périmètre, puis ordonner les étapes. Pour revenir aux circuits livrés : `python manage.py installer_circuits --remplacer`.
+- **Créer une antenne ou un service autonome** : `/admin/` → Périmètres de gestion (code, type, région), puis la structure de tête correspondante en cochant « structure de tête du périmètre » et en désignant son responsable.

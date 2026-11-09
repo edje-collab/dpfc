@@ -12,7 +12,7 @@ CHAMPS_PAR_TYPE = {
     TypeDemande.PERMISSION: ["heure_debut", "heure_fin", "contact_pendant_absence"],
     TypeDemande.ORDRE_MISSION: [
         "destination", "region_mission", "moyen_transport", "structures_visitees", "accompagnants",
-        "hors_perimetre_drenaet", "termes_de_reference", "lettre_invitation",
+        "hors_perimetre_drena", "termes_de_reference", "lettre_invitation",
     ],
     TypeDemande.ABSENCE: ["contact_pendant_absence"],
     TypeDemande.FORMATION: ["destination", "structures_visitees"],
@@ -24,8 +24,8 @@ AIDE_PAR_TYPE = {
     TypeDemande.PERMISSION: "Absence courte, de quelques heures a cinq jours ouvrables.",
     TypeDemande.ORDRE_MISSION: (
         "Deplacement professionnel. Un rapport sera attendu au retour. Si la mission sort du "
-        "perimetre de la DRENAET, joignez les termes de reference et la lettre d'invitation : "
-        "l'ordre de mission est alors etabli par le DRENAET."
+        "ressort de la DRENA, joignez les termes de reference et la lettre d'invitation : "
+        "l'ordre de mission est alors etabli par la DRENA."
     ),
     TypeDemande.ABSENCE: "Declaration d'une absence deja survenue, avec justificatif.",
     TypeDemande.FORMATION: "Participation a une formation, un atelier ou un seminaire.",
@@ -71,7 +71,7 @@ class DemandeForm(forms.ModelForm):
             if nom not in autorises:
                 self.fields.pop(nom)
         if depot_pour_autrui and agent is not None:
-            self.fields["agent_concerne"].queryset = agent.agents_de_mon_antenne()
+            self.fields["agent_concerne"].queryset = agent.agents_de_mon_perimetre()
             self.fields["agent_concerne"].required = True
             self.fields["agent_concerne"].empty_label = "Choisir l'agent"
         if "interimaire" in self.fields and agent is not None:
@@ -99,16 +99,16 @@ class DemandeForm(forms.ModelForm):
             self.instance.agent = beneficiaire
         elif self.agent is not None and not self.instance.agent_id:
             self.instance.agent = self.agent
-        if self.type_acte == TypeDemande.ORDRE_MISSION and donnees.get("hors_perimetre_drenaet"):
+        if self.type_acte == TypeDemande.ORDRE_MISSION and donnees.get("hors_perimetre_drena"):
             if not (donnees.get("termes_de_reference") or self.instance.termes_de_reference):
                 self.add_error(
                     "termes_de_reference",
-                    "Mission hors perimetre DRENAET : joignez les termes de reference.",
+                    "Mission hors du ressort de la DRENA : joignez les termes de reference.",
                 )
             if not (donnees.get("lettre_invitation") or self.instance.lettre_invitation):
                 self.add_error(
                     "lettre_invitation",
-                    "Mission hors perimetre DRENAET : joignez la lettre d'invitation ou d'information.",
+                    "Mission hors du ressort de la DRENA : joignez la lettre d'invitation ou d'information.",
                 )
         return donnees
 

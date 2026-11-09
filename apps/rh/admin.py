@@ -13,8 +13,8 @@ class ValidationInline(admin.TabularInline):
 @admin.register(Demande)
 class DemandeAdmin(admin.ModelAdmin):
     list_display = ("numero", "type", "agent", "date_debut", "date_fin", "nb_jours",
-                    "hors_perimetre_drenaet", "statut")
-    list_filter = ("type", "statut", "hors_perimetre_drenaet", "agent__structure__rattachement",
+                    "hors_perimetre_drena", "statut")
+    list_filter = ("type", "statut", "hors_perimetre_drena", "agent__structure__rattachement",
                    "agent__structure")
     search_fields = ("numero", "agent__last_name", "agent__matricule", "motif", "destination")
     date_hierarchy = "date_debut"

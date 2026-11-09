@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.core.models import Structure
+from apps.core.models import Perimetre, Structure
 from apps.rh.models import Demande, TypeDemande
 from apps.signature.models import CleSignature, SignatureElectronique
 from apps.signature.services import (
@@ -23,13 +23,19 @@ CODE = "signature2026"
 class SignatureTest(TestCase):
     @classmethod
     def setUpTestData(cls):
+        perimetre = Perimetre.objects.create(
+            code="APFC-GBK", nom="Antenne de Bouake", type=Perimetre.Type.ANTENNE
+        )
         cls.region_structure = Structure.objects.create(
-            nom="Antenne de Bouake", sigle="APFC-GBK", type=Structure.Type.ANTENNE
+            nom="Antenne de Bouake", sigle="APFC-GBK", type=Structure.Type.ANTENNE,
+            perimetre=perimetre, perimetre_racine=True,
         )
         cls.chef = Agent.objects.create_user(
             "C0001", password="motdepasse123", last_name="KONE", first_name="Adama",
             role=Agent.Role.CHEF_ANTENNE, structure=cls.region_structure, fonction="Chef d'antenne",
         )
+        cls.region_structure.responsable = cls.chef
+        cls.region_structure.save()
         cls.agent = Agent.objects.create_user(
             "A0001", password="motdepasse123", last_name="OUATTARA", first_name="Fatoumata",
             structure=cls.region_structure, superieur=cls.chef,

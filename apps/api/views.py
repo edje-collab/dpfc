@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from rest_framework import permissions, status, viewsets
+from drf_spectacular.utils import extend_schema
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -9,12 +10,12 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.accounts.models import Notification
-from apps.site_public.models import PageActualite, PageEvenement, PageProjet, Ressource
 from apps.core.models import Structure
-from apps.rh.models import Demande, RapportMission, SoldeConge, Validation
+from apps.rh.models import Demande, RapportMission, SoldeConge
 from apps.rh.services import annuler, decider, demandes_a_traiter, soumettre
 from apps.signature.models import SignatureElectronique
 from apps.signature.services import ErreurSignature, signer_demande, verifier_signature
+from apps.site_public.models import PageActualite, PageEvenement, PageProjet, Ressource
 
 from . import serializers as s
 
@@ -34,6 +35,11 @@ class MonProfilView(RetrieveUpdateAPIView):
 
 
 class ChangerMotDePasseView(APIView):
+    serializer_class = s.ChangementMotDePasseSerializer
+
+    @extend_schema(
+        request=s.ChangementMotDePasseSerializer, responses=s.MessageSerializer
+    )
     def post(self, request):
         ancien = request.data.get("ancien_mot_de_passe", "")
         nouveau = request.data.get("nouveau_mot_de_passe", "")
@@ -48,6 +54,9 @@ class ChangerMotDePasseView(APIView):
 
 
 class SoldeView(APIView):
+    serializer_class = s.SoldeSerializer
+
+    @extend_schema(responses=s.SoldeSerializer)
     def get(self, request):
         annee = int(request.query_params.get("annee", timezone.localdate().year))
         solde = SoldeConge.pour(request.user, annee)
@@ -58,6 +67,7 @@ class DemandeViewSet(viewsets.ModelViewSet):
     """Actes administratifs de l'agent connecte."""
 
     serializer_class = s.DemandeSerializer
+    queryset = Demande.objects.none()  # le vrai filtrage est dans get_queryset
 
     def get_queryset(self):
         qs = Demande.objects.select_related("agent").prefetch_related("validations__valideur")
@@ -177,7 +187,9 @@ class VerificationView(APIView):
     """Verification publique d'un acte signe, a partir de son code."""
 
     permission_classes = [permissions.AllowAny]
+    serializer_class = s.VerificationSerializer
 
+    @extend_schema(responses=s.VerificationSerializer)
     def get(self, request, code):
         signature = (
             SignatureElectronique.objects.filter(code_verification__iexact=code)
@@ -206,6 +218,7 @@ class VerificationView(APIView):
 
 class RapportMissionViewSet(viewsets.ModelViewSet):
     serializer_class = s.RapportMissionSerializer
+    queryset = RapportMission.objects.none()
 
     def get_queryset(self):
         return RapportMission.objects.filter(demande__agent=self.request.user)
@@ -213,6 +226,7 @@ class RapportMissionViewSet(viewsets.ModelViewSet):
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = s.NotificationSerializer
+    queryset = Notification.objects.none()
 
     def get_queryset(self):
         return Notification.objects.filter(destinataire=self.request.user)

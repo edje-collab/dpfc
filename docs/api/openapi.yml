@@ -1,0 +1,2539 @@
+openapi: 3.0.3
+info:
+  title: API du portail DPFC
+  version: 3.0.0
+  description: Plateforme de gestion de la Direction de la Pedagogie et de la Formation
+    Continue.
+paths:
+  /api/v1/annuaire/:
+    get:
+      operationId: annuaire_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - annuaire
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAgentList'
+          description: ''
+  /api/v1/annuaire/{id}/:
+    get:
+      operationId: annuaire_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this agent.
+        required: true
+      tags:
+      - annuaire
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+          description: ''
+  /api/v1/auth/connexion/:
+    post:
+      operationId: auth_connexion_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnexionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConnexionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConnexionRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/rafraichir/:
+    post:
+      operationId: auth_rafraichir_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/auth/verifier/:
+    post:
+      operationId: auth_verifier_create
+      description: |-
+        Takes a token and indicates if it is valid.  This view provides no
+        information about a token's fitness for a particular use.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+        required: true
+      responses:
+        '200':
+          description: No response body
+  /api/v1/demandes/:
+    get:
+      operationId: demandes_list
+      description: Actes administratifs de l'agent connecte.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - demandes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDemandeList'
+          description: ''
+    post:
+      operationId: demandes_create
+      description: Actes administratifs de l'agent connecte.
+      tags:
+      - demandes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Demande'
+          description: ''
+  /api/v1/demandes/{id}/:
+    get:
+      operationId: demandes_retrieve
+      description: Actes administratifs de l'agent connecte.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this demande.
+        required: true
+      tags:
+      - demandes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Demande'
+          description: ''
+    put:
+      operationId: demandes_update
+      description: Actes administratifs de l'agent connecte.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this demande.
+        required: true
+      tags:
+      - demandes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Demande'
+          description: ''
+    patch:
+      operationId: demandes_partial_update
+      description: Actes administratifs de l'agent connecte.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this demande.
+        required: true
+      tags:
+      - demandes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDemandeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDemandeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDemandeRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Demande'
+          description: ''
+    delete:
+      operationId: demandes_destroy
+      description: Actes administratifs de l'agent connecte.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this demande.
+        required: true
+      tags:
+      - demandes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/demandes/{id}/annuler/:
+    post:
+      operationId: demandes_annuler_create
+      description: Actes administratifs de l'agent connecte.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this demande.
+        required: true
+      tags:
+      - demandes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Demande'
+          description: ''
+  /api/v1/demandes/{id}/decision/:
+    post:
+      operationId: demandes_decision_create
+      description: |-
+        Avis favorable ou rejet. Si `code_signature` est fourni et que le valideur
+        dispose d'une cle valide, la signature electronique est apposee dans la foulee.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this demande.
+        required: true
+      tags:
+      - demandes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Demande'
+          description: ''
+  /api/v1/demandes/{id}/pieces/:
+    post:
+      operationId: demandes_pieces_create
+      description: |-
+        Depot des pieces jointes depuis le terrain : termes de reference,
+        lettre d'invitation, piece justificative.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this demande.
+        required: true
+      tags:
+      - demandes
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Demande'
+          description: ''
+  /api/v1/demandes/{id}/soumettre/:
+    post:
+      operationId: demandes_soumettre_create
+      description: Actes administratifs de l'agent connecte.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this demande.
+        required: true
+      tags:
+      - demandes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DemandeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Demande'
+          description: ''
+  /api/v1/demandes/a-valider/:
+    get:
+      operationId: demandes_a_valider_retrieve
+      description: Actes administratifs de l'agent connecte.
+      tags:
+      - demandes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Demande'
+          description: ''
+  /api/v1/moi/:
+    get:
+      operationId: moi_retrieve
+      tags:
+      - moi
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+          description: ''
+    put:
+      operationId: moi_update
+      tags:
+      - moi
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+          description: ''
+    patch:
+      operationId: moi_partial_update
+      tags:
+      - moi
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAgentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAgentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAgentRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+          description: ''
+  /api/v1/moi/mot-de-passe/:
+    post:
+      operationId: moi_mot_de_passe_create
+      tags:
+      - moi
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangementMotDePasseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangementMotDePasseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangementMotDePasseRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/v1/moi/solde/:
+    get:
+      operationId: moi_solde_retrieve
+      tags:
+      - moi
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Solde'
+          description: ''
+  /api/v1/notifications/:
+    get:
+      operationId: notifications_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+  /api/v1/notifications/{id}/:
+    get:
+      operationId: notifications_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/v1/notifications/tout-lire/:
+    post:
+      operationId: notifications_tout_lire_create
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/v1/public/actualites/:
+    get:
+      operationId: public_actualites_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - public
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedActualiteList'
+          description: ''
+  /api/v1/public/actualites/{slug}/:
+    get:
+      operationId: public_actualites_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          description: Le nom de la page comme elle apparaîtra dans l'URL e.g http://domain.com/blog/[my-slug]/
+        required: true
+      tags:
+      - public
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Actualite'
+          description: ''
+  /api/v1/public/antennes/:
+    get:
+      operationId: public_antennes_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - public
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStructureList'
+          description: ''
+  /api/v1/public/antennes/{slug}/:
+    get:
+      operationId: public_antennes_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          title: Identifiant d'URL
+        required: true
+      tags:
+      - public
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Structure'
+          description: ''
+  /api/v1/public/evenements/:
+    get:
+      operationId: public_evenements_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - public
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEvenementList'
+          description: ''
+  /api/v1/public/evenements/{slug}/:
+    get:
+      operationId: public_evenements_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          description: Le nom de la page comme elle apparaîtra dans l'URL e.g http://domain.com/blog/[my-slug]/
+        required: true
+      tags:
+      - public
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Evenement'
+          description: ''
+  /api/v1/public/projets/:
+    get:
+      operationId: public_projets_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - public
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjetList'
+          description: ''
+  /api/v1/public/projets/{slug}/:
+    get:
+      operationId: public_projets_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          description: Le nom de la page comme elle apparaîtra dans l'URL e.g http://domain.com/blog/[my-slug]/
+        required: true
+      tags:
+      - public
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Projet'
+          description: ''
+  /api/v1/public/ressources/:
+    get:
+      operationId: public_ressources_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - public
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRessourceList'
+          description: ''
+  /api/v1/public/ressources/{slug}/:
+    get:
+      operationId: public_ressources_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - public
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ressource'
+          description: ''
+  /api/v1/rapports-mission/:
+    get:
+      operationId: rapports_mission_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - rapports-mission
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRapportMissionList'
+          description: ''
+    post:
+      operationId: rapports_mission_create
+      tags:
+      - rapports-mission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RapportMissionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RapportMissionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RapportMissionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RapportMission'
+          description: ''
+  /api/v1/rapports-mission/{id}/:
+    get:
+      operationId: rapports_mission_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this rapport de mission.
+        required: true
+      tags:
+      - rapports-mission
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RapportMission'
+          description: ''
+    put:
+      operationId: rapports_mission_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this rapport de mission.
+        required: true
+      tags:
+      - rapports-mission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RapportMissionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RapportMissionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RapportMissionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RapportMission'
+          description: ''
+    patch:
+      operationId: rapports_mission_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this rapport de mission.
+        required: true
+      tags:
+      - rapports-mission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRapportMissionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRapportMissionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRapportMissionRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RapportMission'
+          description: ''
+    delete:
+      operationId: rapports_mission_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this rapport de mission.
+        required: true
+      tags:
+      - rapports-mission
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/verification/{code}/:
+    get:
+      operationId: verification_retrieve
+      description: Verification publique d'un acte signe, a partir de son code.
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      tags:
+      - verification
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Verification'
+          description: ''
+components:
+  schemas:
+    Actualite:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        titre:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          description: Le nom de la page comme elle apparaîtra dans l'URL e.g http://domain.com/blog/[my-slug]/
+          pattern: ^[-\w]+$
+          maxLength: 255
+        chapeau:
+          type: string
+          description: Resume affiche dans les listes.
+          maxLength: 300
+        contenu:
+          type: string
+          readOnly: true
+        image:
+          type: string
+          nullable: true
+          readOnly: true
+        categorie:
+          type: string
+          readOnly: true
+        date_publication:
+          type: string
+          format: date-time
+          title: Date de publication
+        url:
+          type: string
+          readOnly: true
+      required:
+      - categorie
+      - chapeau
+      - contenu
+      - id
+      - image
+      - slug
+      - titre
+      - url
+    Agent:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        matricule:
+          type: string
+          readOnly: true
+        civilite:
+          $ref: '#/components/schemas/CiviliteEnum'
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prenoms
+          maxLength: 150
+        nom_complet:
+          type: string
+          readOnly: true
+        email:
+          title: Courriel professionnel
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        telephone:
+          type: string
+          maxLength: 40
+        photo:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        fonction:
+          type: string
+          maxLength: 150
+        grade:
+          type: string
+          maxLength: 100
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          readOnly: true
+          title: Role dans le portail
+        role_libelle:
+          type: string
+          readOnly: true
+        situation:
+          allOf:
+          - $ref: '#/components/schemas/SituationEnum'
+          readOnly: true
+          title: Situation administrative
+        structure:
+          allOf:
+          - $ref: '#/components/schemas/Structure'
+          readOnly: true
+        affectation:
+          type: string
+          readOnly: true
+        doit_changer_mot_de_passe:
+          type: boolean
+          title: Doit changer son mot de passe
+      required:
+      - affectation
+      - first_name
+      - id
+      - last_name
+      - matricule
+      - nom_complet
+      - photo
+      - role
+      - role_libelle
+      - situation
+      - structure
+    AgentRequest:
+      type: object
+      properties:
+        civilite:
+          $ref: '#/components/schemas/CiviliteEnum'
+        last_name:
+          type: string
+          minLength: 1
+          title: Nom
+          maxLength: 150
+        first_name:
+          type: string
+          minLength: 1
+          title: Prenoms
+          maxLength: 150
+        email:
+          title: Courriel professionnel
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        telephone:
+          type: string
+          maxLength: 40
+        fonction:
+          type: string
+          maxLength: 150
+        grade:
+          type: string
+          maxLength: 100
+        doit_changer_mot_de_passe:
+          type: boolean
+          title: Doit changer son mot de passe
+      required:
+      - first_name
+      - last_name
+    ChangementMotDePasseRequest:
+      type: object
+      properties:
+        ancien_mot_de_passe:
+          type: string
+          writeOnly: true
+          minLength: 1
+        nouveau_mot_de_passe:
+          type: string
+          writeOnly: true
+          minLength: 8
+      required:
+      - ancien_mot_de_passe
+      - nouveau_mot_de_passe
+    CiviliteEnum:
+      enum:
+      - M
+      - MME
+      type: string
+      description: |-
+        * `M` - Monsieur
+        * `MME` - Madame
+    ConnexionRequest:
+      type: object
+      description: Ajoute le profil de l'agent a la reponse de connexion.
+      properties:
+        matricule:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - matricule
+      - password
+    DecisionEnum:
+      enum:
+      - ATTENTE
+      - FAVORABLE
+      - DEFAVORABLE
+      - IGNOREE
+      type: string
+      description: |-
+        * `ATTENTE` - En attente
+        * `FAVORABLE` - Avis favorable
+        * `DEFAVORABLE` - Avis defavorable
+        * `IGNOREE` - Etape sans objet
+    Demande:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        numero:
+          type: string
+          readOnly: true
+          nullable: true
+        type:
+          allOf:
+          - $ref: '#/components/schemas/DemandeTypeEnum'
+          title: Type d'acte
+        type_libelle:
+          type: string
+          readOnly: true
+        agent_nom:
+          type: string
+          readOnly: true
+        agent_matricule:
+          type: string
+          readOnly: true
+        motif:
+          type: string
+          title: Motif / objet
+          description: Expliquez brievement la demande.
+        date_debut:
+          type: string
+          format: date
+          title: Du
+        date_fin:
+          type: string
+          format: date
+          title: Au
+        heure_debut:
+          type: string
+          format: time
+          nullable: true
+          title: Heure de debut
+        heure_fin:
+          type: string
+          format: time
+          nullable: true
+          title: Heure de fin
+        nb_jours:
+          type: integer
+          readOnly: true
+          title: Nombre de jours ouvrables
+        interimaire:
+          type: integer
+          nullable: true
+          title: Agent assurant l'interim
+        destination:
+          type: string
+          maxLength: 200
+        region_mission:
+          type: integer
+          nullable: true
+          title: Region de la mission
+        moyen_transport:
+          type: string
+          title: Moyen de transport
+          maxLength: 120
+        structures_visitees:
+          type: string
+          title: Structures a visiter
+          maxLength: 250
+        accompagnants:
+          type: string
+          maxLength: 250
+        hors_perimetre_drena:
+          type: boolean
+          title: Mission hors du ressort de la DRENA
+          description: 'Cochez si le deplacement sort du ressort de la direction regionale
+            : l''ordre de mission est alors etabli par la DRENA, sur presentation
+            des termes de reference et de la lettre d''invitation ou d''information.'
+        termes_de_reference:
+          type: string
+          format: uri
+          nullable: true
+          title: Termes de reference (TDR)
+        lettre_invitation:
+          type: string
+          format: uri
+          nullable: true
+          title: Lettre d'invitation ou d'information
+        lieu_jouissance:
+          type: string
+          title: Lieu de jouissance
+          maxLength: 150
+        contact_pendant_absence:
+          type: string
+          title: Contact pendant l'absence
+          maxLength: 60
+        justificatif:
+          type: string
+          format: uri
+          nullable: true
+          title: Piece justificative
+        statut:
+          allOf:
+          - $ref: '#/components/schemas/StatutEnum'
+          readOnly: true
+        statut_libelle:
+          type: string
+          readOnly: true
+        soumise_le:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        cloturee_le:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Decision finale le
+        motif_rejet:
+          type: string
+          readOnly: true
+          title: Motif du rejet
+        validations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+          readOnly: true
+        progression:
+          type: integer
+          readOnly: true
+        est_modifiable:
+          type: boolean
+          readOnly: true
+        autorite_signataire:
+          type: string
+          readOnly: true
+        signatures:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        cree_le:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - agent_matricule
+      - agent_nom
+      - autorite_signataire
+      - cloturee_le
+      - cree_le
+      - date_debut
+      - date_fin
+      - est_modifiable
+      - id
+      - motif
+      - motif_rejet
+      - nb_jours
+      - numero
+      - progression
+      - signatures
+      - soumise_le
+      - statut
+      - statut_libelle
+      - type
+      - type_libelle
+      - validations
+    DemandeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/DemandeTypeEnum'
+          title: Type d'acte
+        motif:
+          type: string
+          minLength: 1
+          title: Motif / objet
+          description: Expliquez brievement la demande.
+        date_debut:
+          type: string
+          format: date
+          title: Du
+        date_fin:
+          type: string
+          format: date
+          title: Au
+        heure_debut:
+          type: string
+          format: time
+          nullable: true
+          title: Heure de debut
+        heure_fin:
+          type: string
+          format: time
+          nullable: true
+          title: Heure de fin
+        interimaire:
+          type: integer
+          nullable: true
+          title: Agent assurant l'interim
+        destination:
+          type: string
+          maxLength: 200
+        region_mission:
+          type: integer
+          nullable: true
+          title: Region de la mission
+        moyen_transport:
+          type: string
+          title: Moyen de transport
+          maxLength: 120
+        structures_visitees:
+          type: string
+          title: Structures a visiter
+          maxLength: 250
+        accompagnants:
+          type: string
+          maxLength: 250
+        hors_perimetre_drena:
+          type: boolean
+          title: Mission hors du ressort de la DRENA
+          description: 'Cochez si le deplacement sort du ressort de la direction regionale
+            : l''ordre de mission est alors etabli par la DRENA, sur presentation
+            des termes de reference et de la lettre d''invitation ou d''information.'
+        termes_de_reference:
+          type: string
+          format: binary
+          title: Termes de reference (TDR)
+        lettre_invitation:
+          type: string
+          format: binary
+          title: Lettre d'invitation ou d'information
+        lieu_jouissance:
+          type: string
+          title: Lieu de jouissance
+          maxLength: 150
+        contact_pendant_absence:
+          type: string
+          title: Contact pendant l'absence
+          maxLength: 60
+        justificatif:
+          type: string
+          format: binary
+          title: Piece justificative
+      required:
+      - date_debut
+      - date_fin
+      - motif
+      - type
+    DemandeTypeEnum:
+      enum:
+      - CONGE_ANNUEL
+      - CONGE_EXCEPTIONNEL
+      - PERMISSION
+      - ORDRE_MISSION
+      - ABSENCE
+      - FORMATION
+      type: string
+      description: |-
+        * `CONGE_ANNUEL` - Conge annuel
+        * `CONGE_EXCEPTIONNEL` - Conge exceptionnel
+        * `PERMISSION` - Permission d'absence
+        * `ORDRE_MISSION` - Ordre de mission
+        * `ABSENCE` - Declaration d'absence
+        * `FORMATION` - Demande de formation
+    EtatEnum:
+      enum:
+      - PREPARATION
+      - EN_COURS
+      - ACHEVE
+      type: string
+      description: |-
+        * `PREPARATION` - En preparation
+        * `EN_COURS` - En cours
+        * `ACHEVE` - Acheve
+    Evenement:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        titre:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          description: Le nom de la page comme elle apparaîtra dans l'URL e.g http://domain.com/blog/[my-slug]/
+          pattern: ^[-\w]+$
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/EvenementTypeEnum'
+        type_libelle:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        date_debut:
+          type: string
+          format: date
+          title: Date de debut
+        date_fin:
+          type: string
+          format: date
+          nullable: true
+          title: Date de fin
+        heure_debut:
+          type: string
+          format: time
+          nullable: true
+          title: Heure de debut
+        lieu:
+          type: string
+          maxLength: 200
+        public_cible:
+          type: string
+          maxLength: 200
+        url:
+          type: string
+          readOnly: true
+      required:
+      - date_debut
+      - description
+      - id
+      - slug
+      - titre
+      - type_libelle
+      - url
+    EvenementTypeEnum:
+      enum:
+      - FORMATION
+      - ATELIER
+      - SEMINAIRE
+      - REUNION
+      - AUTRE
+      type: string
+      description: |-
+        * `FORMATION` - Formation
+        * `ATELIER` - Atelier
+        * `SEMINAIRE` - Seminaire
+        * `REUNION` - Reunion
+        * `AUTRE` - Autre
+    Message:
+      type: object
+      properties:
+        detail:
+          type: string
+          readOnly: true
+      required:
+      - detail
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        titre:
+          type: string
+          maxLength: 200
+        message:
+          type: string
+        lien:
+          type: string
+          maxLength: 300
+        niveau:
+          $ref: '#/components/schemas/NotificationNiveauEnum'
+        lue:
+          type: boolean
+        creee_le:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - creee_le
+      - id
+      - titre
+    NotificationNiveauEnum:
+      enum:
+      - INFO
+      - SUCCES
+      - ALERTE
+      type: string
+      description: |-
+        * `INFO` - Information
+        * `SUCCES` - Succes
+        * `ALERTE` - Alerte
+    NotificationRequest:
+      type: object
+      properties:
+        titre:
+          type: string
+          minLength: 1
+          maxLength: 200
+        message:
+          type: string
+        lien:
+          type: string
+          maxLength: 300
+        niveau:
+          $ref: '#/components/schemas/NotificationNiveauEnum'
+        lue:
+          type: boolean
+      required:
+      - titre
+    PaginatedActualiteList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Actualite'
+    PaginatedAgentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Agent'
+    PaginatedDemandeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Demande'
+    PaginatedEvenementList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evenement'
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+    PaginatedProjetList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Projet'
+    PaginatedRapportMissionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RapportMission'
+    PaginatedRessourceList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ressource'
+    PaginatedStructureList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Structure'
+    PatchedAgentRequest:
+      type: object
+      properties:
+        civilite:
+          $ref: '#/components/schemas/CiviliteEnum'
+        last_name:
+          type: string
+          minLength: 1
+          title: Nom
+          maxLength: 150
+        first_name:
+          type: string
+          minLength: 1
+          title: Prenoms
+          maxLength: 150
+        email:
+          title: Courriel professionnel
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        telephone:
+          type: string
+          maxLength: 40
+        fonction:
+          type: string
+          maxLength: 150
+        grade:
+          type: string
+          maxLength: 100
+        doit_changer_mot_de_passe:
+          type: boolean
+          title: Doit changer son mot de passe
+    PatchedDemandeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/DemandeTypeEnum'
+          title: Type d'acte
+        motif:
+          type: string
+          minLength: 1
+          title: Motif / objet
+          description: Expliquez brievement la demande.
+        date_debut:
+          type: string
+          format: date
+          title: Du
+        date_fin:
+          type: string
+          format: date
+          title: Au
+        heure_debut:
+          type: string
+          format: time
+          nullable: true
+          title: Heure de debut
+        heure_fin:
+          type: string
+          format: time
+          nullable: true
+          title: Heure de fin
+        interimaire:
+          type: integer
+          nullable: true
+          title: Agent assurant l'interim
+        destination:
+          type: string
+          maxLength: 200
+        region_mission:
+          type: integer
+          nullable: true
+          title: Region de la mission
+        moyen_transport:
+          type: string
+          title: Moyen de transport
+          maxLength: 120
+        structures_visitees:
+          type: string
+          title: Structures a visiter
+          maxLength: 250
+        accompagnants:
+          type: string
+          maxLength: 250
+        hors_perimetre_drena:
+          type: boolean
+          title: Mission hors du ressort de la DRENA
+          description: 'Cochez si le deplacement sort du ressort de la direction regionale
+            : l''ordre de mission est alors etabli par la DRENA, sur presentation
+            des termes de reference et de la lettre d''invitation ou d''information.'
+        termes_de_reference:
+          type: string
+          format: binary
+          title: Termes de reference (TDR)
+        lettre_invitation:
+          type: string
+          format: binary
+          title: Lettre d'invitation ou d'information
+        lieu_jouissance:
+          type: string
+          title: Lieu de jouissance
+          maxLength: 150
+        contact_pendant_absence:
+          type: string
+          title: Contact pendant l'absence
+          maxLength: 60
+        justificatif:
+          type: string
+          format: binary
+          title: Piece justificative
+    PatchedRapportMissionRequest:
+      type: object
+      properties:
+        demande:
+          type: integer
+        resume:
+          type: string
+          minLength: 1
+          title: Resume de la mission
+        resultats:
+          type: string
+          title: Resultats obtenus
+        difficultes:
+          type: string
+          title: Difficultes rencontrees
+        recommandations:
+          type: string
+        fichier:
+          type: string
+          format: binary
+          title: Rapport detaille
+    Projet:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nom:
+          type: string
+          readOnly: true
+        sigle:
+          type: string
+          maxLength: 30
+        slug:
+          type: string
+          description: Le nom de la page comme elle apparaîtra dans l'URL e.g http://domain.com/blog/[my-slug]/
+          pattern: ^[-\w]+$
+          maxLength: 255
+        accroche:
+          type: string
+          maxLength: 250
+        description:
+          type: string
+          readOnly: true
+        couleur:
+          type: string
+          title: Couleur de la vignette
+          maxLength: 7
+        etat:
+          $ref: '#/components/schemas/EtatEnum'
+        image:
+          type: string
+          nullable: true
+          readOnly: true
+        url:
+          type: string
+          readOnly: true
+      required:
+      - description
+      - id
+      - image
+      - nom
+      - sigle
+      - slug
+      - url
+    RapportMission:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        demande:
+          type: integer
+        resume:
+          type: string
+          title: Resume de la mission
+        resultats:
+          type: string
+          title: Resultats obtenus
+        difficultes:
+          type: string
+          title: Difficultes rencontrees
+        recommandations:
+          type: string
+        fichier:
+          type: string
+          format: uri
+          nullable: true
+          title: Rapport detaille
+        depose_le:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - demande
+      - depose_le
+      - id
+      - resume
+    RapportMissionRequest:
+      type: object
+      properties:
+        demande:
+          type: integer
+        resume:
+          type: string
+          minLength: 1
+          title: Resume de la mission
+        resultats:
+          type: string
+          title: Resultats obtenus
+        difficultes:
+          type: string
+          title: Difficultes rencontrees
+        recommandations:
+          type: string
+        fichier:
+          type: string
+          format: binary
+          title: Rapport detaille
+      required:
+      - demande
+      - resume
+    RattachementEnum:
+      enum:
+      - CENTRALE
+      - REGION
+      type: string
+      description: |-
+        * `CENTRALE` - Direction centrale (nationale)
+        * `REGION` - Region
+    Ressource:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        titre:
+          type: string
+          maxLength: 250
+        slug:
+          oneOf:
+          - type: string
+            maxLength: 270
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
+        type:
+          allOf:
+          - $ref: '#/components/schemas/RessourceTypeEnum'
+          title: Type de ressource
+        type_libelle:
+          type: string
+          readOnly: true
+        niveau:
+          $ref: '#/components/schemas/RessourceNiveauEnum'
+        niveau_libelle:
+          type: string
+          readOnly: true
+        discipline:
+          type: string
+          maxLength: 120
+        classe:
+          type: string
+          description: Ex. CP1, CM2, 6e, Tle D
+          maxLength: 60
+        description:
+          type: string
+        fichier:
+          type: string
+          nullable: true
+          readOnly: true
+        lien_externe:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        annee:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          title: Annee de parution
+      required:
+      - fichier
+      - id
+      - niveau_libelle
+      - titre
+      - type
+      - type_libelle
+    RessourceNiveauEnum:
+      enum:
+      - PRESCOLAIRE
+      - PRIMAIRE
+      - SECONDAIRE_1
+      - SECONDAIRE_2
+      - TECHNIQUE
+      - TOUS
+      type: string
+      description: |-
+        * `PRESCOLAIRE` - Prescolaire
+        * `PRIMAIRE` - Primaire
+        * `SECONDAIRE_1` - Secondaire 1er cycle
+        * `SECONDAIRE_2` - Secondaire 2nd cycle
+        * `TECHNIQUE` - Enseignement technique
+        * `TOUS` - Tous niveaux
+    RessourceTypeEnum:
+      enum:
+      - PROGRAMME
+      - GUIDE
+      - FICHE_TP
+      - MODULE
+      - TEXTE
+      type: string
+      description: |-
+        * `PROGRAMME` - Programme scolaire
+        * `GUIDE` - Guide pedagogique
+        * `FICHE_TP` - Fiche de travaux pratiques
+        * `MODULE` - Module de formation
+        * `TEXTE` - Texte officiel
+    RoleEnum:
+      enum:
+      - AGENT
+      - CHEF_SERVICE
+      - SOUS_DIRECTEUR
+      - SECRETARIAT
+      - CHEF_ANTENNE
+      - CHEF_CENTRE
+      - DIRECTEUR_REGIONAL
+      - RH
+      - DIRECTEUR
+      - DIRECTEUR_GENERAL
+      - ADMIN
+      type: string
+      description: |-
+        * `AGENT` - Agent
+        * `CHEF_SERVICE` - Chef de service
+        * `SOUS_DIRECTEUR` - Sous-directeur
+        * `SECRETARIAT` - Secretariat
+        * `CHEF_ANTENNE` - Chef d'antenne (APFC)
+        * `CHEF_CENTRE` - Chef de centre (CNRPN)
+        * `DIRECTEUR_REGIONAL` - Directeur regional (DRENA)
+        * `RH` - Gestionnaire du personnel
+        * `DIRECTEUR` - Directeur
+        * `DIRECTEUR_GENERAL` - Directeur general (DGPCSP)
+        * `ADMIN` - Administrateur du portail
+    SituationEnum:
+      enum:
+      - EN_POSTE
+      - EN_CONGE
+      - EN_MISSION
+      - ABSENT
+      - DETACHE
+      - RETRAITE
+      type: string
+      description: |-
+        * `EN_POSTE` - En poste
+        * `EN_CONGE` - En conge
+        * `EN_MISSION` - En mission
+        * `ABSENT` - Absent
+        * `DETACHE` - Detache
+        * `RETRAITE` - Admis a la retraite
+    Solde:
+      type: object
+      properties:
+        annee:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: Annee de reference
+        droit_jours:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: Droit annuel (jours)
+        jours_reportes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        jours_consommes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        jours_restants:
+          type: integer
+          readOnly: true
+        total_droits:
+          type: integer
+          readOnly: true
+      required:
+      - annee
+      - jours_restants
+      - total_droits
+    StatutEnum:
+      enum:
+      - BROUILLON
+      - SOUMISE
+      - EN_COURS
+      - APPROUVEE
+      - REJETEE
+      - ANNULEE
+      type: string
+      description: |-
+        * `BROUILLON` - Brouillon
+        * `SOUMISE` - Soumise
+        * `EN_COURS` - Validation en cours
+        * `APPROUVEE` - Approuvee
+        * `REJETEE` - Rejetee
+        * `ANNULEE` - Annulee
+    Structure:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nom:
+          type: string
+          title: Libelle
+          maxLength: 200
+        sigle:
+          type: string
+          maxLength: 30
+        slug:
+          title: Identifiant d'URL
+          oneOf:
+          - type: string
+            maxLength: 220
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
+        type:
+          $ref: '#/components/schemas/StructureTypeEnum'
+        rattachement:
+          $ref: '#/components/schemas/RattachementEnum'
+        region:
+          type: string
+          readOnly: true
+        telephone:
+          type: string
+          maxLength: 40
+        email:
+          title: Courriel
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+      required:
+      - id
+      - nom
+      - region
+      - type
+    StructureRequest:
+      type: object
+      properties:
+        nom:
+          type: string
+          minLength: 1
+          title: Libelle
+          maxLength: 200
+        sigle:
+          type: string
+          maxLength: 30
+        slug:
+          title: Identifiant d'URL
+          oneOf:
+          - type: string
+            maxLength: 220
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
+        type:
+          $ref: '#/components/schemas/StructureTypeEnum'
+        rattachement:
+          $ref: '#/components/schemas/RattachementEnum'
+        telephone:
+          type: string
+          maxLength: 40
+        email:
+          title: Courriel
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+      required:
+      - nom
+      - type
+    StructureTypeEnum:
+      enum:
+      - DIRECTION_GENERALE
+      - DIRECTION
+      - SOUS_DIRECTION
+      - SERVICE
+      - CENTRE
+      - ANTENNE
+      - BUREAU
+      - DRENA
+      - DDENA
+      - DRETPI
+      type: string
+      description: |-
+        * `DIRECTION_GENERALE` - Direction generale
+        * `DIRECTION` - Direction centrale
+        * `SOUS_DIRECTION` - Sous-direction
+        * `SERVICE` - Service
+        * `CENTRE` - Centre national (CNRPN)
+        * `ANTENNE` - Antenne de la pedagogie et de la formation continue
+        * `BUREAU` - Bureau d'antenne
+        * `DRENA` - Direction regionale (DRENA)
+        * `DDENA` - Direction departementale (DDENA)
+        * `DRETPI` - Direction regionale de l'enseignement technique (DRETPI)
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    TokenVerifyRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - token
+    Validation:
+      type: object
+      properties:
+        ordre:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        libelle:
+          type: string
+          title: Intitule de l'etape
+          maxLength: 120
+        valideur:
+          type: string
+          readOnly: true
+        fonction_valideur:
+          type: string
+          readOnly: true
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+        decision_libelle:
+          type: string
+          readOnly: true
+        commentaire:
+          type: string
+          title: Observation
+        decide_le:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - decision_libelle
+      - fonction_valideur
+      - libelle
+      - ordre
+      - valideur
+    ValidationRequest:
+      type: object
+      properties:
+        ordre:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        libelle:
+          type: string
+          minLength: 1
+          title: Intitule de l'etape
+          maxLength: 120
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+        commentaire:
+          type: string
+          title: Observation
+        decide_le:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - libelle
+      - ordre
+    Verification:
+      type: object
+      properties:
+        code_verification:
+          type: string
+          readOnly: true
+        acte:
+          type: string
+          readOnly: true
+        numero:
+          type: string
+          readOnly: true
+        beneficiaire:
+          type: string
+          readOnly: true
+        matricule:
+          type: string
+          readOnly: true
+        date_debut:
+          type: string
+          format: date
+          readOnly: true
+        date_fin:
+          type: string
+          format: date
+          readOnly: true
+        signataire:
+          type: string
+          readOnly: true
+        qualite:
+          type: string
+          readOnly: true
+        horodatage:
+          type: string
+          format: date-time
+          readOnly: true
+        algorithme:
+          type: string
+          readOnly: true
+        empreinte:
+          type: string
+          readOnly: true
+        valide:
+          type: boolean
+          readOnly: true
+      required:
+      - acte
+      - algorithme
+      - beneficiaire
+      - code_verification
+      - date_debut
+      - date_fin
+      - empreinte
+      - horodatage
+      - matricule
+      - numero
+      - qualite
+      - signataire
+      - valide
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

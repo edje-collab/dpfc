@@ -24,7 +24,7 @@
           {% if demande.lieu_jouissance %}<tr><th>Lieu de jouissance</th><td>{{ demande.lieu_jouissance }}</td></tr>{% endif %}
           {% if demande.interimaire %}<tr><th>Interim</th><td>{{ demande.interimaire.nom_complet }}</td></tr>{% endif %}
           {% if demande.contact_pendant_absence %}<tr><th>Contact</th><td>{{ demande.contact_pendant_absence }}</td></tr>{% endif %}
-          {% if demande.hors_perimetre_drenaet %}<tr><th>Perimetre</th><td>Mission hors perimetre DRENAET &mdash; ordre de mission etabli par le DRENAET</td></tr>{% endif %}
+          {% if demande.hors_perimetre_drena %}<tr><th>Ressort</th><td>Mission hors du ressort de la DRENA &mdash; ordre de mission etabli par la DRENA</td></tr>{% endif %}
           {% if demande.termes_de_reference %}<tr><th>Termes de reference</th><td><a href="{{ demande.termes_de_reference.url }}">Consulter les TDR</a></td></tr>{% endif %}
           {% if demande.lettre_invitation %}<tr><th>Lettre d'invitation</th><td><a href="{{ demande.lettre_invitation.url }}">Consulter la lettre</a></td></tr>{% endif %}
           {% if demande.depose_par %}<tr><th>Depot</th><td>Effectue au secretariat par {{ demande.depose_par.nom_complet }}</td></tr>{% endif %}

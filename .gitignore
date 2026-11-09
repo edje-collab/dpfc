@@ -6,3 +6,8 @@ __pycache__/
 /staticfiles/
 /logs/*.log
 .venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+docs/api/openapi.yml.bak
