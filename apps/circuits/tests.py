@@ -242,3 +242,96 @@ class CircuitTest(BaseOrganisation):
                             type_acte=type_acte,
                         ).first()
                     )
+
+
+class NettoyageOrganisationTest(BaseOrganisation):
+    """Mise en conformite de l'organigramme avec le decret n° 2026-509."""
+
+    def _obsolete(self, sigle, nom, **extra):
+        return Structure.objects.create(
+            nom=nom, sigle=sigle, type=Structure.Type.SOUS_DIRECTION,
+            parent=self.direction, perimetre=self.p_centrale, **extra,
+        )
+
+    def _nettoyer(self, **options):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        sortie = StringIO()
+        call_command("nettoyer_organisation", stdout=sortie, **options)
+        return sortie.getvalue()
+
+    def test_simulation_ne_modifie_rien(self):
+        self._obsolete("SDFC", "Sous-direction de la formation continue")
+        sortie = self._nettoyer()
+        self.assertIn("SIMULATION", sortie)
+        self.assertTrue(Structure.objects.filter(sigle="SDFC").exists())
+
+    def test_les_structures_hors_decret_sont_retirees(self):
+        self._obsolete("SDFC", "Sous-direction de la formation continue")
+        self._obsolete("SDPMS", "Sous-direction des programmes et manuels")
+        self._nettoyer(appliquer=True)
+        self.assertFalse(Structure.objects.filter(sigle__in=["SDFC", "SDPMS"]).exists())
+
+    def test_le_service_du_personnel_est_conserve(self):
+        """Decision expresse de la direction : SPAA subsiste."""
+        Structure.objects.create(
+            nom="Service du personnel et des affaires administratives", sigle="SPAA",
+            type=Structure.Type.SERVICE, parent=self.direction, perimetre=self.p_centrale,
+        )
+        sortie = self._nettoyer(appliquer=True)
+        self.assertTrue(Structure.objects.filter(sigle="SPAA", active=True).exists())
+        self.assertIn("Conserve sur decision de la direction", sortie)
+
+    def test_les_sous_directions_du_decret_sont_conservees(self):
+        for sigle in ("SDPPBS", "SDIP"):
+            self._obsolete(sigle, f"Sous-direction {sigle}")
+        self._nettoyer(appliquer=True)
+        self.assertEqual(
+            Structure.objects.filter(sigle__in=["SDPPBS", "SDIP"], active=True).count(), 2
+        )
+
+    def test_les_agents_sont_rattaches_a_la_direction(self):
+        obsolete = self._obsolete("SDFC", "Sous-direction de la formation continue")
+        agent = self._agent("X0001", "MUTE", Agent.Role.AGENT, obsolete)
+        self._nettoyer(appliquer=True)
+        agent.refresh_from_db()
+        self.assertEqual(agent.structure, self.direction)
+        self.assertFalse(Structure.objects.filter(sigle="SDFC").exists())
+
+    def test_une_structure_porteuse_d_historique_est_desactivee(self):
+        """Effacer la structure effacerait la provenance des actes deja pris."""
+        from apps.rh.models import Demande, TypeDemande
+
+        obsolete = self._obsolete("SDPRPN", "Service des ressources numeriques")
+        debut = date.today() + timedelta(days=10)
+        Demande.objects.create(
+            agent=self.agent_central, type=TypeDemande.PERMISSION, motif="Historique",
+            date_debut=debut, date_fin=debut, structure=obsolete,
+        )
+        sortie = self._nettoyer(appliquer=True)
+        obsolete.refresh_from_db()
+        self.assertFalse(obsolete.active)
+        self.assertIn("historique a preserver", sortie)
+
+    def test_la_dpfc_est_rattachee_a_la_direction_generale(self):
+        """Article 27 : une base anterieure au decret n'a pas ce rattachement."""
+        Structure.objects.filter(pk=self.direction.pk).update(parent=None)
+        self._nettoyer(appliquer=True)
+        self.direction.refresh_from_db()
+        self.assertEqual(self.direction.parent, self.dgpcsp)
+
+    def test_un_second_passage_est_sans_effet(self):
+        obsolete = self._obsolete("SDPRPN", "Service des ressources numeriques")
+        from apps.rh.models import Demande, TypeDemande
+
+        debut = date.today() + timedelta(days=10)
+        Demande.objects.create(
+            agent=self.agent_central, type=TypeDemande.PERMISSION, motif="Historique",
+            date_debut=debut, date_fin=debut, structure=obsolete,
+        )
+        self._nettoyer(appliquer=True)
+        sortie = self._nettoyer(appliquer=True)
+        self.assertIn("conforme au decret", sortie)
+        self.assertIn("Deja retirees", sortie)

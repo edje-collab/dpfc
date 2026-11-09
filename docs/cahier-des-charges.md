@@ -5,7 +5,7 @@
 | **Maître d'ouvrage** | Direction de la Pédagogie et de la Formation Continue (DPFC) |
 | **Tutelle** | Direction Générale de la Pédagogie, des Curricula et du Suivi des Programmes (DGPCSP) |
 | **Ministère** | Éducation Nationale, de l'Alphabétisation et de l'Enseignement Technique |
-| **Version** | 3.4.0 |
+| **Version** | 3.4.2 |
 | **Référence réglementaire** | Décret n° 2026-509 du 05 août 2026 portant organisation du MENAET |
 
 > Ce document est tenu à jour avec le code. Chaque exigence porte un identifiant et renvoie aux tests automatisés qui la vérifient : la [matrice de traçabilité](#15-matrice-de-traçabilité) est contrôlée à chaque exécution de la suite de tests, de sorte qu'une exigence ne peut pas être invoquée sans preuve.
@@ -54,6 +54,9 @@ Les trois sont autonomes dans leur gestion. Ce qui les distingue est l'implantat
 | **ORG-06** | Le service du personnel, la direction et l'administration voient tous les périmètres. |
 | **ORG-07** | Les droits tiennent à la **désignation effective** du responsable, non au rôle porté. |
 | **ORG-08** | La reprise d'une base antérieure convertit sans perte : renommage DRENAET → DRENA, création des périmètres, rattachement des structures. |
+| **ORG-09** | Les structures centrales absentes du décret sont retirées de l'organigramme, à l'exception du service du personnel et des affaires administratives, conservé sur décision de la direction. |
+| **ORG-10** | Une structure porteuse d'historique est désactivée plutôt que supprimée : effacer la structure effacerait la provenance des actes déjà pris. |
+| **ORG-11** | Les agents d'une structure retirée sont rattachés à la direction, à charge pour elle de les répartir entre les trois sous-directions du décret. |
 
 ## 4. Circuits de validation
 
@@ -268,6 +271,9 @@ Chaque exigence renvoie aux tests qui la vérifient. Cette matrice est contrôl�
 | ORG-06 | `apps/circuits/tests.py::test_le_service_du_personnel_voit_tous_les_perimetres` |
 | ORG-07 | `apps/courrier/tests.py::test_porter_le_role_de_chef_ne_suffit_pas_a_imputer`<br>`apps/courrier/tests.py::test_meme_regle_pour_le_plan_d_action`<br>`apps/courrier/tests.py::test_le_secretariat_enregistre_mais_n_impute_pas` |
 | ORG-08 | `apps/core/migrations/0006_reprise_organisation_decret_2026_509.py` |
+| ORG-09 | `apps/circuits/tests.py::test_les_structures_hors_decret_sont_retirees`<br>`apps/circuits/tests.py::test_le_service_du_personnel_est_conserve`<br>`apps/circuits/tests.py::test_les_sous_directions_du_decret_sont_conservees` |
+| ORG-10 | `apps/circuits/tests.py::test_une_structure_porteuse_d_historique_est_desactivee`<br>`apps/circuits/tests.py::test_un_second_passage_est_sans_effet` |
+| ORG-11 | `apps/circuits/tests.py::test_les_agents_sont_rattaches_a_la_direction`<br>`apps/circuits/tests.py::test_la_dpfc_est_rattachee_a_la_direction_generale` |
 | CIR-01 | `apps/circuits/tests.py::test_circuit_central_suit_la_voie_hierarchique` |
 | CIR-02 | `apps/circuits/tests.py::test_l_acte_du_chef_d_antenne_remonte_a_la_drena` |
 | CIR-03 | `apps/achats/tests.py::test_petite_depense_s_arrete_au_superieur`<br>`apps/achats/tests.py::test_depense_moyenne_remonte_au_responsable_du_perimetre`<br>`apps/achats/tests.py::test_engagement_important_remonte_a_la_direction` |
@@ -388,12 +394,20 @@ Points qui relèvent de la direction, et non de la réalisation technique.
 
 | Point | Nature de la décision |
 |---|---|
-| **Sous-directions antérieures** | L'organigramme d'avant le décret comportait des sous-directions et services qui n'y figurent plus (SDFC, SDPMS, SDPRPN). La reprise les conserve : décider de leur suppression, de leur fusion dans les trois nouvelles sous-directions, et de la réaffectation des agents. |
+| **Répartition des agents** | Les agents des structures retirées sont rattachés à la direction. Leur répartition entre les trois sous-directions du décret (SDPPBS, SDIP, SDFPC) relève de la direction. |
 | **Seuils d'engagement** | Les montants livrés (100 000 et 2 000 000 FCFA) sont des valeurs de travail, à confronter aux règles de la comptabilité publique applicables à la direction. |
 | **Barèmes de participation** | Les montants journaliers des ateliers sont à aligner sur les barèmes officiels en vigueur. |
 | **Règle d'attestation** | Le seuil retenu — la moitié des sessions — est un choix par défaut. |
 | **OCR des documents scannés** | Facultatif. Son installation suppose une décision sur la charge serveur acceptable. |
 | **Données personnelles** | Les coordonnées des participants extérieurs aux ateliers sont stockées en clair. Un chiffrement au repos est techniquement possible ; la décision dépend du niveau d'exigence retenu. |
+
+---
+
+### 16.1 Points tranchés
+
+| Point | Décision | Date |
+|---|---|---|
+| **Sous-directions antérieures au décret** | Supprimées de l'organigramme, **à l'exception du service du personnel et des affaires administratives**, conservé. Appliqué par `manage.py nettoyer_organisation`. Une structure porteuse d'historique est désactivée plutôt que supprimée. | Version 3.4.2 |
 
 ---
 
@@ -406,3 +420,5 @@ Points qui relèvent de la direction, et non de la réalisation technique.
 | 3.2.0 | Courrier, documents et parapheur |
 | 3.3.0 | Ateliers et émargement par QR code |
 | 3.4.0 | Achats, bons de commande, magasin et équipements |
+| 3.4.1 | Cahier des charges et matrice de traçabilité |
+| 3.4.2 | Décision sur les sous-directions antérieures au décret (ORG-09 à ORG-11) |

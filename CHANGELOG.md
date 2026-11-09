@@ -1,5 +1,15 @@
 # Journal des versions
 
+## 3.4.2 — Mise en conformité de l'organigramme
+
+**Décision de la direction appliquée.** Les sous-directions et services centraux antérieurs au décret n° 2026-509 sont retirés de l'organigramme, **à l'exception du service du personnel et des affaires administratives**, conservé. Nouvelle commande `manage.py nettoyer_organisation`, qui simule par défaut et n'exécute qu'avec `--appliquer`.
+
+**Une structure porteuse d'historique est désactivée, pas supprimée** : effacer la structure effacerait la provenance des actes déjà pris. Le compte rendu indique à chaque fois lequel des deux cas s'applique. Les agents et sous-structures sont rattachés à la direction avant retrait.
+
+**Correction.** Sur une base antérieure au décret, la DPFC n'était pas rattachée à la DGPCSP — les valeurs par défaut de `get_or_create` ne s'appliquent pas à un enregistrement existant. La commande établit ce lien (article 27).
+
+Nouvelles exigences **ORG-09** à **ORG-11** au cahier des charges, avec leurs tests. Le point correspondant de la section « ce qui reste à trancher » passe en « points tranchés ».
+
 ## 3.4.1 — Cahier des charges
 
 **Cahier des charges** ([docs/cahier-des-charges.md](docs/cahier-des-charges.md)) : objet, contexte réglementaire, organisation cible, et une centaine d'exigences numérotées couvrant l'organisation, les circuits, les actes administratifs, la signature, le pilotage, le courrier, les documents, le parapheur, les ateliers, les achats, les stocks, le site public, la sécurité et la technique.

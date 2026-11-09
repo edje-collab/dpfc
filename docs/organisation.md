@@ -70,12 +70,27 @@ La migration `core.0006` convertit automatiquement une base antérieure :
 - un périmètre est créé pour la direction centrale, un par antenne et un par centre ;
 - chaque structure est rattachée au périmètre correspondant.
 
-### Point restant à trancher par la direction
+### Mise en conformité de l'organigramme
 
-L'organigramme antérieur comportait des sous-directions et services qui ne figurent pas dans le décret (par exemple « Sous-direction de la formation continue », « Sous-direction des programmes et manuels scolaires », « Service développement et production de ressources pédagogiques numériques »). La migration **les conserve en l'état** : décider de leur suppression, de leur fusion dans les trois nouvelles sous-directions, et du réaffectation des agents concernés relève de la direction, pas de la reprise technique.
+L'organigramme antérieur comportait des sous-directions et services qui ne figurent pas dans le décret. **Décision de la direction : ils sont supprimés, à l'exception du service du personnel et des affaires administratives (SPAA), qui subsiste.**
 
-Pour les lister :
+La commande `nettoyer_organisation` applique cette décision. Elle simule par défaut :
 
 ```bash
-python manage.py shell -c "from apps.core.models import Structure; print('\n'.join(f'{s.sigle} - {s.nom}' for s in Structure.objects.filter(rattachement='CENTRALE').exclude(sigle__in=['DGPCSP','DPFC','SDPPBS','SDIP','SDFPC','SPAA','CNRPN'])))"
+python manage.py nettoyer_organisation
 ```
+
+```bash
+python manage.py nettoyer_organisation --appliquer
+```
+
+Ce qu'elle fait :
+
+- rattache la DPFC à la DGPCSP si ce lien manque (article 27) ;
+- rattache à la direction les agents et sous-structures des structures retirées ;
+- **supprime** la structure, ou la **désactive** si elle porte de l'historique — effacer la structure effacerait la provenance des actes déjà pris. Le compte rendu indique à chaque fois lequel des deux cas s'applique ;
+- conserve le SPAA et les structures du décret.
+
+Elle est idempotente : un second passage ne fait rien.
+
+> **Reste à la main de la direction** : les agents des structures retirées sont rattachés à la direction elle-même. Leur répartition entre les trois sous-directions du décret (SDPPBS, SDIP, SDFPC) est une décision d'organisation.
