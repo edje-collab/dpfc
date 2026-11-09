@@ -1,0 +1,51 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Attestation{% endblock %}
+{% block titre_page %}Attestation de participation{% endblock %}
+{% block sous_titre %}{{ participant.nom_complet }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc sans-impression">
+  <div class="actions">
+    <button class="btn btn--principal" type="button" onclick="window.print()">Imprimer</button>
+    <a class="btn btn--secondaire" href="{{ atelier.get_absolute_url }}">Retour a l'atelier</a>
+  </div>
+</div>
+
+<div class="document">
+  <div class="document__entete">
+    <p>{{ config_site.ministere }}<br>
+       {{ config_site.direction_generale }}<br>
+       <strong>{{ config_site.nom_site }}</strong><br>
+       {{ atelier.perimetre.nom }}</p>
+    <p>REPUBLIQUE DE COTE D'IVOIRE<br>Union - Discipline - Travail</p>
+  </div>
+
+  <h1 style="text-align:center;margin:2.5rem 0">ATTESTATION DE PARTICIPATION</h1>
+
+  <p>Je soussigne(e), <strong>{{ signataire.nom_complet|default:"le responsable" }}</strong>,
+     {{ qualite }}, atteste que :</p>
+
+  <p style="text-align:center;font-size:1.2rem;margin:1.5rem 0">
+    <strong>{{ participant.nom_complet }}</strong>
+    {% if participant.fonction %}<br>{{ participant.fonction }}{% endif %}
+    {% if participant.structure_origine %}<br>{{ participant.structure_origine }}{% endif %}
+  </p>
+
+  <p>a effectivement pris part a <strong>{{ atelier.intitule }}</strong>, qui s'est tenu
+     a {{ atelier.lieu }} du {{ atelier.date_debut|date:"j F Y" }} au
+     {{ atelier.date_fin|date:"j F Y" }}.</p>
+
+  <p>Sa presence a ete constatee sur <strong>{{ sessions_emargees }}</strong> des
+     {{ sessions_total }} session{{ sessions_total|pluralize }} de l'atelier,
+     soit {{ jours }} journee{{ jours|pluralize }} de participation effective.</p>
+
+  <p>En foi de quoi la presente attestation lui est delivree pour servir et valoir
+     ce que de droit.</p>
+
+  <p style="margin-top:3rem;text-align:right">
+    Fait a {{ atelier.lieu }}, le {{ delivree_le|date:"j F Y" }}<br><br>
+    <strong>{{ signataire.nom_complet|default:"" }}</strong><br>
+    {{ qualite }}
+  </p>
+</div>
+{% endblock %}

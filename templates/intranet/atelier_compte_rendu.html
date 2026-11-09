@@ -1,0 +1,17 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Compte rendu{% endblock %}
+{% block titre_page %}Compte rendu de l'atelier{% endblock %}
+{% block sous_titre %}{{ atelier.intitule }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc" style="max-width:860px">
+  <form method="post" enctype="multipart/form-data" class="formulaire">
+    {% csrf_token %}
+    {% include "intranet/_champs.html" %}
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Enregistrer</button>
+      <a class="btn btn--secondaire" href="{{ atelier.get_absolute_url }}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

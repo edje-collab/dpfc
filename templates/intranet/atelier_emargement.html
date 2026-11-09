@@ -1,0 +1,79 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Emargement{% endblock %}
+{% block titre_page %}Emargement{% endblock %}
+{% block sous_titre %}{{ atelier.intitule }} &middot; {{ session }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <div class="bloc__tete">
+    <h2>Session</h2>
+    <a class="btn btn--secondaire btn--petit" href="{{ atelier.get_absolute_url }}">Retour a l'atelier</a>
+  </div>
+  <div class="puces-session">
+    {% for s in sessions %}
+      <a class="btn btn--petit {% if s.pk == session.pk %}btn--principal{% else %}btn--secondaire{% endif %}"
+         href="{% url 'ateliers:emargement_session' atelier.pk s.pk %}">{{ s }}
+        <span class="pastille pastille--neutre">{{ s.nb_emarges }}</span></a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grille-2">
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete"><h2>Scanner un QR code</h2></div>
+      <form method="post" class="formulaire">
+        {% csrf_token %}
+        {% include "intranet/_champs.html" %}
+        <div class="actions"><button class="btn btn--principal" type="submit">Enregistrer la presence</button></div>
+      </form>
+      <p class="aide">Le champ reste actif : enchainez les scans sans toucher a la souris.</p>
+    </div>
+
+    <div class="bloc">
+      <div class="bloc__tete"><h2>Emargement manuel</h2></div>
+      <p class="aide">A n'utiliser que si le QR code ne peut pas etre lu. Le motif est consigne.</p>
+      <form method="post" action="{% url 'ateliers:emargement_manuel' atelier.pk session.pk %}" class="formulaire">
+        {% csrf_token %}
+        {% for champ in form_manuel.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+        <div class="actions"><button class="btn btn--secondaire" type="submit">Emarger manuellement</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete">
+        <h2>Presences constatees</h2>
+        <span class="pastille pastille--ok">{{ emargements|length }} / {{ attendus }}</span>
+      </div>
+      {% if emargements %}
+        <div class="defilement">
+          <table class="table table--compacte">
+            <thead><tr><th>Participant</th><th>Heure</th><th>Mode</th><th></th></tr></thead>
+            <tbody>
+              {% for e in emargements %}
+                <tr>
+                  <td>{{ e.participant.nom_complet }}</td>
+                  <td>{{ e.horodatage|date:"H:i" }}</td>
+                  <td>{% if e.mode == 'MANUEL' %}<span class="pastille pastille--attente">Manuel</span>
+                      {% else %}<span class="pastille pastille--neutre">Scan</span>{% endif %}
+                      {% if e.motif %}<br><small class="aide">{{ e.motif|truncatechars:50 }}</small>{% endif %}</td>
+                  <td>
+                    <form method="post" action="{% url 'ateliers:emargement_annuler' e.pk %}"
+                          data-confirmer="Annuler cet emargement ?">{% csrf_token %}
+                      <input type="hidden" name="motif" value="Emargement enregistre par erreur.">
+                      <button class="btn btn--danger btn--petit" type="submit">Annuler</button></form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="aide">Aucune presence constatee sur cette session.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

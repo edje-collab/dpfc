@@ -1,0 +1,17 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Session{% endblock %}
+{% block titre_page %}Ajouter une session{% endblock %}
+{% block sous_titre %}{{ atelier.intitule }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc" style="max-width:600px">
+  <form method="post" class="formulaire">
+    {% csrf_token %}
+    {% include "intranet/_champs.html" %}
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Ajouter</button>
+      <a class="btn btn--secondaire" href="{{ atelier.get_absolute_url }}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

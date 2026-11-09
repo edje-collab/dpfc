@@ -1,0 +1,47 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Ateliers{% endblock %}
+{% block titre_page %}Ateliers{% endblock %}
+{% block sous_titre %}{{ total }} atelier{{ total|pluralize }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="formulaire">
+    <div class="grille-tb">
+      {% for champ in form.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+    </div>
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Filtrer</button>
+      <a class="btn btn--secondaire" href="{% url 'ateliers:liste' %}">Reinitialiser</a>
+      <a class="btn btn--principal" href="{% url 'ateliers:creer' %}">Organiser un atelier</a>
+    </div>
+  </form>
+</div>
+
+<div class="bloc">
+  {% if page_obj %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Atelier</th><th>Type</th><th>Perimetre</th><th>Lieu</th>
+                   <th>Periode</th><th>Participants</th><th>Presence</th><th>Statut</th></tr></thead>
+        <tbody>
+          {% for a in page_obj %}
+            <tr>
+              <td><a href="{{ a.get_absolute_url }}">{{ a.intitule }}</a></td>
+              <td><span class="puce-type">{{ a.get_type_display }}</span></td>
+              <td>{{ a.perimetre.code }}</td>
+              <td>{{ a.lieu }}</td>
+              <td>{{ a.date_debut|date:"d/m" }} &ndash; {{ a.date_fin|date:"d/m/Y" }}</td>
+              <td>{{ a.nb_participants }}</td>
+              <td>{{ a.taux_presence }} %</td>
+              <td><span class="pastille pastille--{{ a.couleur_statut }}">{{ a.get_statut_display }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "public/_pagination.html" %}
+  {% else %}
+    <p class="aide">Aucun atelier ne correspond a ces criteres.</p>
+  {% endif %}
+</div>
+{% endblock %}

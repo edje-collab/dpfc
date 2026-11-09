@@ -4,6 +4,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from apps.accounts.models import Notification
 from apps.activites.models import Activite, Avancement, PlanAction
+from apps.ateliers.models import Atelier, Emargement, Participant, Session
 from apps.core.models import Structure
 from apps.courrier.models import Courrier, Document, Imputation
 from apps.rh.models import Demande, RapportMission, SoldeConge, Validation
@@ -374,3 +375,73 @@ class DocumentSerializer(serializers.ModelSerializer):
         requete = self.context.get("request")
         url = version.fichier.url
         return requete.build_absolute_uri(url) if requete else url
+
+
+# --- Ateliers et emargement --------------------------------------------------
+class SessionSerializer(serializers.ModelSerializer):
+    creneau_libelle = serializers.CharField(source="get_creneau_display", read_only=True)
+    nb_emarges = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Session
+        fields = ["id", "date", "creneau", "creneau_libelle", "libelle", "nb_emarges"]
+
+
+class ParticipantSerializer(serializers.ModelSerializer):
+    nom_complet = serializers.CharField(read_only=True)
+    a_emarge = serializers.BooleanField(read_only=True)
+    nb_sessions_emargees = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Participant
+        fields = ["id", "id_court", "nom", "prenoms", "nom_complet", "fonction",
+                  "structure_origine", "statut", "a_emarge", "nb_sessions_emargees"]
+
+
+class AtelierSerializer(serializers.ModelSerializer):
+    type_libelle = serializers.CharField(source="get_type_display", read_only=True)
+    statut_libelle = serializers.CharField(source="get_statut_display", read_only=True)
+    perimetre_code = serializers.CharField(source="perimetre.code", read_only=True)
+    sessions = SessionSerializer(many=True, read_only=True)
+    nb_participants = serializers.IntegerField(read_only=True)
+    nb_emarges = serializers.IntegerField(read_only=True)
+    taux_presence = serializers.IntegerField(read_only=True)
+    accepte_emargement = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Atelier
+        fields = ["id", "id_court", "intitule", "type", "type_libelle", "lieu",
+                  "date_debut", "date_fin", "statut", "statut_libelle", "perimetre_code",
+                  "sessions", "nb_participants", "nb_emarges", "taux_presence",
+                  "accepte_emargement"]
+
+
+class LigneEmargementSerializer(serializers.Serializer):
+    """
+    Une presence relevee par l'appareil.
+
+    `identifiant` est produit par l'appareil au moment du scan : c'est lui qui
+    rend l'envoi idempotent, de sorte qu'une file rejouee apres une coupure ne
+    cree pas de doublon.
+    """
+
+    identifiant = serializers.UUIDField()
+    jeton = serializers.CharField(max_length=80)
+    horodatage = serializers.DateTimeField()
+    mode = serializers.ChoiceField(
+        choices=Emargement.Mode.choices, default=Emargement.Mode.SCAN, required=False
+    )
+    motif = serializers.CharField(max_length=200, required=False, allow_blank=True)
+
+
+class LotEmargementSerializer(serializers.Serializer):
+    session = serializers.IntegerField()
+    appareil = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    lignes = LigneEmargementSerializer(many=True)
+
+
+class ResultatLotSerializer(serializers.Serializer):
+    enregistres = serializers.IntegerField(read_only=True)
+    doublons = serializers.IntegerField(read_only=True)
+    invalides = serializers.IntegerField(read_only=True)
+    details = serializers.ListField(read_only=True)

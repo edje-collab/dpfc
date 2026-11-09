@@ -1,0 +1,75 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Ateliers{% endblock %}
+{% block titre_page %}Ateliers et emargement{% endblock %}
+{% block sous_titre %}{{ perimetre_courant.nom|default:"Tous perimetres" }}{% endblock %}
+
+{% block contenu %}
+<div class="grille-tb">
+  <div class="indicateur"><strong>{{ nb_ateliers }}</strong><span>ateliers au total</span></div>
+  <div class="indicateur"><strong>{{ nb_en_cours }}</strong><span>en cours</span></div>
+  <div class="indicateur"><strong>{{ nb_a_venir }}</strong><span>a venir</span></div>
+</div>
+
+{% if mes_controles %}
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete"><h2>Ateliers dont je controle l'emargement</h2></div>
+  <table class="table table--compacte">
+    {% for a in mes_controles %}
+      <tr>
+        <td><a href="{{ a.get_absolute_url }}">{{ a.intitule }}</a><br>
+            <small class="aide">{{ a.lieu }} &middot; {{ a.date_debut|date:"d/m" }} au {{ a.date_fin|date:"d/m/Y" }}</small></td>
+        <td><a class="btn btn--principal btn--petit" href="{% url 'ateliers:emargement' a.pk %}">Emarger</a></td>
+      </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if en_cours %}
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete"><h2>En cours</h2></div>
+  <table class="table">
+    <thead><tr><th>Atelier</th><th>Lieu</th><th>Periode</th><th>Participants</th><th>Presence</th></tr></thead>
+    <tbody>
+      {% for a in en_cours %}
+        <tr>
+          <td><a href="{{ a.get_absolute_url }}">{{ a.intitule }}</a></td>
+          <td>{{ a.lieu }}</td>
+          <td>{{ a.date_debut|date:"d/m" }} &ndash; {{ a.date_fin|date:"d/m/Y" }}</td>
+          <td>{{ a.nb_participants }}</td>
+          <td>{{ a.taux_presence }} %<div class="jauge"><i style="width:{{ a.taux_presence }}%"></i></div></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete">
+    <h2>Prochains ateliers</h2>
+    <div class="actions">
+      {% if peut_organiser %}<a class="btn btn--principal btn--petit" href="{% url 'ateliers:creer' %}">Organiser un atelier</a>{% endif %}
+      <a class="btn btn--secondaire btn--petit" href="{% url 'ateliers:liste' %}">Tous les ateliers</a>
+    </div>
+  </div>
+  {% if prochains %}
+    <table class="table">
+      <thead><tr><th>Atelier</th><th>Type</th><th>Lieu</th><th>Periode</th><th>Statut</th></tr></thead>
+      <tbody>
+        {% for a in prochains %}
+          <tr>
+            <td><a href="{{ a.get_absolute_url }}">{{ a.intitule }}</a></td>
+            <td><span class="puce-type">{{ a.get_type_display }}</span></td>
+            <td>{{ a.lieu }}</td>
+            <td>{{ a.date_debut|date:"d/m" }} &ndash; {{ a.date_fin|date:"d/m/Y" }}</td>
+            <td><span class="pastille pastille--{{ a.couleur_statut }}">{{ a.get_statut_display }}</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="aide">Aucun atelier programme.</p>
+  {% endif %}
+</div>
+{% endblock %}

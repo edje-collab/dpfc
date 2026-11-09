@@ -1,0 +1,46 @@
+{% extends "intranet/base_intranet.html" %}
+{% load humanize %}
+{% block titre %}Etat de paiement{% endblock %}
+{% block titre_page %}Etat de paiement{% endblock %}
+{% block sous_titre %}{{ atelier.intitule }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <div class="bloc__tete">
+    <h2>Participants a payer</h2>
+    <div class="actions">
+      <a class="btn btn--secondaire btn--petit" href="{% url 'ateliers:paiement_csv' atelier.pk %}">Exporter en CSV</a>
+      <a class="btn btn--secondaire btn--petit" href="{{ atelier.get_absolute_url }}">Retour a l'atelier</a>
+    </div>
+  </div>
+  <p class="aide">Seuls les participants ayant effectivement emarge figurent dans cet etat.
+     {{ etat.nb_absents }} inscrit{{ etat.nb_absents|pluralize }} n'ont constate aucune presence.</p>
+
+  {% if etat.lignes %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Nom</th><th>Structure</th><th>Categorie</th>
+                   <th>Jours constates</th><th>Montant journalier</th><th>Montant du</th></tr></thead>
+        <tbody>
+          {% for ligne in etat.lignes %}
+            <tr>
+              <td>{{ ligne.participant.nom_complet }}</td>
+              <td>{{ ligne.participant.structure_origine|default:"-" }}</td>
+              <td>{{ ligne.categorie }}</td>
+              <td>{{ ligne.jours }}</td>
+              <td>{{ ligne.montant_journalier|intcomma }}</td>
+              <td><strong>{{ ligne.montant|intcomma }}</strong></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr><th colspan="5">TOTAL ({{ etat.nb_payes }} participant{{ etat.nb_payes|pluralize }})</th>
+              <th>{{ etat.total|intcomma }} FCFA</th></tr>
+        </tfoot>
+      </table>
+    </div>
+  {% else %}
+    <p class="aide">Aucune presence constatee : l'etat de paiement est vide.</p>
+  {% endif %}
+</div>
+{% endblock %}

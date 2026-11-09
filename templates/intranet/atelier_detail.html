@@ -1,0 +1,120 @@
+{% extends "intranet/base_intranet.html" %}
+{% load humanize %}
+{% block titre %}{{ atelier.intitule }}{% endblock %}
+{% block titre_page %}{{ atelier.intitule }}{% endblock %}
+{% block sous_titre %}{{ atelier.get_type_display }} &middot; {{ atelier.lieu }} &middot; {{ atelier.perimetre.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <div class="bloc__tete">
+    <h2>Atelier <span class="pastille pastille--{{ atelier.couleur_statut }}">{{ atelier.get_statut_display }}</span></h2>
+    <div class="actions">
+      {% if peut_controler and atelier.accepte_emargement %}
+        <a class="btn btn--principal btn--petit" href="{% url 'ateliers:emargement' atelier.pk %}">Emarger</a>
+      {% endif %}
+      {% if peut_organiser %}
+        <a class="btn btn--secondaire btn--petit" href="{% url 'ateliers:participants' atelier.pk %}">Participants</a>
+        <a class="btn btn--secondaire btn--petit" href="{% url 'ateliers:badges' atelier.pk %}">Badges QR</a>
+        <a class="btn btn--secondaire btn--petit" href="{% url 'ateliers:modifier' atelier.pk %}">Modifier</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grille-tb">
+    <div class="indicateur"><strong>{{ atelier.nb_participants }}</strong><span>participants inscrits</span></div>
+    <div class="indicateur"><strong>{{ atelier.nb_emarges }}</strong><span>ont emarge</span></div>
+    <div class="indicateur"><strong>{{ atelier.taux_presence }} %</strong><span>taux de presence</span>
+      <div class="jauge"><i style="width:{{ atelier.taux_presence }}%"></i></div></div>
+    <div class="indicateur"><strong>{{ atelier.sessions.count }}</strong><span>sessions</span></div>
+  </div>
+
+  <table class="table table--compacte" style="margin-top:1rem">
+    <tr><th>Periode</th><td>{{ atelier.date_debut|date:"d/m/Y" }} au {{ atelier.date_fin|date:"d/m/Y" }}
+        ({{ atelier.nb_jours }} jour{{ atelier.nb_jours|pluralize }})</td></tr>
+    <tr><th>Lieu</th><td>{{ atelier.lieu }}{% if atelier.structure_hote %} &middot; {{ atelier.structure_hote }}{% endif %}</td></tr>
+    {% if atelier.public_cible %}<tr><th>Public cible</th><td>{{ atelier.public_cible }}</td></tr>{% endif %}
+    <tr><th>Organisateur</th><td>{{ atelier.organisateur.nom_complet|default:"-" }}</td></tr>
+    {% if atelier.activite %}<tr><th>Activite du plan</th>
+        <td><a href="{{ atelier.activite.get_absolute_url }}">{{ atelier.activite.code }} {{ atelier.activite.intitule }}</a></td></tr>{% endif %}
+    {% if atelier.budget %}<tr><th>Budget</th><td>{{ atelier.budget|intcomma }} FCFA</td></tr>{% endif %}
+    {% with controleurs=atelier.controleurs.all %}
+      {% if controleurs %}<tr><th>Controleurs</th>
+        <td>{% for c in controleurs %}{{ c.nom_complet }}{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>{% endif %}
+    {% endwith %}
+  </table>
+
+  {% if atelier.ordre_du_jour %}<p style="margin-top:1rem">{{ atelier.ordre_du_jour|linebreaksbr }}</p>{% endif %}
+  {% if atelier.motif_annulation %}
+    <p class="aide"><strong>Annule :</strong> {{ atelier.motif_annulation }}</p>
+  {% endif %}
+
+  {% if peut_organiser %}
+    <div class="actions" style="margin-top:1rem">
+      {% if atelier.statut == 'PLANIFIE' %}
+        <form method="post" action="{% url 'ateliers:cycle' atelier.pk 'ouvrir' %}">{% csrf_token %}
+          <button class="btn btn--principal" type="submit">Ouvrir l'atelier</button></form>
+      {% endif %}
+      {% if not atelier.est_clos %}
+        <form method="post" action="{% url 'ateliers:cycle' atelier.pk 'clore' %}"
+              data-confirmer="Clore l'atelier ? L'emargement ne sera plus possible.">{% csrf_token %}
+          <button class="btn btn--secondaire" type="submit">Clore</button></form>
+      {% endif %}
+      <a class="btn btn--secondaire" href="{% url 'ateliers:compte_rendu' atelier.pk %}">
+        {% if compte_rendu %}Modifier le compte rendu{% else %}Rediger le compte rendu{% endif %}</a>
+      <a class="btn btn--secondaire" href="{% url 'ateliers:paiement' atelier.pk %}">Etat de paiement</a>
+    </div>
+  {% endif %}
+</div>
+
+<div class="bloc">
+  <div class="bloc__tete">
+    <h2>Feuille de presence</h2>
+    <div class="actions">
+      <a class="btn btn--secondaire btn--petit" href="{% url 'ateliers:presence_csv' atelier.pk %}">Exporter en CSV</a>
+      {% if peut_organiser %}
+        <a class="btn btn--secondaire btn--petit" href="{% url 'ateliers:session_creer' atelier.pk %}">Ajouter une session</a>
+      {% endif %}
+    </div>
+  </div>
+  {% if feuille.lignes %}
+    <div class="defilement">
+      <table class="table table--compacte">
+        <thead>
+          <tr><th style="min-width:200px">Participant</th>
+            {% for s in feuille.sessions %}<th>{{ s }}</th>{% endfor %}
+            <th>Total</th><th>Attestation</th></tr>
+        </thead>
+        <tbody>
+          {% for ligne in feuille.lignes %}
+            <tr>
+              <td>{{ ligne.participant.nom_complet }}
+                  {% if ligne.participant.structure_origine %}<br><small class="aide">{{ ligne.participant.structure_origine }}</small>{% endif %}</td>
+              {% for presence in ligne.presences %}
+                <td>{% if presence %}<span class="pastille pastille--ok">X</span>
+                    {% else %}<span class="aide">&mdash;</span>{% endif %}</td>
+              {% endfor %}
+              <td><strong>{{ ligne.nb_presences }}</strong></td>
+              <td>{% if ligne.nb_presences %}
+                    <a href="{% url 'ateliers:attestation' ligne.participant.pk %}">Attestation</a>
+                  {% else %}<span class="aide">&mdash;</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="aide">Aucun participant inscrit.
+      {% if peut_organiser %}<a href="{% url 'ateliers:participants' atelier.pk %}">Inscrire des participants</a>.{% endif %}</p>
+  {% endif %}
+</div>
+
+{% if compte_rendu %}
+<div class="bloc">
+  <div class="bloc__tete"><h2>Compte rendu</h2></div>
+  <p>{{ compte_rendu.contenu|linebreaksbr }}</p>
+  {% if compte_rendu.decisions %}<h3>Decisions</h3><p>{{ compte_rendu.decisions|linebreaksbr }}</p>{% endif %}
+  {% if compte_rendu.recommandations %}<h3>Recommandations</h3><p>{{ compte_rendu.recommandations|linebreaksbr }}</p>{% endif %}
+  {% if compte_rendu.fichier %}<p><a href="{{ compte_rendu.fichier.url }}">Rapport detaille</a></p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

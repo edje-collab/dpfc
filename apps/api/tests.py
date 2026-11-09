@@ -406,3 +406,164 @@ class ApiCourrierTest(TestCase):
 
     def test_acces_refuse_sans_jeton(self):
         self.assertEqual(self.client.get("/api/v1/courriers/").status_code, 401)
+
+
+class ApiAtelierTest(TestCase):
+    """Le terrain embarque l'atelier, scanne hors ligne, puis renvoie son lot."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.ateliers.models import Atelier, Bareme, Participant
+        from apps.ateliers.services import generer_sessions, ouvrir
+
+        cls.p_antenne = Perimetre.objects.create(
+            code="APFC-GBK", nom="Antenne de Bouake", type=Perimetre.Type.ANTENNE
+        )
+        cls.p_centrale = Perimetre.objects.create(
+            code="DPFC", nom="Direction centrale", type=Perimetre.Type.CENTRALE
+        )
+        cls.antenne = Structure.objects.create(
+            nom="Antenne", sigle="APFC-GBK", type=Structure.Type.ANTENNE,
+            perimetre=cls.p_antenne, perimetre_racine=True,
+        )
+        cls.chef = Agent.objects.create_user(
+            "C0001", password="motdepasse123", last_name="KONE", first_name="A",
+            role=Agent.Role.CHEF_ANTENNE, structure=cls.antenne,
+        )
+        cls.controleur = Agent.objects.create_user(
+            "A0001", password="motdepasse123", last_name="OUATTARA", first_name="F",
+            role=Agent.Role.AGENT, structure=cls.antenne, superieur=cls.chef,
+        )
+        cls.etranger = Agent.objects.create_user(
+            "X0001", password="motdepasse123", last_name="ETRANGER", first_name="X",
+            role=Agent.Role.AGENT, structure=cls.antenne,
+        )
+        cls.antenne.responsable = cls.chef
+        cls.antenne.save(update_fields=["responsable"])
+
+        bareme = Bareme.objects.create(code="CP", libelle="CP", montant_journalier=25_000)
+        cls.atelier = Atelier.objects.create(
+            perimetre=cls.p_antenne, intitule="Atelier regional", lieu="Bouake",
+            date_debut=timezone.localdate(), date_fin=timezone.localdate(),
+            organisateur=cls.chef,
+        )
+        cls.atelier.controleurs.add(cls.controleur)
+        generer_sessions(cls.atelier)
+        cls.session = cls.atelier.sessions.first()
+        cls.participants = [
+            Participant.objects.create(
+                atelier=cls.atelier, nom=f"AGENT{i}", prenoms="P", categorie=bareme
+            )
+            for i in range(4)
+        ]
+        ouvrir(cls.atelier, cls.chef)
+
+    def _entetes(self, matricule="A0001"):
+        reponse = self.client.post(
+            reverse("api:connexion"), {"matricule": matricule, "password": "motdepasse123"},
+            content_type="application/json",
+        )
+        return {"HTTP_AUTHORIZATION": f"Bearer {reponse.json()['access']}"}
+
+    def _lot(self, participants=None, identifiants=None):
+        import uuid
+
+        participants = participants or self.participants
+        identifiants = identifiants or [str(uuid.uuid4()) for _ in participants]
+        return {
+            "session": self.session.pk,
+            "appareil": "tablette-terrain-01",
+            "lignes": [
+                {"identifiant": i, "jeton": p.jeton,
+                 "horodatage": timezone.now().isoformat()}
+                for p, i in zip(participants, identifiants, strict=True)
+            ],
+        }
+
+    def test_l_atelier_est_telechargeable_avec_ses_sessions(self):
+        reponse = self.client.get(f"/api/v1/ateliers/{self.atelier.pk}/", **self._entetes())
+        self.assertEqual(reponse.status_code, 200)
+        donnees = reponse.json()
+        self.assertEqual(donnees["id_court"], self.atelier.id_court)
+        self.assertEqual(len(donnees["sessions"]), 1)
+        self.assertTrue(donnees["accepte_emargement"])
+
+    def test_la_liste_des_participants_est_embarquable(self):
+        reponse = self.client.get(
+            f"/api/v1/ateliers/{self.atelier.pk}/participants/", **self._entetes()
+        )
+        self.assertEqual(reponse.status_code, 200)
+        self.assertEqual(len(reponse.json()), 4)
+
+    def test_un_non_controleur_ne_recoit_pas_les_participants(self):
+        reponse = self.client.get(
+            f"/api/v1/ateliers/{self.atelier.pk}/participants/", **self._entetes("X0001")
+        )
+        self.assertEqual(reponse.status_code, 403)
+
+    def test_depot_d_un_lot_collecte_hors_ligne(self):
+        reponse = self.client.post(
+            f"/api/v1/ateliers/{self.atelier.pk}/emargements/",
+            self._lot(), content_type="application/json", **self._entetes(),
+        )
+        self.assertEqual(reponse.status_code, 200)
+        donnees = reponse.json()
+        self.assertEqual(donnees["enregistres"], 4)
+        self.assertEqual(donnees["doublons"], 0)
+        self.assertEqual(self.session.emargements.count(), 4)
+
+    def test_rejouer_le_lot_apres_une_coupure_ne_duplique_rien(self):
+        import uuid
+
+        identifiants = [str(uuid.uuid4()) for _ in self.participants]
+        lot = self._lot(identifiants=identifiants)
+        entetes = self._entetes()
+        self.client.post(f"/api/v1/ateliers/{self.atelier.pk}/emargements/", lot,
+                         content_type="application/json", **entetes)
+        reponse = self.client.post(f"/api/v1/ateliers/{self.atelier.pk}/emargements/", lot,
+                                   content_type="application/json", **entetes)
+        self.assertEqual(reponse.json()["enregistres"], 0)
+        self.assertEqual(reponse.json()["doublons"], 4)
+        self.assertEqual(self.session.emargements.count(), 4)
+
+    def test_un_jeton_invalide_est_compte_sans_bloquer_le_lot(self):
+        import uuid
+
+        lot = self._lot()
+        lot["lignes"].append({
+            "identifiant": str(uuid.uuid4()), "jeton": "DPFC1.FAUX.FAUX.FAUX",
+            "horodatage": timezone.now().isoformat(),
+        })
+        reponse = self.client.post(
+            f"/api/v1/ateliers/{self.atelier.pk}/emargements/", lot,
+            content_type="application/json", **self._entetes(),
+        )
+        self.assertEqual(reponse.json()["enregistres"], 4)
+        self.assertEqual(reponse.json()["invalides"], 1)
+
+    def test_une_session_d_un_autre_atelier_est_refusee(self):
+        from apps.ateliers.models import Atelier
+        from apps.ateliers.services import generer_sessions
+
+        autre = Atelier.objects.create(
+            perimetre=self.p_antenne, intitule="Autre", lieu="X",
+            date_debut=timezone.localdate(), date_fin=timezone.localdate(),
+        )
+        generer_sessions(autre)
+        lot = self._lot()
+        lot["session"] = autre.sessions.first().pk
+        reponse = self.client.post(
+            f"/api/v1/ateliers/{self.atelier.pk}/emargements/", lot,
+            content_type="application/json", **self._entetes(),
+        )
+        self.assertEqual(reponse.status_code, 400)
+
+    def test_un_non_controleur_ne_peut_pas_emarger(self):
+        reponse = self.client.post(
+            f"/api/v1/ateliers/{self.atelier.pk}/emargements/", self._lot(),
+            content_type="application/json", **self._entetes("X0001"),
+        )
+        self.assertEqual(reponse.status_code, 403)
+
+    def test_acces_refuse_sans_jeton(self):
+        self.assertEqual(self.client.get("/api/v1/ateliers/").status_code, 401)

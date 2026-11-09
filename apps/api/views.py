@@ -12,6 +12,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from apps.accounts.models import Notification
 from apps.activites.models import Activite, PlanAction
 from apps.activites.services import ErreurPlan, enregistrer_avancement, tableau_de_bord
+from apps.ateliers.models import Atelier, Session
+from apps.ateliers.services import ErreurAtelier, enregistrer_lot
 from apps.core.models import Structure
 from apps.courrier.models import Courrier, Document, Imputation
 from apps.courrier.services import ErreurCourrier, rechercher_documents, traiter_imputation
@@ -454,3 +456,77 @@ class DocumentViewSet(viewsets.ReadOnlyModelViewSet):
             annee=parametres.get("annee"),
             perimetre=parametres.get("perimetre"),
         )
+
+
+# --- Ateliers et emargement --------------------------------------------------
+class AtelierViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Ateliers du perimetre, avec leurs sessions et leurs participants.
+
+    L'application mobile telecharge l'atelier avant de partir sur le terrain,
+    puis travaille hors ligne.
+    """
+
+    serializer_class = s.AtelierSerializer
+    queryset = Atelier.objects.none()
+
+    def get_queryset(self):
+        qs = (
+            Atelier.objects.visibles_par(self.request.user)
+            .select_related("perimetre")
+            .prefetch_related("sessions")
+        )
+        if self.request.query_params.get("a_venir") in {"1", "true", "oui"}:
+            qs = qs.a_venir()
+        if statut := self.request.query_params.get("statut"):
+            qs = qs.filter(statut=statut)
+        if self.request.query_params.get("mes_controles") in {"1", "true", "oui"}:
+            qs = qs.filter(controleurs=self.request.user)
+        return qs
+
+    @extend_schema(responses=s.ParticipantSerializer(many=True))
+    @action(detail=True, methods=["get"])
+    def participants(self, request, pk=None):
+        """Liste a embarquer pour l'emargement hors ligne."""
+        atelier = self.get_object()
+        if not atelier.peut_etre_controle_par(request.user):
+            return Response(
+                {"detail": "Vous n'etes pas habilite a emarger cet atelier."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        liste = atelier.participants.exclude(statut="REVOQUE")
+        return Response(s.ParticipantSerializer(liste, many=True).data)
+
+    @extend_schema(request=s.LotEmargementSerializer, responses=s.ResultatLotSerializer)
+    @action(detail=True, methods=["post"], url_path="emargements")
+    def emargements(self, request, pk=None):
+        """
+        Depot d'un lot de presences collectees hors ligne.
+
+        L'operation est idempotente : renvoyer le meme lot apres une coupure
+        n'enregistre rien de plus et ne perd rien.
+        """
+        atelier = self.get_object()
+        if not atelier.peut_etre_controle_par(request.user):
+            return Response(
+                {"detail": "Vous n'etes pas habilite a emarger cet atelier."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serialiseur = s.LotEmargementSerializer(data=request.data)
+        serialiseur.is_valid(raise_exception=True)
+        donnees = serialiseur.validated_data
+
+        session = Session.objects.filter(pk=donnees["session"], atelier=atelier).first()
+        if session is None:
+            return Response(
+                {"detail": "Session inconnue pour cet atelier."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            resultat = enregistrer_lot(
+                atelier, session, request.user, donnees["lignes"],
+                appareil=donnees.get("appareil", ""),
+            )
+        except ErreurAtelier as erreur:
+            return Response({"detail": str(erreur)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(s.ResultatLotSerializer(resultat).data)

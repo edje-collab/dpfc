@@ -1,0 +1,67 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Participants{% endblock %}
+{% block titre_page %}Participants{% endblock %}
+{% block sous_titre %}{{ atelier.intitule }}{% endblock %}
+
+{% block contenu %}
+<div class="grille-2">
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete">
+        <h2>{{ participants|length }} inscrit{{ participants|length|pluralize }}</h2>
+        <a class="btn btn--secondaire btn--petit" href="{% url 'ateliers:badges' atelier.pk %}">Badges QR</a>
+      </div>
+      {% if participants %}
+        <div class="defilement">
+          <table class="table table--compacte">
+            <thead><tr><th>Nom</th><th>Structure</th><th>Categorie</th><th>Presences</th><th></th></tr></thead>
+            <tbody>
+              {% for p in participants %}
+                <tr>
+                  <td>{{ p.nom_complet }}
+                      {% if p.statut == 'REVOQUE' %}<span class="pastille pastille--ko">Revoque</span>{% endif %}
+                      {% if p.fonction %}<br><small class="aide">{{ p.fonction }}</small>{% endif %}</td>
+                  <td>{{ p.structure_origine|default:"-" }}</td>
+                  <td>{{ p.categorie.libelle|default:"-" }}</td>
+                  <td>{{ p.nb_sessions_emargees }}</td>
+                  <td>
+                    {% if peut_organiser and p.statut != 'REVOQUE' %}
+                      <form method="post" action="{% url 'ateliers:participant_revoquer' p.pk %}"
+                            data-confirmer="Revoquer {{ p.nom_complet }} ?">{% csrf_token %}
+                        <button class="btn btn--danger btn--petit" type="submit">Revoquer</button></form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="aide">Aucun participant inscrit.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    {% if peut_organiser %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Inscrire un participant</h2></div>
+        <form method="post" class="formulaire">
+          {% csrf_token %}
+          {% include "intranet/_champs.html" %}
+          <div class="actions"><button class="btn btn--principal" type="submit">Inscrire</button></div>
+        </form>
+      </div>
+
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Inscription groupee</h2></div>
+        <form method="post" action="{% url 'ateliers:participants_importer' atelier.pk %}" class="formulaire">
+          {% csrf_token %}
+          {% for champ in import_form.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+          <div class="actions"><button class="btn btn--secondaire" type="submit">Inscrire la structure</button></div>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

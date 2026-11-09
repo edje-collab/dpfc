@@ -1,5 +1,19 @@
 # Journal des versions
 
+## 3.3.0 — Ateliers et émargement par QR code (phase 4)
+
+**Ateliers.** Nouvelle application `ateliers`. Chaque périmètre organise ses ateliers, formations et séminaires : sessions à la journée ou à la demi-journée, inscription individuelle ou groupée par structure, désignation de contrôleurs d'émargement, compte rendu et décisions. Cycle planifié → en cours → clos, l'annulation exigeant un motif.
+
+**QR code sans donnée personnelle.** Le jeton de présence ne porte ni nom, ni matricule, ni téléphone : deux identifiants courts aléatoires et une signature HMAC-SHA256, la clé étant propre à chaque atelier. Un badge perdu ne révèle rien, et un jeton d'un autre atelier ou altéré est rejeté.
+
+**Émargement utilisable hors ligne.** L'identifiant de l'émargement est produit par l'appareil au moment du scan : un téléphone accumule ses relevés sans réseau, puis rejoue sa file autant de fois qu'il le faut sans créer de doublon. Un second scan portant un identifiant différent est journalisé plutôt que perdu. L'émargement manuel est possible mais motivé.
+
+**Ce qui en découle.** L'état de paiement ne retient que les participants ayant effectivement émargé — barème de la catégorie × journées constatées, les demi-journées comptant pour moitié. L'attestation est réservée à qui a émargé au moins la moitié des sessions. À la clôture, les présences constatées sont reportées sur l'activité du plan d'action : le pilotage se nourrit du terrain.
+
+**Sorties.** Planche de badges à imprimer, feuille de présence et état de paiement exportables en CSV, attestation de participation à l'en-tête de la direction.
+
+**Application mobile.** `/api/v1/ateliers/` pour embarquer l'atelier et sa liste de participants, `/api/v1/ateliers/<id>/emargements/` pour déposer un lot collecté hors ligne.
+
 ## 3.2.0 — Courrier et gestion documentaire (phase 3)
 
 **Registre du courrier par périmètre.** Nouvelle application `courrier`. Chaque périmètre tient sa série annuelle par sens (`ARR-0001/2026/APFC-GBK`, `DEP-0001/2026/DPFC`). Un courrier arrivé est imputé à un ou plusieurs agents, avec instructions et délai ; son statut est déduit de l'état de ses imputations, jamais saisi. Imputation « pour information » close d'emblée, classement sans suite motivé, calcul du retard sur l'imputation la plus ancienne.

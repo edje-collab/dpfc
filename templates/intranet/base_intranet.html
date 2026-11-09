@@ -31,6 +31,15 @@
       <a href="{% url 'activites:activites' %}" class="{% if url_nom in 'activites activite_detail activite_form activite_creer activite_modifier' %}actif{% endif %}">Activites</a>
       <a href="{% url 'activites:axes' %}" class="{% if url_nom == 'axes' %}actif{% endif %}">Axes et perimetres</a>
 
+      <h4>Ateliers</h4>
+      {% if espace == 'ateliers' %}
+        <a href="{% url 'ateliers:tableau' %}" class="{% if url_nom == 'tableau' %}actif{% endif %}">Tableau des ateliers</a>
+        <a href="{% url 'ateliers:liste' %}" class="{% if url_nom != 'tableau' %}actif{% endif %}">Ateliers et emargement</a>
+      {% else %}
+        <a href="{% url 'ateliers:tableau' %}">Tableau des ateliers</a>
+        <a href="{% url 'ateliers:liste' %}">Ateliers et emargement</a>
+      {% endif %}
+
       <h4>Courrier</h4>
       {% if espace == 'courrier' %}{% with actif='actif' %}
         <a href="{% url 'courrier:tableau' %}" class="{% if url_nom == 'tableau' %}{{ actif }}{% endif %}">Tableau du courrier</a>

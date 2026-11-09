@@ -444,15 +444,22 @@ class Command(BaseCommand):
                 type=type_, date_fin=aujourdhui + timedelta(days=delta + 2), lieu=lieu, public_cible=cible,
             )
 
-        # --- Pilotage : axes strategiques et plans d'action ----------------
+        # --- Referentiels des applications metier --------------------------
         from apps.activites.demo import charger as charger_pilotage
         from apps.activites.demo import installer_axes
+        from apps.ateliers.demo import charger as charger_ateliers
+        from apps.ateliers.demo import installer_baremes
+        from apps.courrier.demo import charger as charger_courrier
+        from apps.courrier.demo import installer_modeles
 
         installer_axes()
-        if options["demo"]:
-            charger_pilotage(stdout=self.stdout)
+        installer_modeles()
+        installer_baremes()
 
         if options["demo"]:
+            charger_pilotage(stdout=self.stdout)
+            charger_courrier(stdout=self.stdout)
+            charger_ateliers(stdout=self.stdout)
             self._cles_de_signature([directeur, chef_bouake, chef_korhogo, dr_bouake, dr_korhogo])
             self._demandes_demo()
 

@@ -1,0 +1,33 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Badges{% endblock %}
+{% block titre_page %}Badges a imprimer{% endblock %}
+{% block sous_titre %}{{ atelier.intitule }} &middot; {{ participants|length }} badge{{ participants|length|pluralize }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc sans-impression">
+  <p class="aide">Chaque badge porte un QR code qui ne contient aucune donnee personnelle :
+     seuls deux identifiants et une signature. Un badge perdu ne revele rien.</p>
+  <div class="actions">
+    <button class="btn btn--principal" type="button" onclick="window.print()">Imprimer</button>
+    <a class="btn btn--secondaire" href="{{ atelier.get_absolute_url }}">Retour a l'atelier</a>
+  </div>
+</div>
+
+<div class="badges">
+  {% for p in participants %}
+    <div class="badge">
+      <div class="badge__tete">
+        <strong>{{ config_site.sigle }}</strong>
+        <span>{{ atelier.intitule|truncatechars:48 }}</span>
+      </div>
+      <img class="badge__qr" src="{% url 'ateliers:qr' p.pk %}" alt="">
+      <div class="badge__pied">
+        <strong>{{ p.nom_complet }}</strong>
+        {% if p.fonction %}<span>{{ p.fonction }}</span>{% endif %}
+        {% if p.structure_origine %}<span>{{ p.structure_origine }}</span>{% endif %}
+        <code>{{ p.jeton }}</code>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -206,3 +206,29 @@ body.intranet a { color: var(--i-teal-fonce); }
 .chrono__barre--attente { background: #e0a033; }
 .chrono__barre--ko { background: #c0392b; }
 .chrono__barre--neutre { background: #8aa5ad; }
+
+/* --- Badges et attestations ----------------------------------------------- */
+.puces-session { display: flex; flex-wrap: wrap; gap: .5rem; }
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; }
+.badge {
+  border: 1px solid var(--i-trait); border-radius: var(--i-rayon); padding: .9rem;
+  background: var(--i-papier); text-align: center; break-inside: avoid;
+}
+.badge__tete { font-size: .78rem; color: var(--i-doux); margin-bottom: .5rem; }
+.badge__tete strong { display: block; color: var(--i-teal-fonce); font-size: .95rem; }
+.badge__qr { width: 150px; height: 150px; margin: 0 auto; display: block; }
+.badge__pied { margin-top: .5rem; font-size: .85rem; }
+.badge__pied strong { display: block; font-size: .95rem; }
+.badge__pied span { display: block; color: var(--i-doux); font-size: .78rem; }
+.badge__pied code { display: block; margin-top: .4rem; font-size: .62rem; color: var(--i-doux); word-break: break-all; }
+
+.document__entete { display: flex; justify-content: space-between; gap: 2rem; font-size: .85rem; }
+.document__entete p { margin: 0; }
+
+@media print {
+  .lateral, .barre-haute, .sans-impression, .alertes { display: none !important; }
+  .principal, .contenu, .appli { margin: 0 !important; padding: 0 !important; }
+  .badges { grid-template-columns: repeat(3, 1fr); }
+  .badge { border: 1px dashed #999; }
+  .document { border: 0; box-shadow: none; }
+}

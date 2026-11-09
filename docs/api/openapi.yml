@@ -139,6 +139,128 @@ paths:
               schema:
                 $ref: '#/components/schemas/Agent'
           description: ''
+  /api/v1/ateliers/:
+    get:
+      operationId: ateliers_list
+      description: |-
+        Ateliers du perimetre, avec leurs sessions et leurs participants.
+
+        L'application mobile telecharge l'atelier avant de partir sur le terrain,
+        puis travaille hors ligne.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - ateliers
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAtelierList'
+          description: ''
+  /api/v1/ateliers/{id}/:
+    get:
+      operationId: ateliers_retrieve
+      description: |-
+        Ateliers du perimetre, avec leurs sessions et leurs participants.
+
+        L'application mobile telecharge l'atelier avant de partir sur le terrain,
+        puis travaille hors ligne.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this atelier.
+        required: true
+      tags:
+      - ateliers
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Atelier'
+          description: ''
+  /api/v1/ateliers/{id}/emargements/:
+    post:
+      operationId: ateliers_emargements_create
+      description: |-
+        Depot d'un lot de presences collectees hors ligne.
+
+        L'operation est idempotente : renvoyer le meme lot apres une coupure
+        n'enregistre rien de plus et ne perd rien.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this atelier.
+        required: true
+      tags:
+      - ateliers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LotEmargementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LotEmargementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LotEmargementRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultatLot'
+          description: ''
+  /api/v1/ateliers/{id}/participants/:
+    get:
+      operationId: ateliers_participants_list
+      description: Liste a embarquer pour l'emargement hors ligne.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this atelier.
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - ateliers
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedParticipantList'
+          description: ''
   /api/v1/auth/connexion/:
     post:
       operationId: auth_connexion_create
@@ -1665,6 +1787,100 @@ components:
       required:
       - first_name
       - last_name
+    Atelier:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        id_court:
+          type: string
+          readOnly: true
+        intitule:
+          type: string
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/AtelierTypeEnum'
+        type_libelle:
+          type: string
+          readOnly: true
+        lieu:
+          type: string
+          maxLength: 200
+        date_debut:
+          type: string
+          format: date
+          title: Date de debut
+        date_fin:
+          type: string
+          format: date
+          title: Date de fin
+        statut:
+          $ref: '#/components/schemas/AtelierStatutEnum'
+        statut_libelle:
+          type: string
+          readOnly: true
+        perimetre_code:
+          type: string
+          readOnly: true
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+          readOnly: true
+        nb_participants:
+          type: integer
+          readOnly: true
+        nb_emarges:
+          type: integer
+          readOnly: true
+        taux_presence:
+          type: integer
+          readOnly: true
+        accepte_emargement:
+          type: boolean
+          readOnly: true
+      required:
+      - accepte_emargement
+      - date_debut
+      - date_fin
+      - id
+      - id_court
+      - intitule
+      - lieu
+      - nb_emarges
+      - nb_participants
+      - perimetre_code
+      - sessions
+      - statut_libelle
+      - taux_presence
+      - type_libelle
+    AtelierStatutEnum:
+      enum:
+      - PLANIFIE
+      - EN_COURS
+      - CLOS
+      - ANNULE
+      type: string
+      description: |-
+        * `PLANIFIE` - Planifie
+        * `EN_COURS` - En cours
+        * `CLOS` - Clos
+        * `ANNULE` - Annule
+    AtelierTypeEnum:
+      enum:
+      - ATELIER
+      - FORMATION
+      - SEMINAIRE
+      - REUNION
+      - JOURNEE
+      type: string
+      description: |-
+        * `ATELIER` - Atelier de production
+        * `FORMATION` - Formation
+        * `SEMINAIRE` - Seminaire
+        * `REUNION` - Reunion
+        * `JOURNEE` - Journee pedagogique
     ChangementMotDePasseRequest:
       type: object
       properties:
@@ -1792,6 +2008,16 @@ components:
         * `IMPUTE` - Impute
         * `TRAITE` - Traite
         * `CLASSE` - Classe sans suite
+    CreneauEnum:
+      enum:
+      - JOURNEE
+      - MATIN
+      - APRES_MIDI
+      type: string
+      description: |-
+        * `JOURNEE` - Journee
+        * `MATIN` - Matinee
+        * `APRES_MIDI` - Apres-midi
     DecisionEnum:
       enum:
       - ATTENTE
@@ -2263,6 +2489,51 @@ components:
       - instructions
       - jours_restants
       - traite_le
+    LigneEmargementRequest:
+      type: object
+      description: |-
+        Une presence relevee par l'appareil.
+
+        `identifiant` est produit par l'appareil au moment du scan : c'est lui qui
+        rend l'envoi idempotent, de sorte qu'une file rejouee apres une coupure ne
+        cree pas de doublon.
+      properties:
+        identifiant:
+          type: string
+          format: uuid
+        jeton:
+          type: string
+          minLength: 1
+          maxLength: 80
+        horodatage:
+          type: string
+          format: date-time
+        mode:
+          allOf:
+          - $ref: '#/components/schemas/ModeEnum'
+          default: SCAN
+        motif:
+          type: string
+          maxLength: 200
+      required:
+      - horodatage
+      - identifiant
+      - jeton
+    LotEmargementRequest:
+      type: object
+      properties:
+        session:
+          type: integer
+        appareil:
+          type: string
+          maxLength: 80
+        lignes:
+          type: array
+          items:
+            $ref: '#/components/schemas/LigneEmargementRequest'
+      required:
+      - lignes
+      - session
     Message:
       type: object
       properties:
@@ -2271,6 +2542,14 @@ components:
           readOnly: true
       required:
       - detail
+    ModeEnum:
+      enum:
+      - SCAN
+      - MANUEL
+      type: string
+      description: |-
+        * `SCAN` - Scan du QR code
+        * `MANUEL` - Saisie manuelle
     NatureEnum:
       enum:
       - LETTRE
@@ -2412,6 +2691,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Agent'
+    PaginatedAtelierList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Atelier'
     PaginatedCourrierList:
       type: object
       required:
@@ -2550,6 +2852,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Notification'
+    PaginatedParticipantList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Participant'
     PaginatedPlanActionList:
       type: object
       required:
@@ -2665,6 +2990,56 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Structure'
+    Participant:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        id_court:
+          type: string
+          readOnly: true
+        nom:
+          type: string
+          maxLength: 100
+        prenoms:
+          type: string
+          maxLength: 150
+        nom_complet:
+          type: string
+          readOnly: true
+        fonction:
+          type: string
+          maxLength: 150
+        structure_origine:
+          type: string
+          title: Structure d'origine
+          maxLength: 200
+        statut:
+          $ref: '#/components/schemas/ParticipantStatutEnum'
+        a_emarge:
+          type: boolean
+          readOnly: true
+        nb_sessions_emargees:
+          type: integer
+          readOnly: true
+      required:
+      - a_emarge
+      - id
+      - id_court
+      - nb_sessions_emargees
+      - nom
+      - nom_complet
+    ParticipantStatutEnum:
+      enum:
+      - INSCRIT
+      - PROVISOIRE
+      - REVOQUE
+      type: string
+      description: |-
+        * `INSCRIT` - Inscrit
+        * `PROVISOIRE` - Inscrit sur place, a valider
+        * `REVOQUE` - Revoque
     PatchedAgentRequest:
       type: object
       properties:
@@ -3062,6 +3437,27 @@ components:
         * `FICHE_TP` - Fiche de travaux pratiques
         * `MODULE` - Module de formation
         * `TEXTE` - Texte officiel
+    ResultatLot:
+      type: object
+      properties:
+        enregistres:
+          type: integer
+          readOnly: true
+        doublons:
+          type: integer
+          readOnly: true
+        invalides:
+          type: integer
+          readOnly: true
+        details:
+          type: array
+          items: {}
+          readOnly: true
+      required:
+      - details
+      - doublons
+      - enregistres
+      - invalides
     RoleEnum:
       enum:
       - AGENT
@@ -3138,6 +3534,31 @@ components:
       description: |-
         * `ARRIVEE` - Courrier arrive
         * `DEPART` - Courrier depart
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        date:
+          type: string
+          format: date
+        creneau:
+          $ref: '#/components/schemas/CreneauEnum'
+        creneau_libelle:
+          type: string
+          readOnly: true
+        libelle:
+          type: string
+          maxLength: 150
+        nb_emarges:
+          type: integer
+          readOnly: true
+      required:
+      - creneau_libelle
+      - date
+      - id
+      - nb_emarges
     SituationEnum:
       enum:
       - EN_POSTE
