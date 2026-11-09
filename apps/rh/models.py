@@ -239,7 +239,7 @@ class Demande(Horodate):
         if self.est_mission_hors_perimetre:
             return "Directeur regional (DRENA)"
         perimetre = self.perimetre or (self.agent.perimetre if self.agent_id else None)
-        if perimetre is not None and perimetre.est_autonome:
+        if perimetre is not None:
             return perimetre.libelle_responsable
         return "Directeur de la pedagogie et de la formation continue"
 

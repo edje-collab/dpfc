@@ -145,10 +145,10 @@ class Agent(AbstractUser):
         return self.affectation == Structure.Rattachement.REGION
 
     @property
-    def est_en_perimetre_autonome(self):
-        """Agent d'une antenne ou du CNRPN : le responsable local decide seul."""
+    def est_en_perimetre_deconcentre(self):
+        """Agent d'une antenne ou du CNRPN, par opposition a la direction centrale."""
         perimetre = self.perimetre
-        return perimetre is not None and perimetre.est_autonome
+        return perimetre is not None and perimetre.est_deconcentre
 
     @property
     def dirige_son_perimetre(self):

@@ -1,0 +1,117 @@
+{% extends "intranet/base_intranet.html" %}
+{% load humanize %}
+{% block titre %}{{ plan }}{% endblock %}
+{% block titre_page %}Plan d'action {{ plan.annee }}{% endblock %}
+{% block sous_titre %}{{ plan.perimetre.nom }} &middot; {{ plan.perimetre.get_type_display }}{% endblock %}
+
+{% block contenu %}
+{% if plan.motif_rejet and plan.statut == 'BROUILLON' %}
+  <div class="bloc" style="border-left:4px solid var(--i-rouge)">
+    <strong>Plan renvoye par la direction.</strong>
+    <p style="margin:.4rem 0 0">{{ plan.motif_rejet }}</p>
+  </div>
+{% endif %}
+
+<div class="bloc">
+  <div class="bloc__tete">
+    <h2>{{ plan.libelle }}
+      <span class="pastille pastille--{{ plan.couleur_statut }}">{{ plan.get_statut_display }}</span></h2>
+    <div class="actions">
+      <a class="btn btn--secondaire btn--petit" href="{% url 'activites:plan_chronogramme' plan.pk %}">Chronogramme</a>
+      {% if peut_piloter and plan.est_modifiable %}
+        <a class="btn btn--principal btn--petit" href="{% url 'activites:activite_creer' plan.pk %}">Inscrire une activite</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if plan.contexte %}<p>{{ plan.contexte|linebreaksbr }}</p>{% endif %}
+
+  <div class="grille-tb">
+    <div class="indicateur"><strong>{{ plan.taux_execution }} %</strong><span>execution physique</span>
+      <div class="jauge"><i style="width:{{ plan.taux_execution }}%"></i></div></div>
+    <div class="indicateur"><strong>{{ plan.nb_activites }}</strong><span>activites</span></div>
+    <div class="indicateur"><strong>{{ en_retard }}</strong><span>en retard</span></div>
+    <div class="indicateur"><strong>{{ plan.taux_execution_budgetaire }} %</strong>
+      <span>{{ plan.budget_execute|intcomma }} / {{ plan.budget_prevu|intcomma }} FCFA</span></div>
+  </div>
+
+  <div class="actions" style="margin-top:1rem">
+    {% if peut_piloter and plan.statut == 'BROUILLON' %}
+      <form method="post" action="{% url 'activites:plan_action' plan.pk 'soumettre' %}">{% csrf_token %}
+        <button class="btn btn--principal" type="submit">Transmettre a la direction</button>
+      </form>
+    {% endif %}
+    {% if peut_valider %}
+      <form method="post" action="{% url 'activites:plan_action' plan.pk 'valider' %}">{% csrf_token %}
+        <button class="btn btn--principal" type="submit">Valider le plan</button>
+      </form>
+    {% endif %}
+    {% if plan.statut == 'VALIDE' and user.est_direction or plan.statut == 'VALIDE' and user.peut_administrer %}
+      <form method="post" action="{% url 'activites:plan_action' plan.pk 'clore' %}"
+            data-confirmer="Clore l'exercice ? Les activites non achevees seront reportees.">{% csrf_token %}
+        <button class="btn btn--secondaire" type="submit">Clore l'exercice</button>
+      </form>
+    {% endif %}
+  </div>
+
+  {% if peut_valider %}
+    <form method="post" action="{% url 'activites:plan_action' plan.pk 'renvoyer' %}" class="formulaire" style="margin-top:1rem">
+      {% csrf_token %}
+      {% for champ in form_decision.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+      <div class="actions"><button class="btn btn--danger" type="submit">Renvoyer en preparation</button></div>
+    </form>
+  {% endif %}
+</div>
+
+{% if synthese %}
+<div class="bloc">
+  <div class="bloc__tete"><h2>Par axe strategique</h2></div>
+  <div class="defilement">
+    <table class="table table--compacte">
+      <thead><tr><th>Axe</th><th>Activites</th><th>Avancement</th><th>Budget prevu</th><th>Budget engage</th></tr></thead>
+      <tbody>
+        {% for ligne in synthese %}
+          <tr>
+            <td><strong>{{ ligne.code }}</strong> {{ ligne.libelle }}</td>
+            <td>{{ ligne.nb }}</td>
+            <td>{{ ligne.avancement }} %<div class="jauge"><i style="width:{{ ligne.avancement }}%"></i></div></td>
+            <td>{{ ligne.prevu|intcomma }}</td>
+            <td>{{ ligne.execute|intcomma }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="bloc">
+  <div class="bloc__tete"><h2>Activites</h2></div>
+  {% if activites %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Code</th><th>Intitule</th><th>Axe</th><th>Periode prevue</th>
+                   <th>Responsable</th><th>Statut</th><th>Avancement</th></tr></thead>
+        <tbody>
+          {% for a in activites %}
+            <tr>
+              <td>{{ a.code }}</td>
+              <td><a href="{{ a.get_absolute_url }}">{{ a.intitule }}</a>
+                  {% if a.lieu %}<br><small class="aide">{{ a.lieu }}</small>{% endif %}</td>
+              <td>{{ a.axe.code|default:"-" }}</td>
+              <td>{{ a.date_debut_prevue|date:"d/m" }} &ndash; {{ a.date_fin_prevue|date:"d/m/Y" }}</td>
+              <td>{{ a.responsable.nom_complet|default:"-" }}</td>
+              <td><span class="pastille pastille--{{ a.couleur_statut }}">
+                {% if a.est_en_retard %}En retard{% else %}{{ a.get_statut_display }}{% endif %}</span></td>
+              <td>{{ a.avancement }} %<div class="jauge"><i style="width:{{ a.avancement }}%"></i></div></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="aide">Aucune activite inscrite.
+      {% if peut_piloter and plan.est_modifiable %}Inscrivez la premiere activite du plan.{% endif %}</p>
+  {% endif %}
+</div>
+{% endblock %}

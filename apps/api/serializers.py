@@ -3,6 +3,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from apps.accounts.models import Notification
+from apps.activites.models import Activite, Avancement, PlanAction
 from apps.core.models import Structure
 from apps.rh.models import Demande, RapportMission, SoldeConge, Validation
 from apps.site_public.models import PageActualite, PageEvenement, PageProjet, Ressource
@@ -222,3 +223,88 @@ class VerificationSerializer(serializers.Serializer):
     algorithme = serializers.CharField(read_only=True)
     empreinte = serializers.CharField(read_only=True)
     valide = serializers.BooleanField(read_only=True)
+
+
+# --- Pilotage des activites --------------------------------------------------
+class AvancementSerializer(serializers.ModelSerializer):
+    """Lecture d'un point d'avancement."""
+
+    auteur_nom = serializers.CharField(source="auteur.nom_complet", read_only=True)
+
+    class Meta:
+        model = Avancement
+        fields = ["id", "activite", "date", "taux", "realisations", "difficultes",
+                  "effectif_touche", "montant_engage", "piece_jointe", "auteur_nom", "saisi_le"]
+        read_only_fields = ["auteur_nom", "saisi_le"]
+
+
+class SaisieAvancementSerializer(serializers.ModelSerializer):
+    """
+    Depot d'un compte rendu depuis le terrain.
+
+    L'activite est designee par l'URL et l'auteur par le jeton : ni l'une ni
+    l'autre ne se declarent dans le corps de la requete.
+    """
+
+    class Meta:
+        model = Avancement
+        fields = ["date", "taux", "realisations", "difficultes",
+                  "effectif_touche", "montant_engage", "piece_jointe"]
+        extra_kwargs = {
+            "date": {"required": False},
+            "difficultes": {"required": False},
+            "effectif_touche": {"required": False},
+            "montant_engage": {"required": False},
+            "piece_jointe": {"required": False},
+        }
+
+    def validate_taux(self, taux):
+        if taux > 100:
+            raise serializers.ValidationError("L'avancement ne peut depasser 100 %.")
+        return taux
+
+
+class ActiviteSerializer(serializers.ModelSerializer):
+    axe_code = serializers.CharField(source="axe.code", read_only=True)
+    type_libelle = serializers.CharField(source="get_type_display", read_only=True)
+    statut_libelle = serializers.CharField(source="get_statut_display", read_only=True)
+    responsable_nom = serializers.CharField(source="responsable.nom_complet", read_only=True)
+    perimetre = serializers.CharField(source="plan.perimetre.code", read_only=True)
+    annee = serializers.IntegerField(source="plan.annee", read_only=True)
+    est_en_retard = serializers.BooleanField(read_only=True)
+    jours_de_retard = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Activite
+        fields = [
+            "id", "code", "intitule", "description", "type", "type_libelle", "axe_code",
+            "perimetre", "annee", "responsable_nom", "lieu", "public_cible",
+            "date_debut_prevue", "date_fin_prevue", "date_debut_reelle", "date_fin_reelle",
+            "statut", "statut_libelle", "avancement", "est_en_retard", "jours_de_retard",
+            "budget_prevu", "budget_execute", "effectif_prevu", "effectif_realise",
+        ]
+
+
+class PlanActionSerializer(serializers.ModelSerializer):
+    perimetre_code = serializers.CharField(source="perimetre.code", read_only=True)
+    perimetre_nom = serializers.CharField(source="perimetre.nom", read_only=True)
+    statut_libelle = serializers.CharField(source="get_statut_display", read_only=True)
+    nb_activites = serializers.IntegerField(read_only=True)
+    taux_execution = serializers.IntegerField(read_only=True)
+    taux_execution_budgetaire = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = PlanAction
+        fields = ["id", "annee", "libelle", "contexte", "perimetre_code", "perimetre_nom",
+                  "statut", "statut_libelle", "nb_activites", "taux_execution",
+                  "taux_execution_budgetaire", "valide_le"]
+
+
+class TableauPilotageSerializer(serializers.Serializer):
+    annee = serializers.IntegerField(read_only=True)
+    nb_activites = serializers.IntegerField(read_only=True)
+    taux_execution = serializers.IntegerField(read_only=True)
+    budget_prevu = serializers.DecimalField(max_digits=16, decimal_places=0, read_only=True)
+    budget_execute = serializers.DecimalField(max_digits=16, decimal_places=0, read_only=True)
+    beneficiaires = serializers.IntegerField(read_only=True)
+    nb_en_retard = serializers.IntegerField(read_only=True)

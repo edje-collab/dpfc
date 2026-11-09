@@ -1,0 +1,38 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Axes strategiques{% endblock %}
+{% block titre_page %}Axes strategiques{% endblock %}
+{% block sous_titre %}Referentiel commun a tous les perimetres{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <div class="bloc__tete"><h2>Axes</h2></div>
+  <table class="table">
+    <thead><tr><th>Code</th><th>Libelle</th><th>Description</th></tr></thead>
+    <tbody>
+      {% for axe in axes %}
+        <tr><td><strong>{{ axe.code }}</strong></td><td>{{ axe.libelle }}</td>
+            <td class="aide">{{ axe.description|default:"-" }}</td></tr>
+      {% empty %}
+        <tr><td colspan="3" class="aide">Aucun axe defini.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="bloc">
+  <div class="bloc__tete"><h2>Perimetres de gestion</h2></div>
+  <table class="table">
+    <thead><tr><th>Code</th><th>Perimetre</th><th>Type</th><th>Responsable</th><th>Agents</th></tr></thead>
+    <tbody>
+      {% for p in perimetres %}
+        <tr>
+          <td><strong>{{ p.code }}</strong></td><td>{{ p.nom }}</td>
+          <td>{{ p.get_type_display }}</td>
+          <td>{{ p.responsable.nom_complet|default:"-" }}</td>
+          <td>{{ p.agents.count }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "intranet/base_intranet.html" %}
+{% load humanize %}
+{% block titre %}Pilotage{% endblock %}
+{% block titre_page %}Pilotage des activites{% endblock %}
+{% block sous_titre %}Exercice {{ annee }} &middot; {{ perimetre_courant.nom|default:"tous perimetres" }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc__tete">
+  <h2>Exercice {{ annee }}</h2>
+  <form method="get" class="actions">
+    <select name="annee" onchange="this.form.submit()">
+      {% for a in annees %}<option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>{% endfor %}
+      {% if not annees %}<option value="{{ annee }}">{{ annee }}</option>{% endif %}
+    </select>
+    <noscript><button class="btn btn--secondaire btn--petit" type="submit">Afficher</button></noscript>
+  </form>
+</div>
+
+<div class="grille-tb">
+  <div class="indicateur">
+    <strong>{{ taux_execution }} %</strong>
+    <span>taux d'execution physique</span>
+    <div class="jauge"><i style="width:{{ taux_execution }}%"></i></div>
+  </div>
+  <div class="indicateur">
+    <strong>{{ nb_activites }}</strong>
+    <span>activite{{ nb_activites|pluralize }} inscrite{{ nb_activites|pluralize }} au plan</span>
+  </div>
+  <div class="indicateur">
+    <strong>{{ beneficiaires|intcomma }}</strong>
+    <span>beneficiaires touches</span>
+  </div>
+  <div class="indicateur">
+    <strong>{{ budget_execute|intcomma }}</strong>
+    <span>FCFA engages sur {{ budget_prevu|intcomma }} prevus</span>
+  </div>
+</div>
+
+{% if en_retard %}
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete">
+    <h2>Activites en retard <span class="pastille pastille--ko">{{ en_retard|length }}</span></h2>
+    <a class="btn btn--secondaire btn--petit" href="{% url 'activites:activites' %}?retard=on">Tout voir</a>
+  </div>
+  <div class="defilement">
+    <table class="table table--compacte">
+      <thead><tr><th>Code</th><th>Activite</th><th>Perimetre</th><th>Echeance</th><th>Retard</th><th>Avancement</th></tr></thead>
+      <tbody>
+        {% for a in en_retard|slice:":8" %}
+          <tr>
+            <td>{{ a.code }}</td>
+            <td><a href="{{ a.get_absolute_url }}">{{ a.intitule }}</a></td>
+            <td>{{ a.plan.perimetre.code }}</td>
+            <td>{{ a.date_fin_prevue|date:"d/m/Y" }}</td>
+            <td><span class="pastille pastille--ko">{{ a.jours_de_retard }} j</span></td>
+            <td>{{ a.avancement }} %</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete">
+    <h2>Plans d'action</h2>
+    <a class="btn btn--secondaire btn--petit" href="{% url 'activites:plans' %}">Gerer les plans</a>
+  </div>
+  {% if plans %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Perimetre</th><th>Statut</th><th>Activites</th><th>Execution</th><th>Budget</th></tr></thead>
+        <tbody>
+          {% for plan in plans %}
+            <tr>
+              <td><a href="{{ plan.get_absolute_url }}">{{ plan.perimetre.nom }}</a><br>
+                  <small class="aide">{{ plan.perimetre.get_type_display }}</small></td>
+              <td><span class="pastille pastille--{{ plan.couleur_statut }}">{{ plan.get_statut_display }}</span></td>
+              <td>{{ plan.nb_activites }}</td>
+              <td>{{ plan.taux_execution }} %<div class="jauge"><i style="width:{{ plan.taux_execution }}%"></i></div></td>
+              <td>{{ plan.taux_execution_budgetaire }} %</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="aide">Aucun plan d'action pour cet exercice.</p>
+  {% endif %}
+</div>
+
+{% if consolidation %}
+<div class="bloc" style="margin-top:1.2rem">
+  <div class="bloc__tete"><h2>Consolidation nationale</h2></div>
+  <div class="defilement">
+    <table class="table">
+      <thead><tr><th>Perimetre</th><th>Type</th><th>Statut du plan</th><th>Activites</th>
+                 <th>En retard</th><th>Execution</th><th>Budget prevu</th><th>Budget engage</th></tr></thead>
+      <tbody>
+        {% for ligne in consolidation %}
+          <tr>
+            <td><a href="{{ ligne.plan.get_absolute_url }}">{{ ligne.perimetre.code }}</a></td>
+            <td>{{ ligne.perimetre.get_type_display }}</td>
+            <td>{{ ligne.statut }}</td>
+            <td>{{ ligne.nb_activites }}</td>
+            <td>{% if ligne.en_retard %}<span class="pastille pastille--ko">{{ ligne.en_retard }}</span>{% else %}-{% endif %}</td>
+            <td>{{ ligne.taux_execution }} %</td>
+            <td>{{ ligne.budget_prevu|intcomma }}</td>
+            <td>{{ ligne.budget_execute|intcomma }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

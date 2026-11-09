@@ -1,0 +1,38 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Plans d'action{% endblock %}
+{% block titre_page %}Plans d'action{% endblock %}
+{% block sous_titre %}{{ mon_perimetre.nom|default:"Tous les perimetres" }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <div class="bloc__tete">
+    <h2>Plans d'action</h2>
+    {% if peut_creer %}
+      <a class="btn btn--principal btn--petit" href="{% url 'activites:plan_creer' %}">Etablir un plan</a>
+    {% endif %}
+  </div>
+  {% if plans %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Annee</th><th>Perimetre</th><th>Statut</th><th>Activites</th>
+                   <th>Execution</th><th>Valide par</th></tr></thead>
+        <tbody>
+          {% for plan in plans %}
+            <tr>
+              <td><a href="{{ plan.get_absolute_url }}"><strong>{{ plan.annee }}</strong></a></td>
+              <td>{{ plan.perimetre.nom }}<br><small class="aide">{{ plan.perimetre.code }}</small></td>
+              <td><span class="pastille pastille--{{ plan.couleur_statut }}">{{ plan.get_statut_display }}</span></td>
+              <td>{{ plan.nb_activites }}</td>
+              <td>{{ plan.taux_execution }} %<div class="jauge"><i style="width:{{ plan.taux_execution }}%"></i></div></td>
+              <td>{{ plan.valide_par.nom_complet|default:"-" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="aide">Aucun plan d'action.
+      {% if peut_creer %}Commencez par en etablir un pour l'exercice en cours.{% endif %}</p>
+  {% endif %}
+</div>
+{% endblock %}

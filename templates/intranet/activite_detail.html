@@ -1,0 +1,122 @@
+{% extends "intranet/base_intranet.html" %}
+{% load humanize %}
+{% block titre %}{{ activite.intitule }}{% endblock %}
+{% block titre_page %}{{ activite.code }} &middot; {{ activite.intitule }}{% endblock %}
+{% block sous_titre %}Plan {{ activite.plan.annee }} &middot; {{ activite.plan.perimetre.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="grille-2">
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete">
+        <h2>{{ activite.intitule }}
+          <span class="pastille pastille--{{ activite.couleur_statut }}">
+            {% if activite.est_en_retard %}En retard de {{ activite.jours_de_retard }} j{% else %}{{ activite.get_statut_display }}{% endif %}
+          </span></h2>
+        <div class="actions">
+          {% if peut_piloter %}
+            <a class="btn btn--secondaire btn--petit" href="{% url 'activites:activite_modifier' activite.pk %}">Modifier</a>
+          {% endif %}
+          {% if peut_rendre_compte %}
+            <a class="btn btn--principal btn--petit" href="{% url 'activites:activite_avancement' activite.pk %}">Rendre compte</a>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if activite.description %}<p>{{ activite.description|linebreaksbr }}</p>{% endif %}
+      {% if activite.motif_report %}
+        <p class="aide"><strong>Motif du report ou de l'annulation :</strong> {{ activite.motif_report }}</p>
+      {% endif %}
+
+      <table class="table table--compacte">
+        <tr><th>Axe strategique</th><td>{{ activite.axe|default:"Hors axe" }}</td></tr>
+        <tr><th>Type</th><td>{{ activite.get_type_display }}</td></tr>
+        <tr><th>Periode prevue</th><td>{{ activite.date_debut_prevue|date:"d/m/Y" }} au {{ activite.date_fin_prevue|date:"d/m/Y" }}</td></tr>
+        {% if activite.date_debut_reelle %}
+          <tr><th>Periode reelle</th><td>{{ activite.date_debut_reelle|date:"d/m/Y" }}{% if activite.date_fin_reelle %} au {{ activite.date_fin_reelle|date:"d/m/Y" }}{% endif %}</td></tr>
+        {% endif %}
+        {% if activite.lieu %}<tr><th>Lieu</th><td>{{ activite.lieu }}</td></tr>{% endif %}
+        {% if activite.public_cible %}<tr><th>Public cible</th><td>{{ activite.public_cible }}</td></tr>{% endif %}
+        <tr><th>Structure chargee</th><td>{{ activite.structure|default:"-" }}</td></tr>
+        <tr><th>Responsable</th><td>{{ activite.responsable.nom_complet|default:"-" }}</td></tr>
+        {% if activite.source_financement %}<tr><th>Financement</th><td>{{ activite.source_financement }}</td></tr>{% endif %}
+      </table>
+    </div>
+
+    <div class="bloc">
+      <div class="bloc__tete"><h2>Points d'avancement</h2></div>
+      {% if avancements %}
+        <ul class="circuit">
+          {% for point in avancements %}
+            <li>
+              <strong>{{ point.date|date:"d/m/Y" }} &middot; {{ point.taux }} %</strong>
+              <p style="margin:.2rem 0">{{ point.realisations|linebreaksbr }}</p>
+              {% if point.difficultes %}<p class="aide">Difficultes : {{ point.difficultes }}</p>{% endif %}
+              <p class="aide">
+                {% if point.effectif_touche %}{{ point.effectif_touche }} beneficiaire{{ point.effectif_touche|pluralize }} &middot; {% endif %}
+                {% if point.montant_engage %}{{ point.montant_engage|intcomma }} FCFA &middot; {% endif %}
+                saisi par {{ point.auteur.nom_complet|default:"—" }}
+              </p>
+              {% if point.piece_jointe %}<a href="{{ point.piece_jointe.url }}">Piece jointe</a>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="aide">Aucun point d'avancement enregistre.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    <div class="bloc">
+      <div class="bloc__tete"><h2>Execution</h2></div>
+      <div class="indicateur" style="border:0;padding:0">
+        <strong>{{ activite.avancement }} %</strong><span>avancement physique</span>
+        <div class="jauge"><i style="width:{{ activite.avancement }}%"></i></div>
+      </div>
+      <table class="table table--compacte" style="margin-top:1rem">
+        <tr><th>Budget</th><td>{{ activite.budget_execute|intcomma }} / {{ activite.budget_prevu|intcomma }} FCFA
+            ({{ activite.taux_execution_budgetaire }} %)</td></tr>
+        <tr><th>Beneficiaires</th><td>{{ activite.effectif_realise }} / {{ activite.effectif_prevu }}
+            ({{ activite.taux_couverture_beneficiaires }} %)</td></tr>
+      </table>
+    </div>
+
+    <div class="bloc">
+      <div class="bloc__tete">
+        <h2>Indicateurs</h2>
+        {% if peut_rendre_compte %}
+          <a class="btn btn--secondaire btn--petit" href="{% url 'activites:indicateur_creer' activite.pk %}">Ajouter</a>
+        {% endif %}
+      </div>
+      {% if indicateurs %}
+        <table class="table table--compacte">
+          {% for i in indicateurs %}
+            <tr>
+              <td>{{ i.libelle }}<br><small class="aide">{{ i.valeur_realisee }} / {{ i.valeur_cible }} {{ i.unite }}</small></td>
+              <td style="width:40%">{{ i.taux_atteinte }} %<div class="jauge"><i style="width:{{ i.taux_atteinte }}%"></i></div></td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <p class="aide">Aucun indicateur defini.</p>
+      {% endif %}
+    </div>
+
+    {% if peut_piloter and not activite.est_close %}
+      <div class="bloc">
+        <div class="bloc__tete"><h2>Decision</h2></div>
+        <form method="post" action="{% url 'activites:activite_decision' activite.pk 'reporter' %}" class="formulaire">
+          {% csrf_token %}
+          {% for champ in form_report.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+          <div class="actions">
+            <button class="btn btn--secondaire" type="submit">Reporter</button>
+            <button class="btn btn--danger" type="submit"
+                    formaction="{% url 'activites:activite_decision' activite.pk 'annuler' %}">Annuler l'activite</button>
+          </div>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Chronogramme{% endblock %}
+{% block titre_page %}Chronogramme {{ plan.annee }}{% endblock %}
+{% block sous_titre %}{{ plan.perimetre.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <div class="bloc__tete">
+    <h2>Calendrier previsionnel</h2>
+    <a class="btn btn--secondaire btn--petit" href="{{ plan.get_absolute_url }}">Retour au plan</a>
+  </div>
+  {% if lignes %}
+    <div class="defilement">
+      <table class="table table--compacte chronogramme">
+        <thead>
+          <tr>
+            <th style="min-width:220px">Activite</th>
+            {% for m in mois %}<th class="chrono__mois">{{ m }}</th>{% endfor %}
+            <th>Avancement</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ligne in lignes %}
+            <tr>
+              <td><a href="{{ ligne.activite.get_absolute_url }}">{{ ligne.activite.code }}</a>
+                  {{ ligne.activite.intitule }}</td>
+              {% for _ in ""|ljust:ligne.avant %}<td class="chrono__case"></td>{% endfor %}
+              <td class="chrono__case chrono__barre chrono__barre--{{ ligne.activite.couleur_statut }}"
+                  colspan="{{ ligne.duree }}"
+                  title="{{ ligne.activite.date_debut_prevue|date:'d/m/Y' }} au {{ ligne.activite.date_fin_prevue|date:'d/m/Y' }}">
+                {{ ligne.activite.avancement }} %
+              </td>
+              {% for _ in ""|ljust:ligne.apres %}<td class="chrono__case"></td>{% endfor %}
+              <td>{{ ligne.activite.get_statut_display }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="aide">Aucune activite a positionner.</p>
+  {% endif %}
+</div>
+{% endblock %}

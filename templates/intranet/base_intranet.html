@@ -25,6 +25,12 @@
         Notifications {% if nb_notifications %}<span class="badge-compteur">{{ nb_notifications }}</span>{% endif %}
       </a>
 
+      <h4>Pilotage</h4>
+      <a href="{% url 'activites:pilotage' %}" class="{% if url_nom == 'pilotage' %}actif{% endif %}">Tableau de bord</a>
+      <a href="{% url 'activites:plans' %}" class="{% if url_nom in 'plans plan_detail plan_creer plan_chronogramme' %}actif{% endif %}">Plans d'action</a>
+      <a href="{% url 'activites:activites' %}" class="{% if url_nom in 'activites activite_detail activite_form activite_creer activite_modifier' %}actif{% endif %}">Activites</a>
+      <a href="{% url 'activites:axes' %}" class="{% if url_nom == 'axes' %}actif{% endif %}">Axes et perimetres</a>
+
       <h4>Encadrement</h4>
       <a href="{% url 'rh:a_valider' %}" class="{% if url_nom == 'a_valider' %}actif{% endif %}">
         A valider {% if nb_a_valider %}<span class="badge-compteur">{{ nb_a_valider }}</span>{% endif %}

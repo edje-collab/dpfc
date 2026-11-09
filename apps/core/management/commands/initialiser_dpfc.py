@@ -31,6 +31,32 @@ REGIONS = [
     ("Indenie-Djuablin", "IDJ", "Abengourou", "DRENA Abengourou"),
 ]
 
+# Titulaires des postes regionaux, un par region : chaque perimetre a son chef.
+DIRECTEURS_REGIONAUX = {
+    "ABJ": ("ASSAMOI", "Kouassi Bertin"), "GBK": ("ADJOUMANI", "Kouadio"),
+    "PORO": ("TOURE", "Lassina"), "HSA": ("GBAGBO", "Marius"),
+    "GTG": ("KOFFI", "Yao Daniel"), "BSA": ("DAGO", "Honore"),
+    "YAM": ("N'DRI", "Konan Paul"), "IDJ": ("ANOH", "Amenan Rose"),
+}
+CHEFS_ANTENNE = {
+    "ABJ": ("KACOU", "Marie-Louise"), "GBK": ("KONE", "Adama"),
+    "PORO": ("SORO", "Nabintou"), "HSA": ("ZIE", "Gnepa Olivier"),
+    "GTG": ("OUATTARA", "Salimata"), "BSA": ("TANOH", "Kouame Felix"),
+    "YAM": ("BROU", "Akissi Georgette"), "IDJ": ("YEBOUE", "Kouadio Armand"),
+}
+SECRETAIRES = {
+    "ABJ": ("ABLE", "Aya Chantal"), "GBK": ("KOUASSI", "Akissi"),
+    "PORO": ("SILUE", "Awa"), "HSA": ("GOUE", "Bleu Alphonse"),
+    "GTG": ("KONAN", "Ama Julienne"), "BSA": ("DJE", "Bi Tra"),
+    "YAM": ("AKA", "Affoue Prisca"), "IDJ": ("MEL", "Ahou Nadege"),
+}
+CONSEILLERS = {
+    "ABJ": ("DOUMBIA", "Moussa"), "GBK": ("OUATTARA", "Fatoumata"),
+    "PORO": ("COULIBALY", "Seydou"), "HSA": ("IRIE", "Lou Pauline"),
+    "GTG": ("KAMAGATE", "Vakaba"), "BSA": ("GNAGNE", "Seri Patrice"),
+    "YAM": ("KOUAKOU", "Yao Thierry"), "IDJ": ("ADOU", "Kouassi Landry"),
+}
+
 # Sous-directions de la DPFC, article 28 du decret n° 2026-509 du 05 aout 2026.
 SOUS_DIRECTIONS = [
     ("Sous-direction des Programmes Pedagogiques et des Bibliotheques Scolaires", "SDPPBS"),
@@ -273,20 +299,36 @@ class Command(BaseCommand):
         creer("400002N", "AKA", "Esther", Agent.Role.AGENT, cnrpn,
               "Chargee de production de ressources numeriques", chef_centre, grade="Professeur")
 
-        dr_bouake = creer("300001B", "ADJOUMANI", "Kouadio", Agent.Role.DIRECTEUR_REGIONAL,
-                          drenas["GBK"], "Directeur regional (DRENA)", grade="Inspecteur general")
-        dr_korhogo = creer("300003K", "TOURE", "Lassina", Agent.Role.DIRECTEUR_REGIONAL,
-                           drenas["PORO"], "Directeur regional (DRENA)", grade="Inspecteur general")
-        chef_bouake = creer("200001B", "KONE", "Adama", Agent.Role.CHEF_ANTENNE, antennes["GBK"],
-                            "Chef d'antenne", dr_bouake)
-        creer("200005B", "KOUASSI", "Akissi", Agent.Role.SECRETARIAT, antennes["GBK"],
-              "Secretaire de l'antenne", chef_bouake, grade="Secretaire administratif")
-        creer("200002B", "OUATTARA", "Fatoumata", Agent.Role.AGENT, antennes["GBK"],
-              "Conseillere pedagogique", chef_bouake, grade="Conseiller pedagogique")
-        chef_korhogo = creer("200003K", "SORO", "Nabintou", Agent.Role.CHEF_ANTENNE, antennes["PORO"],
-                             "Chef d'antenne", dr_korhogo)
-        creer("200004K", "COULIBALY", "Seydou", Agent.Role.AGENT, antennes["PORO"],
-              "Conseiller pedagogique", chef_korhogo, grade="Conseiller pedagogique")
+        # Chaque DRENA et chaque antenne recoivent leur responsable : aucun
+        # perimetre ne doit rester sans autorite capable de decider.
+        directeurs_regionaux, chefs_antenne = {}, {}
+        for rang, (code, region) in enumerate(regions.items(), start=1):
+            dr = creer(
+                f"3000{rang:02d}R", DIRECTEURS_REGIONAUX[code][0], DIRECTEURS_REGIONAUX[code][1],
+                Agent.Role.DIRECTEUR_REGIONAL, drenas[code],
+                f"Directeur regional de {region.chef_lieu}", grade="Inspecteur general",
+            )
+            directeurs_regionaux[code] = dr
+            chef = creer(
+                f"2000{rang:02d}C", CHEFS_ANTENNE[code][0], CHEFS_ANTENNE[code][1],
+                Agent.Role.CHEF_ANTENNE, antennes[code],
+                f"Chef de l'antenne de {region.chef_lieu}", dr,
+            )
+            chefs_antenne[code] = chef
+            creer(
+                f"2000{rang:02d}S", SECRETAIRES[code][0], SECRETAIRES[code][1],
+                Agent.Role.SECRETARIAT, antennes[code],
+                "Secretaire de l'antenne", chef, grade="Secretaire administratif",
+            )
+            creer(
+                f"2000{rang:02d}A", CONSEILLERS[code][0], CONSEILLERS[code][1],
+                Agent.Role.AGENT, antennes[code],
+                "Conseiller pedagogique", chef, grade="Conseiller pedagogique",
+            )
+        dr_bouake = directeurs_regionaux["GBK"]
+        dr_korhogo = directeurs_regionaux["PORO"]
+        chef_bouake = chefs_antenne["GBK"]
+        chef_korhogo = chefs_antenne["PORO"]
 
         direction.responsable = directeur
         direction.save()
@@ -300,18 +342,13 @@ class Command(BaseCommand):
         centrales["SPAA"].save()
         cnrpn.responsable = chef_centre
         cnrpn.save()
-        antennes["GBK"].responsable = chef_bouake
-        antennes["GBK"].save()
-        antennes["PORO"].responsable = chef_korhogo
-        antennes["PORO"].save()
-        drenas["GBK"].responsable = dr_bouake
-        drenas["GBK"].save()
-        drenas["PORO"].responsable = dr_korhogo
-        drenas["PORO"].save()
         for code, antenne in antennes.items():
+            antenne.responsable = chefs_antenne[code]
             if antenne.drena_id is None:
                 antenne.drena = drenas[code]
-                antenne.save(update_fields=["drena"])
+            antenne.save(update_fields=["responsable", "drena"])
+            drenas[code].responsable = directeurs_regionaux[code]
+            drenas[code].save(update_fields=["responsable"])
 
         if not Agent.objects.filter(is_superuser=True).exists():
             admin = Agent.objects.create_superuser("ADMIN01", "admin@dpfc.education.ci", "dpfc2026!")
@@ -407,6 +444,14 @@ class Command(BaseCommand):
                 type=type_, date_fin=aujourdhui + timedelta(days=delta + 2), lieu=lieu, public_cible=cible,
             )
 
+        # --- Pilotage : axes strategiques et plans d'action ----------------
+        from apps.activites.demo import charger as charger_pilotage
+        from apps.activites.demo import installer_axes
+
+        installer_axes()
+        if options["demo"]:
+            charger_pilotage(stdout=self.stdout)
+
         if options["demo"]:
             self._cles_de_signature([directeur, chef_bouake, chef_korhogo, dr_bouake, dr_korhogo])
             self._demandes_demo()
@@ -415,9 +460,11 @@ class Command(BaseCommand):
         self.stdout.write("  Comptes de demonstration : le mot de passe initial est le matricule.")
         self.stdout.write(
             "  100001D directrice | 100002R personnel | 100003S sous-directrice | 100004C chef de service\n"
-            "  200001B chef d'antenne Bouake | 200005B secretariat d'antenne | 200002B agent d'antenne\n"
+            "  200002C chef d'antenne Bouake | 200002S secretariat | 200002A conseiller\n"
             "  400001N chef de centre CNRPN | 400002N agent CNRPN\n"
-            "  300001B directeur regional DRENA Bouake"
+            "  300002R directeur regional DRENA Bouake\n"
+            "  Chaque antenne a son chef, son secretariat et son conseiller "
+            "(suffixes C, S et A)."
         )
 
     def _cles_de_signature(self, signataires):

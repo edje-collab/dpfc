@@ -116,10 +116,13 @@ class PerimetreTest(BaseOrganisation):
         self.assertEqual(self.agent_antenne.perimetre, self.p_antenne)
         self.assertEqual(self.agent_centre.perimetre, self.p_cnrpn)
 
-    def test_antenne_et_cnrpn_sont_autonomes_pas_la_centrale(self):
-        self.assertTrue(self.p_antenne.est_autonome)
-        self.assertTrue(self.p_cnrpn.est_autonome)
-        self.assertFalse(self.p_centrale.est_autonome)
+    def test_les_trois_perimetres_sont_autonomes(self):
+        """Chacun instruit ses actes ; seule l'implantation les distingue."""
+        for perimetre in (self.p_centrale, self.p_antenne, self.p_cnrpn):
+            self.assertTrue(perimetre.est_autonome)
+        self.assertFalse(self.p_centrale.est_deconcentre)
+        self.assertTrue(self.p_antenne.est_deconcentre)
+        self.assertTrue(self.p_cnrpn.est_deconcentre)
 
     def test_le_responsable_est_celui_de_la_structure_de_tete(self):
         self.assertEqual(self.p_antenne.responsable, self.chef_antenne)

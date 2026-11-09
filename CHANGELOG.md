@@ -1,5 +1,19 @@
 # Journal des versions
 
+## 3.1.0 — Pilotage des activités (phase 2)
+
+**Plans d'action annuels.** Nouvelle application `activites` : chaque périmètre — direction centrale, antenne régionale, CNRPN — établit son plan annuel, le transmet à la direction, puis rend compte de son exécution. Cycle complet : préparation, soumission, validation ou renvoi motivé, clôture avec report automatique des activités restées ouvertes.
+
+**L'avancement est rapporté, pas saisi.** Un point d'avancement porte le taux atteint, les réalisations, les difficultés, les bénéficiaires touchés et le montant engagé sur la période. L'activité en découle : le taux suit le dernier compte rendu, les bénéficiaires et les montants se cumulent, les changements d'état et les dates réelles sont automatiques.
+
+**Consolidation.** Taux d'exécution physique et budgétaire par activité, par axe stratégique et par plan, les activités annulées étant exclues du calcul. Tableau de bord par périmètre, consolidation nationale pour la direction, chronogramme sur douze mois, registre filtrable et export CSV. Les axes stratégiques sont un référentiel national, ce qui rend la comparaison entre périmètres possible.
+
+**Application mobile.** `/api/v1/pilotage/`, `/api/v1/plans/`, `/api/v1/activites/` et le dépôt d'un compte rendu avec pièce jointe depuis le terrain, cloisonnés par périmètre.
+
+**Correction.** La direction centrale est elle aussi un périmètre autonome, dirigé par un directeur central : `Perimetre.est_autonome` vaut désormais pour les trois types, et `est_deconcentre` distingue l'implantation (antenne ou centre rattaché) de l'autonomie de gestion.
+
+**Jeu de démonstration.** Chaque antenne a son chef, son secrétariat et son conseiller : plus aucun périmètre sans responsable. Les plans couvrent tous les cas de gestion — en préparation, soumis, validés, clos — et les activités tous les statuts, y compris le retard, le report et l'annulation. Les dates sont relatives au jour du chargement, pour une démonstration stable toute l'année.
+
 ## 3.0.0 — Plateforme de gestion de la direction (phase 1 : socle)
 
 Mise en conformité avec le **décret n° 2026-509 du 05 août 2026** et passage à une plateforme de gestion, sur la pile technique d'e-PECU.

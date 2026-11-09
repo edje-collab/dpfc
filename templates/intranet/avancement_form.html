@@ -1,0 +1,19 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Point d'avancement{% endblock %}
+{% block titre_page %}Rendre compte de l'execution{% endblock %}
+{% block sous_titre %}{{ activite.code }} &middot; {{ activite.intitule }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc" style="max-width:720px">
+  <p class="aide">Avancement actuel : <strong>{{ activite.avancement }} %</strong>.
+     Indiquez l'avancement atteint a ce jour, non la progression de la periode.</p>
+  <form method="post" enctype="multipart/form-data" class="formulaire">
+    {% csrf_token %}
+    {% include "intranet/_champs.html" %}
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Enregistrer le point</button>
+      <a class="btn btn--secondaire" href="{{ activite.get_absolute_url }}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

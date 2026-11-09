@@ -1,0 +1,17 @@
+{% extends "intranet/base_intranet.html" %}
+{% block titre %}Activite{% endblock %}
+{% block titre_page %}{% if activite %}Modifier une activite{% else %}Inscrire une activite{% endif %}{% endblock %}
+{% block sous_titre %}Plan {{ plan.annee }} &middot; {{ plan.perimetre.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc" style="max-width:860px">
+  <form method="post" class="formulaire">
+    {% csrf_token %}
+    {% include "intranet/_champs.html" %}
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Enregistrer</button>
+      <a class="btn btn--secondaire" href="{% if activite %}{{ activite.get_absolute_url }}{% else %}{{ plan.get_absolute_url }}{% endif %}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

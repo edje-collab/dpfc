@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.core.models import Perimetre, Region, Structure
 from apps.rh.models import Demande, TypeDemande
@@ -174,3 +175,124 @@ class ApiAntenneTest(TestCase):
 
     def test_verification_code_inconnu(self):
         self.assertEqual(self.client.get("/api/v1/verification/DPFC-0000-0000-0000/").status_code, 404)
+
+
+class ApiPilotageTest(TestCase):
+    """L'application mobile consulte les activites et rend compte depuis le terrain."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.activites.models import Activite, Axe, PlanAction
+        from apps.activites.services import soumettre_plan, valider_plan
+
+        region = Region.objects.create(nom="Poro", code="PORO", chef_lieu="Korhogo")
+        cls.p_centrale = Perimetre.objects.create(
+            code="DPFC", nom="Direction centrale", type=Perimetre.Type.CENTRALE
+        )
+        cls.p_antenne = Perimetre.objects.create(
+            code="APFC-PORO", nom="Antenne de Korhogo", type=Perimetre.Type.ANTENNE, region=region
+        )
+        cls.direction = Structure.objects.create(
+            nom="Direction de la Pedagogie", sigle="DPFC", type=Structure.Type.DIRECTION,
+            perimetre=cls.p_centrale, perimetre_racine=True,
+        )
+        cls.antenne = Structure.objects.create(
+            nom="Antenne de Korhogo", sigle="APFC-PORO", type=Structure.Type.ANTENNE,
+            region=region, perimetre=cls.p_antenne, perimetre_racine=True,
+        )
+        cls.directeur = Agent.objects.create_user(
+            "D0001", password="motdepasse123", last_name="KOUAME", first_name="Sylvie",
+            role=Agent.Role.DIRECTEUR, structure=cls.direction,
+        )
+        cls.chef = Agent.objects.create_user(
+            "C0001", password="motdepasse123", last_name="SORO", first_name="Nabintou",
+            role=Agent.Role.CHEF_ANTENNE, structure=cls.antenne,
+        )
+        cls.direction.responsable = cls.directeur
+        cls.direction.save(update_fields=["responsable"])
+        cls.antenne.responsable = cls.chef
+        cls.antenne.save(update_fields=["responsable"])
+
+        annee = timezone.localdate().year
+        axe = Axe.objects.create(code="AX1", libelle="Qualite des apprentissages")
+        cls.plan = PlanAction.objects.create(perimetre=cls.p_antenne, annee=annee)
+        cls.activite = Activite.objects.create(
+            plan=cls.plan, axe=axe, intitule="Suivi pedagogique des ecoles",
+            date_debut_prevue=date(annee, 1, 15), date_fin_prevue=date(annee, 12, 15),
+            responsable=cls.chef, effectif_prevu=100, budget_prevu=2_000_000,
+        )
+        # Plan d'un autre perimetre, qui ne doit pas apparaitre.
+        autre = PlanAction.objects.create(perimetre=cls.p_centrale, annee=annee)
+        Activite.objects.create(
+            plan=autre, intitule="Activite centrale",
+            date_debut_prevue=date(annee, 2, 1), date_fin_prevue=date(annee, 3, 1),
+        )
+        soumettre_plan(cls.plan, par=cls.chef)
+        valider_plan(cls.plan, par=cls.directeur)
+
+    def _entetes(self, matricule="C0001"):
+        reponse = self.client.post(
+            reverse("api:connexion"), {"matricule": matricule, "password": "motdepasse123"},
+            content_type="application/json",
+        )
+        return {"HTTP_AUTHORIZATION": f"Bearer {reponse.json()['access']}"}
+
+    def test_le_terrain_ne_voit_que_les_activites_de_son_perimetre(self):
+        reponse = self.client.get("/api/v1/activites/", **self._entetes())
+        self.assertEqual(reponse.status_code, 200)
+        donnees = reponse.json()["results"]
+        self.assertEqual(len(donnees), 1)
+        self.assertEqual(donnees[0]["perimetre"], "APFC-PORO")
+        self.assertEqual(donnees[0]["code"], "A-001")
+
+    def test_la_direction_voit_tous_les_perimetres(self):
+        reponse = self.client.get("/api/v1/activites/", **self._entetes("D0001"))
+        self.assertEqual(reponse.json()["count"], 2)
+
+    def test_compte_rendu_depuis_le_telephone(self):
+        reponse = self.client.post(
+            f"/api/v1/activites/{self.activite.pk}/avancement/",
+            {"taux": 60, "realisations": "Soixante ecoles visitees.", "effectif_touche": 60,
+             "montant_engage": 900000},
+            **self._entetes(),
+        )
+        self.assertEqual(reponse.status_code, 200)
+        donnees = reponse.json()
+        self.assertEqual(donnees["avancement"], 60)
+        self.assertEqual(donnees["statut"], "EN_COURS")
+        self.activite.refresh_from_db()
+        self.assertEqual(self.activite.effectif_realise, 60)
+
+    def test_compte_rendu_refuse_au_dela_de_cent(self):
+        reponse = self.client.post(
+            f"/api/v1/activites/{self.activite.pk}/avancement/",
+            {"taux": 150, "realisations": "Impossible."}, **self._entetes(),
+        )
+        self.assertEqual(reponse.status_code, 400)
+
+    def test_compte_rendu_refuse_sur_une_activite_annulee(self):
+        """Chemin d'erreur metier, distinct de la validation du formulaire."""
+        from apps.activites.services import annuler_activite
+
+        annuler_activite(self.activite, self.directeur, "Sans objet.")
+        reponse = self.client.post(
+            f"/api/v1/activites/{self.activite.pk}/avancement/",
+            {"taux": 50, "realisations": "Trop tard."}, **self._entetes(),
+        )
+        self.assertEqual(reponse.status_code, 400)
+        self.assertIn("annulee", reponse.json()["detail"])
+
+    def test_tableau_de_bord_mobile(self):
+        reponse = self.client.get("/api/v1/pilotage/", **self._entetes())
+        self.assertEqual(reponse.status_code, 200)
+        donnees = reponse.json()
+        self.assertEqual(donnees["nb_activites"], 1)
+        self.assertIn("taux_execution", donnees)
+
+    def test_les_plans_sont_filtres_par_perimetre(self):
+        reponse = self.client.get("/api/v1/plans/", **self._entetes())
+        codes = [p["perimetre_code"] for p in reponse.json()["results"]]
+        self.assertEqual(codes, ["APFC-PORO"])
+
+    def test_acces_refuse_sans_jeton(self):
+        self.assertEqual(self.client.get("/api/v1/activites/").status_code, 401)

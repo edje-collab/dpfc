@@ -5,6 +5,96 @@ info:
   description: Plateforme de gestion de la Direction de la Pedagogie et de la Formation
     Continue.
 paths:
+  /api/v1/activites/:
+    get:
+      operationId: activites_list
+      description: |-
+        Activites du perimetre de l'agent.
+
+        Le terrain consulte ses activites et rend compte de leur execution depuis
+        le telephone, y compris hors du bureau.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - activites
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedActiviteList'
+          description: ''
+  /api/v1/activites/{id}/:
+    get:
+      operationId: activites_retrieve
+      description: |-
+        Activites du perimetre de l'agent.
+
+        Le terrain consulte ses activites et rend compte de leur execution depuis
+        le telephone, y compris hors du bureau.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this activite.
+        required: true
+      tags:
+      - activites
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activite'
+          description: ''
+  /api/v1/activites/{id}/avancement/:
+    post:
+      operationId: activites_avancement_create
+      description: |-
+        Activites du perimetre de l'agent.
+
+        Le terrain consulte ses activites et rend compte de leur execution depuis
+        le telephone, y compris hors du bureau.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this activite.
+        required: true
+      tags:
+      - activites
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SaisieAvancementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SaisieAvancementRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activite'
+          description: ''
   /api/v1/annuaire/:
     get:
       operationId: annuaire_list
@@ -618,6 +708,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/Notification'
           description: ''
+  /api/v1/pilotage/:
+    get:
+      operationId: pilotage_retrieve
+      description: Synthese du pilotage pour l'ecran d'accueil de l'application mobile.
+      tags:
+      - pilotage
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableauPilotage'
+          description: ''
+  /api/v1/plans/:
+    get:
+      operationId: plans_list
+      description: Plans d'action visibles par l'agent connecte.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - plans
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlanActionList'
+          description: ''
+  /api/v1/plans/{id}/:
+    get:
+      operationId: plans_retrieve
+      description: Plans d'action visibles par l'agent connecte.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this plan d'action.
+        required: true
+      tags:
+      - plans
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanAction'
+          description: ''
   /api/v1/public/actualites/:
     get:
       operationId: public_actualites_list
@@ -1024,6 +1176,147 @@ paths:
           description: ''
 components:
   schemas:
+    Activite:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          maxLength: 30
+        intitule:
+          type: string
+          maxLength: 250
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/ActiviteTypeEnum'
+        type_libelle:
+          type: string
+          readOnly: true
+        axe_code:
+          type: string
+          readOnly: true
+        perimetre:
+          type: string
+          readOnly: true
+        annee:
+          type: integer
+          readOnly: true
+        responsable_nom:
+          type: string
+          readOnly: true
+        lieu:
+          type: string
+          maxLength: 200
+        public_cible:
+          type: string
+          maxLength: 200
+        date_debut_prevue:
+          type: string
+          format: date
+          title: Debut prevu
+        date_fin_prevue:
+          type: string
+          format: date
+          title: Fin prevue
+        date_debut_reelle:
+          type: string
+          format: date
+          nullable: true
+          title: Debut reel
+        date_fin_reelle:
+          type: string
+          format: date
+          nullable: true
+          title: Fin reelle
+        statut:
+          $ref: '#/components/schemas/ActiviteStatutEnum'
+        statut_libelle:
+          type: string
+          readOnly: true
+        avancement:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: Avancement (%)
+        est_en_retard:
+          type: boolean
+          readOnly: true
+        jours_de_retard:
+          type: integer
+          readOnly: true
+        budget_prevu:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,0})?$
+          title: Budget prevu (FCFA)
+        budget_execute:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,0})?$
+          title: Budget execute (FCFA)
+        effectif_prevu:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: Beneficiaires prevus
+        effectif_realise:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: Beneficiaires touches
+      required:
+      - annee
+      - axe_code
+      - date_debut_prevue
+      - date_fin_prevue
+      - est_en_retard
+      - id
+      - intitule
+      - jours_de_retard
+      - perimetre
+      - responsable_nom
+      - statut_libelle
+      - type_libelle
+    ActiviteStatutEnum:
+      enum:
+      - PLANIFIEE
+      - EN_COURS
+      - REALISEE
+      - REPORTEE
+      - ANNULEE
+      type: string
+      description: |-
+        * `PLANIFIEE` - Planifiee
+        * `EN_COURS` - En cours
+        * `REALISEE` - Realisee
+        * `REPORTEE` - Reportee
+        * `ANNULEE` - Annulee
+    ActiviteTypeEnum:
+      enum:
+      - FORMATION
+      - ATELIER
+      - ELABORATION
+      - SUIVI
+      - EVALUATION
+      - PRODUCTION
+      - REUNION
+      - AUTRE
+      type: string
+      description: |-
+        * `FORMATION` - Formation / renforcement de capacites
+        * `ATELIER` - Atelier de production
+        * `ELABORATION` - Elaboration de programmes ou de guides
+        * `SUIVI` - Suivi pedagogique et encadrement
+        * `EVALUATION` - Evaluation des acquis
+        * `PRODUCTION` - Production de ressources
+        * `REUNION` - Reunion et concertation
+        * `AUTRE` - Autre
     Actualite:
       type: object
       properties:
@@ -1336,7 +1629,7 @@ components:
           title: Piece justificative
         statut:
           allOf:
-          - $ref: '#/components/schemas/StatutEnum'
+          - $ref: '#/components/schemas/DemandeStatutEnum'
           readOnly: true
         statut_libelle:
           type: string
@@ -1485,6 +1778,22 @@ components:
       - date_fin
       - motif
       - type
+    DemandeStatutEnum:
+      enum:
+      - BROUILLON
+      - SOUMISE
+      - EN_COURS
+      - APPROUVEE
+      - REJETEE
+      - ANNULEE
+      type: string
+      description: |-
+        * `BROUILLON` - Brouillon
+        * `SOUMISE` - Soumise
+        * `EN_COURS` - Validation en cours
+        * `APPROUVEE` - Approuvee
+        * `REJETEE` - Rejetee
+        * `ANNULEE` - Annulee
     DemandeTypeEnum:
       enum:
       - CONGE_ANNUEL
@@ -1640,6 +1949,29 @@ components:
           type: boolean
       required:
       - titre
+    PaginatedActiviteList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Activite'
     PaginatedActualiteList:
       type: object
       required:
@@ -1755,6 +2087,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Notification'
+    PaginatedPlanActionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanAction'
     PaginatedProjetList:
       type: object
       required:
@@ -1981,6 +2336,68 @@ components:
           type: string
           format: binary
           title: Rapport detaille
+    PlanAction:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        annee:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        libelle:
+          type: string
+          maxLength: 250
+        contexte:
+          type: string
+          title: Contexte et orientations
+        perimetre_code:
+          type: string
+          readOnly: true
+        perimetre_nom:
+          type: string
+          readOnly: true
+        statut:
+          $ref: '#/components/schemas/PlanActionStatutEnum'
+        statut_libelle:
+          type: string
+          readOnly: true
+        nb_activites:
+          type: integer
+          readOnly: true
+        taux_execution:
+          type: integer
+          readOnly: true
+        taux_execution_budgetaire:
+          type: integer
+          readOnly: true
+        valide_le:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - annee
+      - id
+      - nb_activites
+      - perimetre_code
+      - perimetre_nom
+      - statut_libelle
+      - taux_execution
+      - taux_execution_budgetaire
+    PlanActionStatutEnum:
+      enum:
+      - BROUILLON
+      - SOUMIS
+      - VALIDE
+      - CLOS
+      type: string
+      description: |-
+        * `BROUILLON` - En preparation
+        * `SOUMIS` - Soumis a validation
+        * `VALIDE` - Valide
+        * `CLOS` - Clos
     Projet:
       type: object
       properties:
@@ -2208,6 +2625,48 @@ components:
         * `DIRECTEUR` - Directeur
         * `DIRECTEUR_GENERAL` - Directeur general (DGPCSP)
         * `ADMIN` - Administrateur du portail
+    SaisieAvancementRequest:
+      type: object
+      description: |-
+        Depot d'un compte rendu depuis le terrain.
+
+        L'activite est designee par l'URL et l'auteur par le jeton : ni l'une ni
+        l'autre ne se declarent dans le corps de la requete.
+      properties:
+        date:
+          type: string
+          format: date
+          title: Date du point
+        taux:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: Avancement declare (%)
+        realisations:
+          type: string
+          minLength: 1
+          title: Realisations de la periode
+        difficultes:
+          type: string
+          title: Difficultes rencontrees
+        effectif_touche:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: Beneficiaires touches sur la periode
+        montant_engage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,0})?$
+          title: Montant engage sur la periode (FCFA)
+        piece_jointe:
+          type: string
+          format: binary
+      required:
+      - realisations
+      - taux
     SituationEnum:
       enum:
       - EN_POSTE
@@ -2259,22 +2718,6 @@ components:
       - annee
       - jours_restants
       - total_droits
-    StatutEnum:
-      enum:
-      - BROUILLON
-      - SOUMISE
-      - EN_COURS
-      - APPROUVEE
-      - REJETEE
-      - ANNULEE
-      type: string
-      description: |-
-        * `BROUILLON` - Brouillon
-        * `SOUMISE` - Soumise
-        * `EN_COURS` - Validation en cours
-        * `APPROUVEE` - Approuvee
-        * `REJETEE` - Rejetee
-        * `ANNULEE` - Annulee
     Structure:
       type: object
       properties:
@@ -2380,6 +2823,42 @@ components:
         * `DRENA` - Direction regionale (DRENA)
         * `DDENA` - Direction departementale (DDENA)
         * `DRETPI` - Direction regionale de l'enseignement technique (DRETPI)
+    TableauPilotage:
+      type: object
+      properties:
+        annee:
+          type: integer
+          readOnly: true
+        nb_activites:
+          type: integer
+          readOnly: true
+        taux_execution:
+          type: integer
+          readOnly: true
+        budget_prevu:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,0})?$
+          readOnly: true
+        budget_execute:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,0})?$
+          readOnly: true
+        beneficiaires:
+          type: integer
+          readOnly: true
+        nb_en_retard:
+          type: integer
+          readOnly: true
+      required:
+      - annee
+      - beneficiaires
+      - budget_execute
+      - budget_prevu
+      - nb_activites
+      - nb_en_retard
+      - taux_execution
     TokenRefresh:
       type: object
       properties:

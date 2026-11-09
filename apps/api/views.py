@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -10,6 +10,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.accounts.models import Notification
+from apps.activites.models import Activite, PlanAction
+from apps.activites.services import ErreurPlan, enregistrer_avancement, tableau_de_bord
 from apps.core.models import Structure
 from apps.rh.models import Demande, RapportMission, SoldeConge
 from apps.rh.services import annuler, decider, demandes_a_traiter, soumettre
@@ -295,3 +297,89 @@ class AntennePubliqueViewSet(LectureLibre):
     serializer_class = s.StructureSerializer
     lookup_field = "slug"
     queryset = Structure.objects.filter(type=Structure.Type.ANTENNE, active=True).select_related("region")
+
+
+# --- Pilotage des activites --------------------------------------------------
+class PlanActionViewSet(viewsets.ReadOnlyModelViewSet):
+    """Plans d'action visibles par l'agent connecte."""
+
+    serializer_class = s.PlanActionSerializer
+    queryset = PlanAction.objects.none()
+
+    def get_queryset(self):
+        return (
+            PlanAction.objects.visibles_par(self.request.user)
+            .select_related("perimetre")
+            .order_by("-annee")
+        )
+
+
+class ActiviteViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Activites du perimetre de l'agent.
+
+    Le terrain consulte ses activites et rend compte de leur execution depuis
+    le telephone, y compris hors du bureau.
+    """
+
+    serializer_class = s.ActiviteSerializer
+    queryset = Activite.objects.none()
+
+    def get_queryset(self):
+        qs = (
+            Activite.objects.visibles_par(self.request.user)
+            .select_related("plan__perimetre", "axe", "responsable")
+        )
+        if annee := self.request.query_params.get("annee"):
+            qs = qs.filter(plan__annee=annee)
+        if statut := self.request.query_params.get("statut"):
+            qs = qs.filter(statut=statut)
+        if self.request.query_params.get("retard") in {"1", "true", "oui"}:
+            qs = qs.en_retard()
+        if self.request.query_params.get("mes_activites") in {"1", "true", "oui"}:
+            qs = qs.filter(responsable=self.request.user)
+        return qs.order_by("date_fin_prevue")
+
+    @extend_schema(request=s.SaisieAvancementSerializer, responses=s.ActiviteSerializer)
+    @action(detail=True, methods=["post"], url_path="avancement",
+            parser_classes=[MultiPartParser, FormParser])
+    def avancement(self, request, pk=None):
+        activite = self.get_object()
+        serialiseur = s.SaisieAvancementSerializer(data=request.data)
+        serialiseur.is_valid(raise_exception=True)
+        donnees = serialiseur.validated_data
+        try:
+            enregistrer_avancement(
+                activite, request.user, donnees["taux"], donnees["realisations"],
+                difficultes=donnees.get("difficultes", ""),
+                effectif_touche=donnees.get("effectif_touche", 0),
+                montant_engage=donnees.get("montant_engage", 0),
+                piece_jointe=donnees.get("piece_jointe"),
+                date=donnees.get("date"),
+            )
+        except ErreurPlan as erreur:
+            return Response({"detail": str(erreur)}, status=status.HTTP_400_BAD_REQUEST)
+        activite.refresh_from_db()
+        return Response(s.ActiviteSerializer(activite, context={"request": request}).data)
+
+
+class TableauPilotageView(APIView):
+    """Synthese du pilotage pour l'ecran d'accueil de l'application mobile."""
+
+    serializer_class = s.TableauPilotageSerializer
+
+    @extend_schema(responses=s.TableauPilotageSerializer)
+    def get(self, request):
+        annee = request.query_params.get("annee")
+        donnees = tableau_de_bord(request.user, int(annee) if annee else None)
+        return Response(
+            {
+                "annee": donnees["annee"],
+                "nb_activites": donnees["nb_activites"],
+                "taux_execution": donnees["taux_execution"],
+                "budget_prevu": donnees["budget_prevu"],
+                "budget_execute": donnees["budget_execute"],
+                "beneficiaires": donnees["beneficiaires"],
+                "nb_en_retard": donnees["en_retard"].count(),
+            }
+        )

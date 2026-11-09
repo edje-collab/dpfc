@@ -1,0 +1,49 @@
+{% extends "intranet/base_intranet.html" %}
+{% load humanize %}
+{% block titre %}Activites{% endblock %}
+{% block titre_page %}Registre des activites{% endblock %}
+{% block sous_titre %}{{ total }} activite{{ total|pluralize }}{% endblock %}
+
+{% block contenu %}
+<div class="bloc">
+  <form method="get" class="formulaire">
+    <div class="grille-tb">
+      {% for champ in form.visible_fields %}{% include "intranet/_champ.html" %}{% endfor %}
+    </div>
+    <div class="actions">
+      <button class="btn btn--principal" type="submit">Filtrer</button>
+      <a class="btn btn--secondaire" href="{% url 'activites:activites' %}">Reinitialiser</a>
+      <a class="btn btn--secondaire" href="{% url 'activites:export_activites' %}{% if annee %}?annee={{ annee }}{% endif %}">Exporter en CSV</a>
+    </div>
+  </form>
+</div>
+
+<div class="bloc">
+  {% if page_obj %}
+    <div class="defilement">
+      <table class="table">
+        <thead><tr><th>Code</th><th>Intitule</th><th>Perimetre</th><th>Axe</th>
+                   <th>Echeance</th><th>Statut</th><th>Avancement</th><th>Budget engage</th></tr></thead>
+        <tbody>
+          {% for a in page_obj %}
+            <tr>
+              <td>{{ a.code }}</td>
+              <td><a href="{{ a.get_absolute_url }}">{{ a.intitule }}</a></td>
+              <td>{{ a.plan.perimetre.code }}</td>
+              <td>{{ a.axe.code|default:"-" }}</td>
+              <td>{{ a.date_fin_prevue|date:"d/m/Y" }}
+                  {% if a.est_en_retard %}<br><small class="pastille pastille--ko">{{ a.jours_de_retard }} j de retard</small>{% endif %}</td>
+              <td><span class="pastille pastille--{{ a.couleur_statut }}">{{ a.get_statut_display }}</span></td>
+              <td>{{ a.avancement }} %<div class="jauge"><i style="width:{{ a.avancement }}%"></i></div></td>
+              <td>{{ a.budget_execute|intcomma }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "public/_pagination.html" %}
+  {% else %}
+    <p class="aide">Aucune activite ne correspond a ces criteres.</p>
+  {% endif %}
+</div>
+{% endblock %}

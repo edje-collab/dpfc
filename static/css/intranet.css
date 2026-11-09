@@ -194,3 +194,15 @@ body.intranet a { color: var(--i-teal-fonce); }
   .page-connexion__visuel { padding: 2rem; }
   .formulaire .paire { grid-template-columns: 1fr; }
 }
+
+/* --- Chronogramme des activites ------------------------------------------- */
+.chronogramme th.chrono__mois { text-align: center; width: 48px; font-size: .8rem; }
+.chrono__case { padding: .25rem .15rem; border-left: 1px solid var(--i-trait); }
+.chrono__barre {
+  text-align: center; font-size: .78rem; font-weight: 600; color: #fff;
+  border-radius: 6px; background: var(--i-teal);
+}
+.chrono__barre--ok { background: #2f9e55; }
+.chrono__barre--attente { background: #e0a033; }
+.chrono__barre--ko { background: #c0392b; }
+.chrono__barre--neutre { background: #8aa5ad; }

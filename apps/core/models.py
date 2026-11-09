@@ -61,8 +61,8 @@ class PerimetreQuerySet(models.QuerySet):
     def actifs(self):
         return self.filter(actif=True)
 
-    def autonomes(self):
-        """Perimetres dont la gestion du personnel est deconcentree."""
+    def deconcentres(self):
+        """Perimetres implantes hors de la direction centrale."""
         return self.actifs().exclude(type=Perimetre.Type.CENTRALE)
 
 
@@ -70,10 +70,16 @@ class Perimetre(Horodate):
     """
     Unite de gestion autonome.
 
-    La direction centrale, chaque antenne regionale et le CNRPN instruisent
-    leurs propres actes, tiennent leur propre numerotation et disposent de
-    leurs propres tableaux de bord. Un agent appartient a un seul perimetre,
-    deduit de sa structure d'affectation.
+    Les trois familles de perimetres sont autonomes : la direction centrale,
+    dirigee par un directeur central, chaque antenne regionale, dirigee par un
+    chef d'antenne, et le CNRPN, dirige par un chef de centre. Chacune instruit
+    ses propres actes, tient sa propre numerotation et dispose de ses propres
+    tableaux de bord. Un agent appartient a un seul perimetre, deduit de sa
+    structure d'affectation.
+
+    Ce qui les distingue n'est pas l'autonomie mais l'implantation : la
+    direction centrale est au niveau national, les autres sont deconcentrees
+    ou rattachees.
     """
 
     class Type(models.TextChoices):
@@ -112,7 +118,12 @@ class Perimetre(Horodate):
 
     @property
     def est_autonome(self):
-        """Vrai pour une antenne ou le CNRPN : le responsable y decide seul."""
+        """Tout perimetre est autonome : son responsable y instruit les actes."""
+        return True
+
+    @property
+    def est_deconcentre(self):
+        """Vrai hors direction centrale : antenne regionale ou centre rattache."""
         return self.type in {self.Type.ANTENNE, self.Type.CENTRE}
 
     @property
@@ -127,6 +138,7 @@ class Perimetre(Horodate):
 
     @property
     def libelle_responsable(self):
+        """Qualite du responsable, telle qu'elle figure sur les actes."""
         return {
             self.Type.CENTRALE: "Directeur de la pedagogie et de la formation continue",
             self.Type.ANTENNE: "Chef d'antenne (APFC)",

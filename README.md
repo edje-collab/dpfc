@@ -5,7 +5,7 @@ Plateforme de gestion de la direction, **monolithe Django modulaire** réunissan
 | Brique | Description |
 |---|---|
 | **Site public** | Géré par **Wagtail** (CMS, administration sur `/cms/`), accessible sans compte : actualités, ressources pédagogiques, FOAD, projets, agenda, antennes régionales, contact. Contenu par blocs, médiathèque, brouillons/publication, prévisualisation. |
-| **Plateforme de gestion** | Espace authentifié : actes administratifs (congé, permission, ordre de mission, absence, formation), circuits de validation **paramétrables par périmètre**, planning, registre, annuaire. |
+| **Plateforme de gestion** | Espace authentifié : **plans d'action annuels, activités, chronogramme et tableaux de bord par périmètre**, actes administratifs (congé, permission, ordre de mission, absence, formation), circuits de validation **paramétrables par périmètre**, planning, registre, annuaire. |
 | **API REST** | `/api/v1/` avec jetons JWT, consommée par l'application mobile **Flutter** livrée dans `mobile/`. |
 | **Signature électronique** | Bi-clés RSA 2048 par signataire, scellement SHA-256 des actes, page publique de vérification et QR code sur le document. |
 
@@ -17,7 +17,7 @@ Chaque agent relève d'un **périmètre de gestion** qui détermine son circuit 
 
 ## 1. Démarrage rapide
 
-Avec Docker, voir [§ 9](#9-déploiement). En local, sans conteneur :
+Avec Docker, voir [§ 10](#10-déploiement). En local, sans conteneur :
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
@@ -80,6 +80,8 @@ dpfc/
 │   ├── accounts/        modèle Agent (connexion par matricule), rôles, notifications,
 │   │                    annuaire, organigramme, gestion des comptes
 │   ├── circuits/        circuits de validation paramétrables par périmètre et type d'acte
+│   ├── activites/       plans d'action annuels, activités, avancement, indicateurs,
+│   │                    chronogramme et tableaux de bord
 │   ├── site_public/     site public Wagtail : pages (accueil, éditoriales, actualités, projets,
 │   │                    événements, antennes, contact), snippets (ressources, catégories, messages)
 │   ├── rh/              actes administratifs, circuit de validation, soldes de congé,
@@ -181,7 +183,29 @@ RH = {
 }
 ```
 
-## 5. Signature électronique
+## 5. Pilotage des activités
+
+Chaque périmètre établit son plan d'action annuel, le fait valider par la direction, puis rend compte de son exécution. Détail dans [docs/pilotage.md](docs/pilotage.md).
+
+```
+En préparation ──soumission──▶ Soumis ──validation──▶ Validé ──clôture──▶ Clos
+       ▲                          │
+       └──────── renvoi ──────────┘
+```
+
+- **L'avancement n'est pas saisi, il est rapporté** : on dépose un point d'avancement (taux atteint, réalisations, difficultés, bénéficiaires, montant engagé) dont l'activité découle. Les bénéficiaires et les montants se cumulent ; l'activité passe en cours à la première déclaration et réalisée à 100 %.
+- **Les taux sont calculés** : l'exécution d'un plan est la moyenne des avancements de ses activités, les annulées exclues.
+- **Clore un exercice** reporte les activités restées ouvertes, avec mention explicite.
+- **Les axes stratégiques sont nationaux**, ce qui permet la consolidation : la direction compare l'exécution de tous les périmètres sur un même cadre.
+
+| Écran | Adresse |
+|---|---|
+| Tableau de bord | `/intranet/pilotage/` |
+| Plans d'action | `/intranet/pilotage/plans/` |
+| Chronogramme | `/intranet/pilotage/plans/<id>/chronogramme/` |
+| Registre des activités (export CSV) | `/intranet/pilotage/activites/` |
+
+## 6. Signature électronique
 
 - **Clé personnelle** : espace agent → « Ma signature électronique ». Le portail génère une bi-clé RSA 2048 ; la clé privée est stockée chiffrée (PKCS#8) par un **code de signature** connu du seul agent, jamais conservé par le serveur.
 - **Apposition** : au moment de la décision, le valideur saisit son code. La signature RSASSA-PSS/SHA-256 porte sur l'empreinte SHA-256 du condensé canonique de l'acte (numéro, agent, structure, type, dates, durée, destination, périmètre, motif). À la dernière étape du circuit, le code est exigé si l'agent dispose d'une clé valide.
@@ -191,7 +215,7 @@ RH = {
 
 Cette implémentation est autoportante (aucune autorité externe). Elle est compatible avec une montée vers un certificat qualifié : il suffit de remplacer la clé auto-générée par une clé adossée à un certificat X.509 délivré par un PSCE agréé, la chaîne de vérification restant identique.
 
-## 6. Import Excel des agents
+## 7. Import Excel des agents
 
 Espace agent → « Import Excel des agents » (réservé au service du personnel et à l'administrateur).
 
@@ -209,7 +233,7 @@ python manage.py importer_agents agents.xlsx            # analyse seule
 python manage.py importer_agents agents.xlsx --appliquer
 ```
 
-## 7. API REST (application Flutter)
+## 8. API REST (application Flutter)
 
 Schéma OpenAPI : [docs/api/openapi.yml](docs/api/openapi.yml), exploré en ligne sur `/api/v1/docs/`. Pour le régénérer :
 
@@ -223,6 +247,10 @@ python manage.py spectacular --file docs/api/openapi.yml
 | POST | `/api/v1/auth/rafraichir/` | renouvellement du jeton |
 | GET/PATCH | `/api/v1/moi/` | profil |
 | GET | `/api/v1/moi/solde/` | solde de congé |
+| GET | `/api/v1/pilotage/` | synthèse du pilotage pour l'écran d'accueil |
+| GET | `/api/v1/plans/` | plans d'action visibles |
+| GET | `/api/v1/activites/` | activités du périmètre (`annee`, `statut`, `retard`, `mes_activites`) |
+| POST | `/api/v1/activites/<id>/avancement/` | compte rendu d'exécution depuis le terrain |
 | GET/POST | `/api/v1/demandes/` | mes demandes, création |
 | POST | `/api/v1/demandes/{id}/soumettre/` | transmission au circuit |
 | POST | `/api/v1/demandes/{id}/decision/` | avis favorable ou rejet ; `code_signature` appose la signature |
@@ -242,7 +270,7 @@ flutter run          # adapter baseUrl dans lib/services/api.dart
 
 Elle couvre le parcours de terrain complet : dépôt d'un acte, bascule « mission hors du ressort de la DRENA » avec envoi des TDR et de la lettre d'invitation depuis le téléphone, suivi du circuit, décision du chef d'antenne ou du directeur régional avec saisie du code de signature à la dernière étape, et vérification d'un acte par son code.
 
-## 8. Tests et qualité
+## 9. Tests et qualité
 
 ```bash
 python manage.py test --settings=config.settings.test
@@ -256,9 +284,9 @@ pytest
 ruff check apps config
 ```
 
-76 tests couvrent les périmètres de gestion (héritage par l'agent, cloisonnement de la visibilité, numérotation par périmètre), les circuits paramétrables (circuit central, autonomie de l'antenne et du CNRPN, mission hors ressort, acte du responsable, circuit propre à un périmètre, étape sans titulaire), le calcul des jours ouvrables, le dépôt par le secrétariat, le parcours complet d'une demande, le rejet, les droits d'accès, la signature électronique, l'import Excel/CSV, les pages publiques et l'API.
+111 tests couvrent le pilotage (cycle du plan, avancement cumulé, retards, consolidation, chronogramme, indicateurs, cloisonnement), les périmètres de gestion (héritage par l'agent, cloisonnement de la visibilité, numérotation par périmètre), les circuits paramétrables (circuit central, autonomie de l'antenne et du CNRPN, mission hors ressort, acte du responsable, circuit propre à un périmètre, étape sans titulaire), le calcul des jours ouvrables, le dépôt par le secrétariat, le parcours complet d'une demande, le rejet, les droits d'accès, la signature électronique, l'import Excel/CSV, les pages publiques et l'API.
 
-## 9. Déploiement
+## 10. Déploiement
 
 La pile est alignée sur celle d'e-PECU : PostgreSQL, Celery et Redis, stockage objet S3/MinIO, Nginx devant gunicorn ([ADR 0004](docs/adr/0004-pile-alignee-sur-e-pecu.md)).
 
@@ -311,11 +339,11 @@ celery -A config beat -l info
 
 Avec `config.settings.prod`, HTTPS, cookies sécurisés, HSTS, `X-Frame-Options` et le verrouillage après échecs de connexion (`django-axes`) sont actifs.
 
-## 10. Exploitation courante
+## 11. Exploitation courante
 
 - **Créer un agent** : espace agent → Comptes des agents → Créer un compte. Le mot de passe initial est le matricule et son changement est imposé à la première connexion.
 - **Affecter en région** : rattacher l'agent à une structure de type `ANTENNE` ; le circuit d'antenne s'applique alors automatiquement. Renseigner le champ `drenaet` de l'antenne dans l'administration pour que l'exception « mission hors périmètre » désigne le bon directeur régional.
-- **Créer des agents en masse** : Import Excel des agents (voir § 6).
+- **Créer des agents en masse** : Import Excel des agents (voir § 7).
 - **Activer la signature d'une autorité** : l'intéressé génère lui-même sa clé depuis « Ma signature électronique ».
 - **Publier une actualité, un projet, un événement ou une page** : Wagtail (`/cms/`) → Pages → Accueil → rubrique concernée → « Ajouter une page enfant ». Enregistrer en brouillon, prévisualiser, puis « Publier ». La case « Afficher dans les menus » (onglet Promotion) fait apparaître une page de premier niveau dans la barre de navigation.
 - **Ressources pédagogiques, catégories, messages de contact** : Wagtail → menu Contenus. Les fichiers sont pris dans la médiathèque Documents.
@@ -325,3 +353,6 @@ Avec `config.settings.prod`, HTTPS, cookies sécurisés, HSTS, `X-Frame-Options`
 - **Jours fériés** : espace agent → Jours fériés (réservé au service du personnel).
 - **Modifier un circuit de validation** : `/admin/` → Circuits de validation. Choisir le type d'acte et le périmètre, puis ordonner les étapes. Pour revenir aux circuits livrés : `python manage.py installer_circuits --remplacer`.
 - **Créer une antenne ou un service autonome** : `/admin/` → Périmètres de gestion (code, type, région), puis la structure de tête correspondante en cochant « structure de tête du périmètre » et en désignant son responsable.
+- **Ouvrir un exercice** : chaque responsable de périmètre établit son plan d'action (`/intranet/pilotage/plans/`), y inscrit ses activités, puis le transmet à la direction.
+- **Définir les axes stratégiques** : `/admin/` → Axes stratégiques. Ils sont communs à tous les périmètres et conditionnent la consolidation.
+- **Suivre l'exécution** : `/intranet/pilotage/` pour la synthèse, le chronogramme pour le calendrier, le registre pour la recherche et l'export CSV.
