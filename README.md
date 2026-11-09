@@ -9,6 +9,8 @@ Plateforme de gestion de la direction, **monolithe Django modulaire** réunissan
 | **API REST** | `/api/v1/` avec jetons JWT, consommée par l'application mobile **Flutter** livrée dans `mobile/`. |
 | **Signature électronique** | Bi-clés RSA 2048 par signataire, scellement SHA-256 des actes, page publique de vérification et QR code sur le document. |
 
+Le **[cahier des charges](docs/cahier-des-charges.md)** énonce les exigences, chacune reliée aux tests qui la vérifient — la matrice de traçabilité est contrôlée à chaque exécution de la suite de tests.
+
 L'organisation suit le **décret n° 2026-509 du 05 août 2026** : la DPFC relève de la Direction Générale de la Pédagogie, des Curricula et du Suivi des Programmes et comprend trois sous-directions. S'y ajoutent, par arrêté, des structures à **gestion autonome** — les antennes régionales (APFC), dirigées par un chef d'antenne, et le **CNRPN**, dirigé par un chef de centre.
 
 Chaque agent relève d'un **périmètre de gestion** qui détermine son circuit de validation, la numérotation de ses actes et ce que son responsable peut voir. Voir [docs/organisation.md](docs/organisation.md).
@@ -105,7 +107,9 @@ dpfc/
 ├── static/              CSS, JS, images
 ├── mobile/              application Flutter (client de l'API)
 ├── infra/               Dockerfile, Docker Compose, Nginx
-├── docs/                organisation, décisions d'architecture, schéma OpenAPI
+├── docs/                cahier des charges, organisation, décisions d'architecture,
+│                        schéma OpenAPI
+├── tests/               contrôles transverses (traçabilité du cahier des charges)
 └── deploiement/         systemd, Nginx (déploiement sans conteneur)
 ```
 
@@ -380,7 +384,7 @@ pytest
 ruff check apps config
 ```
 
-267 tests couvrent les achats (numérotation par périmètre, circuit à seuils de montant, consultation d'au moins deux fournisseurs, compte contribuable exigé, réception partielle alimentant le magasin, report de la dépense sur le plan d'action) et les stocks (sortie bornée au stock, bénéficiaire obligatoire, inventaire fixant la quantité comptée, cohérence du journal), les ateliers (jetons sans donnée personnelle, rejet des jetons altérés ou d'un autre atelier, idempotence de l'émargement, journalisation des doublons, émargement manuel motivé, état de paiement limité aux émargés, attestations, report sur le plan d'action), le courrier (numérotation par périmètre, cycle d'imputation, retards, confidentialité, droits liés à la désignation), les documents (versions, empreintes, extraction du texte, recherche, accès restreint), le parapheur (circuit, refus, corbeille), le pilotage (cycle du plan, avancement cumulé, retards, consolidation, chronogramme, indicateurs, cloisonnement), les périmètres de gestion (héritage par l'agent, cloisonnement de la visibilité, numérotation par périmètre), les circuits paramétrables (circuit central, autonomie de l'antenne et du CNRPN, mission hors ressort, acte du responsable, circuit propre à un périmètre, étape sans titulaire), le calcul des jours ouvrables, le dépôt par le secrétariat, le parcours complet d'une demande, le rejet, les droits d'accès, la signature électronique, l'import Excel/CSV, les pages publiques et l'API.
+272 tests couvrent les achats (numérotation par périmètre, circuit à seuils de montant, consultation d'au moins deux fournisseurs, compte contribuable exigé, réception partielle alimentant le magasin, report de la dépense sur le plan d'action) et les stocks (sortie bornée au stock, bénéficiaire obligatoire, inventaire fixant la quantité comptée, cohérence du journal), les ateliers (jetons sans donnée personnelle, rejet des jetons altérés ou d'un autre atelier, idempotence de l'émargement, journalisation des doublons, émargement manuel motivé, état de paiement limité aux émargés, attestations, report sur le plan d'action), le courrier (numérotation par périmètre, cycle d'imputation, retards, confidentialité, droits liés à la désignation), les documents (versions, empreintes, extraction du texte, recherche, accès restreint), le parapheur (circuit, refus, corbeille), le pilotage (cycle du plan, avancement cumulé, retards, consolidation, chronogramme, indicateurs, cloisonnement), les périmètres de gestion (héritage par l'agent, cloisonnement de la visibilité, numérotation par périmètre), les circuits paramétrables (circuit central, autonomie de l'antenne et du CNRPN, mission hors ressort, acte du responsable, circuit propre à un périmètre, étape sans titulaire), le calcul des jours ouvrables, le dépôt par le secrétariat, le parcours complet d'une demande, le rejet, les droits d'accès, la signature électronique, l'import Excel/CSV, les pages publiques et l'API.
 
 ## 13. Déploiement
 
@@ -455,6 +459,7 @@ Avec `config.settings.prod`, HTTPS, cookies sécurisés, HSTS, `X-Frame-Options`
 - **Enregistrer et imputer du courrier** : `/intranet/courrier/`. Le secrétariat enregistre, le responsable du périmètre impute avec instructions et délai, l'imputataire rend compte.
 - **Modifier le circuit du parapheur** : `/admin/` → Circuits de validation, type d'acte `PARAPHEUR`.
 - **Organiser un atelier** : `/intranet/ateliers/nouveau/`. Les sessions sont générées automatiquement ; imprimez les badges, désignez les contrôleurs, puis ouvrez l'atelier pour permettre l'émargement.
+- **Faire évoluer le cahier des charges** : ajouter l'exigence dans [docs/cahier-des-charges.md](docs/cahier-des-charges.md), puis la ligne correspondante dans la matrice de traçabilité. La suite de tests refuse une exigence non tracée comme un test cité qui n'existe plus.
 - **Exprimer un besoin d'achat** : `/intranet/achats/besoins/nouveau/`, puis ajouter les articles et transmettre. Le circuit s'adapte au montant.
 - **Modifier les seuils d'engagement** : `/admin/` → Circuits de validation, type d'acte `BESOIN`, champ « seuil de montant » de chaque étape.
 - **Tenir le magasin** : `/intranet/achats/magasin/`. Les entrées se font à la réception des commandes ; les sorties et les inventaires se saisissent sur la fiche de l'article.

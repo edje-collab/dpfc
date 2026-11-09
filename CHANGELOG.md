@@ -1,5 +1,15 @@
 # Journal des versions
 
+## 3.4.1 — Cahier des charges
+
+**Cahier des charges** ([docs/cahier-des-charges.md](docs/cahier-des-charges.md)) : objet, contexte réglementaire, organisation cible, et une centaine d'exigences numérotées couvrant l'organisation, les circuits, les actes administratifs, la signature, le pilotage, le courrier, les documents, le parapheur, les ateliers, les achats, les stocks, le site public, la sécurité et la technique.
+
+**Matrice de traçabilité vérifiée.** Chaque exigence renvoie aux tests qui la prouvent, et `tests/test_tracabilite.py` contrôle que la matrice reste vraie : un test cité qui n'existe plus, une exigence énoncée mais non tracée, ou une référence à une exigence inconnue font échouer la suite. Une matrice qui se périme en silence donne l'illusion d'une preuve ; celle-ci ne le peut pas.
+
+Les exigences transverses — sécurité, architecture, qualités attendues — sont recensées à part, avec leur mode de vérification propre.
+
+**Points laissés à la direction** consignés : devenir des sous-directions antérieures au décret, seuils d'engagement, barèmes de participation, règle d'attestation, OCR, chiffrement des données personnelles.
+
 ## 3.4.0 — Achats et stocks (phase 5)
 
 **Procédure d'achat.** Nouvelle application `achats`. Chaque périmètre exprime ses besoins, les fait valider, consulte les fournisseurs, commande, réceptionne puis solde. Séries annuelles propres au périmètre pour les besoins (`EB-0001/2026/APFC-GBK`) comme pour les bons de commande.
