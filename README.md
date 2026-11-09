@@ -460,7 +460,11 @@ Avec `config.settings.prod`, HTTPS, cookies sécurisés, HSTS, `X-Frame-Options`
 - **Modifier le circuit du parapheur** : `/admin/` → Circuits de validation, type d'acte `PARAPHEUR`.
 - **Organiser un atelier** : `/intranet/ateliers/nouveau/`. Les sessions sont générées automatiquement ; imprimez les badges, désignez les contrôleurs, puis ouvrez l'atelier pour permettre l'émargement.
 - **Mettre l'organigramme en conformité** : `python manage.py nettoyer_organisation` simule, `--appliquer` exécute. Les structures centrales absentes du décret sont retirées, sauf le service du personnel ; celles qui portent de l'historique sont désactivées plutôt que supprimées.
-- **Faire évoluer le cahier des charges** : ajouter l'exigence dans [docs/cahier-des-charges.md](docs/cahier-des-charges.md), puis la ligne correspondante dans la matrice de traçabilité. La suite de tests refuse une exigence non tracée comme un test cité qui n'existe plus.
+- **Faire évoluer le cahier des charges** : ajouter l'exigence dans [docs/cahier-des-charges.md](docs/cahier-des-charges.md), puis la ligne correspondante dans la matrice de traçabilité. La suite de tests refuse une exigence non tracée comme un test cité qui n'existe plus. Régénérer ensuite la version consultable :
+
+```bash
+python3 infra/scripts/cahier_en_page.py
+```
 - **Exprimer un besoin d'achat** : `/intranet/achats/besoins/nouveau/`, puis ajouter les articles et transmettre. Le circuit s'adapte au montant.
 - **Modifier les seuils d'engagement** : `/admin/` → Circuits de validation, type d'acte `BESOIN`, champ « seuil de montant » de chaque étape.
 - **Tenir le magasin** : `/intranet/achats/magasin/`. Les entrées se font à la réception des commandes ; les sorties et les inventaires se saisissent sur la fiche de l'article.
