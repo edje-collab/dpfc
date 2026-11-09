@@ -1,5 +1,13 @@
 # Journal des versions
 
+## 3.4.5 — Manuel de l'utilisateur
+
+**Manuel organisé par profil** ([docs/manuel-utilisateur.md](docs/manuel-utilisateur.md)) : agent, secrétariat, chef de service et sous-directeur, chef d'antenne et chef de centre, directeur régional, service du personnel, directeur, administrateur, rédacteur du site public, et l'usage mobile sur le terrain.
+
+Chacun y trouve ce qu'il fait et comment, avec les libellés exacts de l'interface — vérifiés contre les gabarits plutôt que supposés. Deux sections communes ouvrent le document : se connecter, et les repères partagés (périmètre, numérotation, couleurs, motifs obligatoires). Une foire aux questions ferme sur les méprises courantes.
+
+`infra/scripts/manuel_en_page.py` en rend une version consultable, dérivée du Markdown de sorte qu'elle ne puisse pas diverger.
+
 ## 3.4.4 — Cloisonnement des services extérieurs
 
 **Correction de cloisonnement.** Un agent des services extérieurs du ministère — directeur régional DRENA, par exemple — héritait du périmètre central faute d'en avoir un propre, et voyait donc le courrier, les documents, les achats et les ateliers de la direction. Or il est extérieur à la DPFC : il intervient dans les circuits de validation sans relever de sa gestion.

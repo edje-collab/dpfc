@@ -9,6 +9,8 @@ Plateforme de gestion de la direction, **monolithe Django modulaire** réunissan
 | **API REST** | `/api/v1/` avec jetons JWT, consommée par l'application mobile **Flutter** livrée dans `mobile/`. |
 | **Signature électronique** | Bi-clés RSA 2048 par signataire, scellement SHA-256 des actes, page publique de vérification et QR code sur le document. |
 
+Le **[manuel de l'utilisateur](docs/manuel-utilisateur.md)** est organisé par profil : agent, secrétariat, chef d'antenne, service du personnel, directeur, administrateur.
+
 Le **[cahier des charges](docs/cahier-des-charges.md)** énonce les exigences, chacune reliée aux tests qui la vérifient — la matrice de traçabilité est contrôlée à chaque exécution de la suite de tests.
 
 L'organisation suit le **décret n° 2026-509 du 05 août 2026** : la DPFC relève de la Direction Générale de la Pédagogie, des Curricula et du Suivi des Programmes et comprend trois sous-directions. S'y ajoutent, par arrêté, des structures à **gestion autonome** — les antennes régionales (APFC), dirigées par un chef d'antenne, et le **CNRPN**, dirigé par un chef de centre.
@@ -464,6 +466,11 @@ Avec `config.settings.prod`, HTTPS, cookies sécurisés, HSTS, `X-Frame-Options`
 
 ```bash
 python3 infra/scripts/cahier_en_page.py
+```
+- **Faire évoluer le manuel** : modifier [docs/manuel-utilisateur.md](docs/manuel-utilisateur.md), puis régénérer la version consultable :
+
+```bash
+python3 infra/scripts/manuel_en_page.py
 ```
 - **Exprimer un besoin d'achat** : `/intranet/achats/besoins/nouveau/`, puis ajouter les articles et transmettre. Le circuit s'adapte au montant.
 - **Modifier les seuils d'engagement** : `/admin/` → Circuits de validation, type d'acte `BESOIN`, champ « seuil de montant » de chaque étape.
