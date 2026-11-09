@@ -8,6 +8,11 @@ des affaires administratives, qui subsiste.
     python manage.py nettoyer_organisation              # simulation
     python manage.py nettoyer_organisation --appliquer
 
+Les agents suivent leur structure : chaque structure retiree designe la
+sous-direction du decret qui reprend ses attributions (voir CORRESPONDANCES),
+et ses agents y sont rattaches. A defaut de correspondance connue, ils vont a
+la direction, qui decidera.
+
 Une structure porteuse d'historique — actes administratifs, courriers,
 activites — n'est pas supprimee mais desactivee : effacer la structure
 effacerait la provenance des actes deja pris, ce qu'une administration ne
@@ -35,6 +40,20 @@ SIGLES_CONFORMES = {
 # n'est pas une sous-direction du decret, mais il subsiste.
 SIGLES_CONSERVES = {"SPAA"}
 
+# Quelle sous-direction du decret reprend les attributions de chaque structure
+# retiree. La repartition des agents suit celle des missions, non les personnes :
+# c'est le seul critere qui se justifie sans arbitrer les carrieres.
+CORRESPONDANCES = {
+    # Formation continue -> Sous-direction de la Formation Pedagogique Continue
+    "SDFC": "SDFPC",
+    # Programmes et manuels scolaires -> Sous-direction des Programmes
+    # Pedagogiques et des Bibliotheques Scolaires
+    "SDPMS": "SDPPBS",
+    # Ressources pedagogiques numeriques -> Sous-direction des Innovations
+    # Pedagogiques, qui porte desormais le numerique educatif
+    "SDPRPN": "SDIP",
+}
+
 
 class Command(BaseCommand):
     help = (
@@ -51,12 +70,28 @@ class Command(BaseCommand):
         parseur.add_argument(
             "--reaffecter",
             default="DPFC",
-            help="Sigle de la structure qui accueille les agents des structures retirees "
-                 "(par defaut : DPFC).",
+            help="Structure d'accueil par defaut, pour les agents d'une structure "
+                 "sans correspondance connue (par defaut : DPFC).",
+        )
+        parseur.add_argument(
+            "--correspondance",
+            action="append",
+            default=[],
+            metavar="ANCIEN=NOUVEAU",
+            help="Ajoute ou remplace une correspondance, par exemple SDFC=SDFPC. "
+                 "Repetable.",
         )
 
     def handle(self, *args, **options):
         appliquer = options["appliquer"]
+        correspondances = dict(CORRESPONDANCES)
+        for paire in options["correspondance"]:
+            if "=" not in paire:
+                self.stderr.write(self.style.ERROR(f"Correspondance mal formee : {paire}"))
+                return
+            ancien, nouveau = (p.strip().upper() for p in paire.split("=", 1))
+            correspondances[ancien] = nouveau
+
         self._verifier_rattachement(appliquer)
         accueil = Structure.objects.filter(sigle=options["reaffecter"]).first()
         if accueil is None:
@@ -101,27 +136,36 @@ class Command(BaseCommand):
             )
         self.stdout.write(f"\n{len(obsoletes)} structure(s) absente(s) du decret :\n")
 
-        supprimees, desactivees = [], []
+        supprimees, desactivees, sans_correspondance = [], [], []
         for structure in obsoletes:
             agents = list(structure.agents.all())
             enfants = list(structure.enfants.all())
+            reprise = self._reprise(structure, correspondances, accueil)
+            if reprise.pk == accueil.pk and structure.sigle not in correspondances:
+                sans_correspondance.append(structure.sigle)
+
             self.stdout.write(
                 f"  {structure.sigle:12} {structure.nom[:52]}\n"
                 f"               agents : {len(agents)}"
                 f"{' (' + ', '.join(a.matricule for a in agents) + ')' if agents else ''}"
-                f" | sous-structures : {len(enfants)}"
+                f" | sous-structures : {len(enfants)}\n"
+                f"               attributions reprises par : {reprise.sigle}"
             )
             if not appliquer:
                 continue
 
-            etat = self._retirer(structure, accueil, agents, enfants)
+            etat = self._retirer(structure, reprise, agents, enfants)
             (supprimees if etat == "supprimee" else desactivees).append(structure.sigle)
 
         if not appliquer:
-            self.stdout.write(
-                "\nLes agents seraient rattaches a "
-                f"{accueil.sigle}, les sous-structures egalement."
-            )
+            if sans_correspondance:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"\nSans correspondance connue : {', '.join(sans_correspondance)}. "
+                        f"Leurs agents iraient a {accueil.sigle}.\n"
+                        "Precisez-la au besoin : --correspondance ANCIEN=NOUVEAU."
+                    )
+                )
             self._rappeler_conserves()
             return
 
@@ -135,6 +179,28 @@ class Command(BaseCommand):
                 )
             )
         self._rappeler_conserves()
+
+    def _reprise(self, structure, correspondances, accueil):
+        """
+        Structure qui reprend les attributions d'une structure retiree.
+
+        A defaut de correspondance connue, ou si la structure designee est
+        introuvable, les agents vont a la structure d'accueil : mieux vaut les
+        remettre a la direction que de les placer au jugé.
+        """
+        sigle = correspondances.get(structure.sigle)
+        if not sigle:
+            return accueil
+        reprise = Structure.objects.filter(sigle=sigle, active=True).first()
+        if reprise is None:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  Correspondance {structure.sigle} -> {sigle} : "
+                    f"structure introuvable, repli sur {accueil.sigle}."
+                )
+            )
+            return accueil
+        return reprise
 
     def _verifier_rattachement(self, appliquer):
         """

@@ -292,13 +292,67 @@ class NettoyageOrganisationTest(BaseOrganisation):
             Structure.objects.filter(sigle__in=["SDPPBS", "SDIP"], active=True).count(), 2
         )
 
-    def test_les_agents_sont_rattaches_a_la_direction(self):
-        obsolete = self._obsolete("SDFC", "Sous-direction de la formation continue")
-        agent = self._agent("X0001", "MUTE", Agent.Role.AGENT, obsolete)
+    def test_les_agents_suivent_les_attributions_de_leur_structure(self):
+        """
+        La repartition suit les missions, non les personnes : chaque structure
+        retiree designe la sous-direction qui reprend ses attributions.
+        """
+        sdppbs = Structure.objects.create(
+            nom="Sous-direction des Programmes Pedagogiques", sigle="SDPPBS",
+            type=Structure.Type.SOUS_DIRECTION, parent=self.direction,
+            perimetre=self.p_centrale,
+        )
+        sdip = Structure.objects.create(
+            nom="Sous-direction des Innovations Pedagogiques", sigle="SDIP",
+            type=Structure.Type.SOUS_DIRECTION, parent=self.direction,
+            perimetre=self.p_centrale,
+        )
+        # La SDFPC existe deja dans l'organigramme de reference.
+        sdfpc = self.sous_direction
+        formation = self._obsolete("SDFC", "Sous-direction de la formation continue")
+        programmes = self._obsolete("SDPMS", "Sous-direction des programmes et manuels")
+        numerique = self._obsolete("SDPRPN", "Service des ressources numeriques")
+
+        agents = {
+            "SDFC": self._agent("X0001", "FORMATION", Agent.Role.AGENT, formation),
+            "SDPMS": self._agent("X0002", "PROGRAMMES", Agent.Role.AGENT, programmes),
+            "SDPRPN": self._agent("X0003", "NUMERIQUE", Agent.Role.AGENT, numerique),
+        }
         self._nettoyer(appliquer=True)
+
+        attendu = {"SDFC": sdfpc, "SDPMS": sdppbs, "SDPRPN": sdip}
+        for origine, agent in agents.items():
+            with self.subTest(origine=origine):
+                agent.refresh_from_db()
+                self.assertEqual(agent.structure, attendu[origine])
+
+    def test_sans_correspondance_les_agents_vont_a_la_direction(self):
+        """Mieux vaut les remettre a la direction que de les placer au juge."""
+        inconnue = self._obsolete("XXXX", "Service sans correspondance connue")
+        agent = self._agent("X0001", "ORPHELIN", Agent.Role.AGENT, inconnue)
+        sortie = self._nettoyer(appliquer=True)
         agent.refresh_from_db()
         self.assertEqual(agent.structure, self.direction)
-        self.assertFalse(Structure.objects.filter(sigle="SDFC").exists())
+        self.assertIn("DPFC", sortie)
+
+    def test_une_correspondance_peut_etre_precisee_en_ligne_de_commande(self):
+        cible = Structure.objects.create(
+            nom="Sous-direction des Innovations Pedagogiques", sigle="SDIP",
+            type=Structure.Type.SOUS_DIRECTION, parent=self.direction,
+            perimetre=self.p_centrale,
+        )
+        inconnue = self._obsolete("XXXX", "Service sans correspondance connue")
+        agent = self._agent("X0001", "ORPHELIN", Agent.Role.AGENT, inconnue)
+        self._nettoyer(appliquer=True, correspondance=["XXXX=SDIP"])
+        agent.refresh_from_db()
+        self.assertEqual(agent.structure, cible)
+
+    def test_une_correspondance_vers_une_structure_absente_se_replie(self):
+        inconnue = self._obsolete("XXXX", "Service sans correspondance connue")
+        agent = self._agent("X0001", "ORPHELIN", Agent.Role.AGENT, inconnue)
+        self._nettoyer(appliquer=True, correspondance=["XXXX=INEXISTANTE"])
+        agent.refresh_from_db()
+        self.assertEqual(agent.structure, self.direction)
 
     def test_une_structure_porteuse_d_historique_est_desactivee(self):
         """Effacer la structure effacerait la provenance des actes deja pris."""

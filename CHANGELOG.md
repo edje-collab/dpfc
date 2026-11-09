@@ -1,5 +1,19 @@
 # Journal des versions
 
+## 3.4.3 — Répartition des agents selon les attributions
+
+Les agents d'une structure retirée ne sont plus déposés à la direction : ils **suivent les attributions de leur structure**. Chaque structure retirée désigne la sous-direction du décret qui les reprend.
+
+| Structure retirée | Attributions reprises par |
+|---|---|
+| Sous-direction de la formation continue | SDFPC — Formation Pédagogique Continue |
+| Sous-direction des programmes et manuels scolaires | SDPPBS — Programmes Pédagogiques et Bibliothèques Scolaires |
+| Service des ressources pédagogiques numériques | SDIP — Innovations Pédagogiques |
+
+La répartition suit les **missions**, non les personnes : c'est le seul critère qui se justifie sans arbitrer les carrières. Une correspondance se précise au besoin par `--correspondance ANCIEN=NOUVEAU` ; à défaut de correspondance connue, les agents vont à la direction plutôt que d'être placés au jugé.
+
+La simulation annonce désormais, pour chaque structure, qui reprend ses attributions.
+
 ## 3.4.2 — Mise en conformité de l'organigramme
 
 **Décision de la direction appliquée.** Les sous-directions et services centraux antérieurs au décret n° 2026-509 sont retirés de l'organigramme, **à l'exception du service du personnel et des affaires administratives**, conservé. Nouvelle commande `manage.py nettoyer_organisation`, qui simule par défaut et n'exécute qu'avec `--appliquer`.

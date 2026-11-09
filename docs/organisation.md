@@ -87,10 +87,18 @@ python manage.py nettoyer_organisation --appliquer
 Ce qu'elle fait :
 
 - rattache la DPFC à la DGPCSP si ce lien manque (article 27) ;
-- rattache à la direction les agents et sous-structures des structures retirées ;
+- **répartit les agents selon les attributions reprises** par chaque structure :
+
+  | Structure retirée | Attributions reprises par |
+  |---|---|
+  | Formation continue (SDFC) | SDFPC — Formation Pédagogique Continue |
+  | Programmes et manuels scolaires (SDPMS) | SDPPBS — Programmes Pédagogiques et Bibliothèques Scolaires |
+  | Ressources pédagogiques numériques (SDPRPN) | SDIP — Innovations Pédagogiques |
+
+  Une correspondance se précise au besoin : `--correspondance ANCIEN=NOUVEAU`. À défaut, les agents vont à la direction ;
 - **supprime** la structure, ou la **désactive** si elle porte de l'historique — effacer la structure effacerait la provenance des actes déjà pris. Le compte rendu indique à chaque fois lequel des deux cas s'applique ;
 - conserve le SPAA et les structures du décret.
 
 Elle est idempotente : un second passage ne fait rien.
 
-> **Reste à la main de la direction** : les agents des structures retirées sont rattachés à la direction elle-même. Leur répartition entre les trois sous-directions du décret (SDPPBS, SDIP, SDFPC) est une décision d'organisation.
+> La répartition suit les **missions**, non les personnes : c'est le seul critère qui se justifie sans arbitrer les carrières. Un agent dont l'affectation doit différer se déplace ensuite dans l'administration.
